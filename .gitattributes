@@ -4,6 +4,7 @@
 # Use LF for repository configuration files.
 .gitattributes text eol=lf
 .gitignore text eol=lf
+.editorconfig text eol=lf
 
 # Use CRLF for Windows command scripts.
 *.[bB][aA][tT] text eol=crlf
