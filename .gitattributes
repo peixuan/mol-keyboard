@@ -1,0 +1,10 @@
+# Normalize text files in the repository.
+* text=auto
+
+# Use LF for repository configuration files.
+.gitattributes text eol=lf
+.gitignore text eol=lf
+
+# Use CRLF for Windows command scripts.
+*.[bB][aA][tT] text eol=crlf
+*.[cC][mM][dD] text eol=crlf
