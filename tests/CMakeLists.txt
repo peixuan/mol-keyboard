@@ -28,6 +28,13 @@ mol_enable_warnings(mol_semantics_tests)
 mol_enable_optional_instrumentation(mol_semantics_tests)
 add_test(NAME mol_semantics_tests COMMAND mol_semantics_tests)
 
+add_executable(mol_transport_tests unit/test_transport.c)
+target_link_libraries(mol_transport_tests PRIVATE mol::core)
+set_target_properties(mol_transport_tests PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_transport_tests)
+mol_enable_optional_instrumentation(mol_transport_tests)
+add_test(NAME mol_transport_tests COMMAND mol_transport_tests)
+
 add_executable(mol_platform_audio_runtime_tests unit/test_platform_audio_runtime.c)
 target_link_libraries(mol_platform_audio_runtime_tests PRIVATE mol::platform_audio_runtime)
 set_target_properties(mol_platform_audio_runtime_tests PROPERTIES C_EXTENSIONS OFF

@@ -43,6 +43,12 @@ typedef struct mol_engine_state {
   uint32_t scale_mapping;
   uint32_t chord_mode;
   float sustain;
+  mol_frame_index_t transport_frame;
+  float tempo;
+  uint8_t time_signature_numerator;
+  uint8_t time_signature_denominator;
+  uint8_t transport_running;
+  uint8_t metronome_enabled;
 } mol_engine_state_t;
 
 /** Returns a portable default Standard-profile configuration. */

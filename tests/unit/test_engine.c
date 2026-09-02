@@ -98,7 +98,8 @@ static void test_planar_and_commands(void) {
   command.target_frame = MOL_FRAME_IMMEDIATE;
   EXPECT_TRUE(mol_engine_submit(engine, &command) == MOL_OK);
   command.command_type = MOL_COMMAND_SET_TEMPO;
-  EXPECT_TRUE(mol_engine_submit(engine, &command) == MOL_ERROR_UNSUPPORTED);
+  command.payload.scalar.value = 100.0f;
+  EXPECT_TRUE(mol_engine_submit(engine, &command) == MOL_OK);
   mol_engine_shutdown(engine);
 }
 

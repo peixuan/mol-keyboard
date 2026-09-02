@@ -39,7 +39,8 @@ enum {
   MOL_COMMAND_PLAYBACK_START = 23u,
   MOL_COMMAND_PLAYBACK_STOP = 24u,
   MOL_COMMAND_LOAD_SEQUENCE = 25u,
-  MOL_COMMAND_RESET_ENGINE = 26u
+  MOL_COMMAND_RESET_ENGINE = 26u,
+  MOL_COMMAND_SET_METRONOME = 27u
 };
 
 typedef union mol_command_payload {
@@ -60,6 +61,19 @@ typedef union mol_command_payload {
     uint8_t mapping;
     uint8_t reserved[2];
   } scale;
+  struct {
+    uint8_t numerator;
+    uint8_t denominator;
+    uint8_t reserved[2];
+  } time_signature;
+  struct {
+    uint64_t frame;
+  } transport;
+  struct {
+    float level;
+    uint8_t enabled;
+    uint8_t reserved[3];
+  } metronome;
   uint8_t bytes[64];
 } mol_command_payload_t;
 

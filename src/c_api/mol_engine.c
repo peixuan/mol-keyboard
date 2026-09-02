@@ -5,11 +5,14 @@
 
 #include "mol/engine.h"
 #include "mol/music.h"
+#include "mol/transport.h"
 
 #define MOL_ENGINE_MAGIC UINT32_C(0x4D4F4C45)
 #define MOL_MASTER_GAIN_DEFAULT 0.25f
 #define MOL_SUSTAIN_LEVEL 0.70f
 #define MOL_SUSTAIN_ON_THRESHOLD (64.0f / 127.0f)
+#define MOL_PI 3.14159265358979323846f
+#define MOL_METRONOME_DURATION_SECONDS 0.025f
 
 typedef enum mol_voice_stage {
   MOL_VOICE_IDLE = 0,
@@ -58,7 +61,20 @@ struct mol_engine {
   mol_scale_type_t scale_type;
   mol_scale_mapping_t scale_mapping;
   mol_chord_mode_t chord_mode;
+  mol_frame_index_t transport_frame;
+  mol_frame_index_t metronome_next_frame;
+  uint64_t metronome_beat_index;
+  uint32_t tempo_milli_bpm;
+  uint32_t metronome_remaining;
+  uint32_t metronome_duration;
+  float metronome_level;
+  float metronome_phase;
+  float metronome_phase_increment;
   uint8_t scale_tonic;
+  uint8_t time_signature_numerator;
+  uint8_t time_signature_denominator;
+  uint8_t transport_running;
+  uint8_t metronome_enabled;
 };
 
 static int mol_engine_config_is_valid(const mol_engine_config_t* config) {
@@ -231,6 +247,42 @@ static void mol_push_music_error(mol_engine_t* engine, const mol_command_t* comm
   ++engine->event_count;
 }
 
+static void mol_push_transport_event(mol_engine_t* engine, const mol_command_t* command) {
+  mol_event_t* event;
+  uint32_t tail;
+  if (engine->event_count >= engine->config.event_capacity) {
+    return;
+  }
+  tail = (engine->event_head + engine->event_count) % engine->config.event_capacity;
+  event = &engine->events[tail];
+  memset(event, 0, sizeof(*event));
+  event->struct_size = (uint32_t)sizeof(*event);
+  event->api_version = MOL_API_VERSION;
+  event->event_type = MOL_EVENT_TRANSPORT_CHANGED;
+  event->source_id = command->source_id;
+  event->frame = engine->current_frame;
+  event->payload[0] = (uint8_t)command->command_type;
+  ++engine->event_count;
+}
+
+static void mol_push_metronome_event(mol_engine_t* engine, uint8_t accent, uint8_t beat) {
+  mol_event_t* event;
+  uint32_t tail;
+  if (engine->event_count >= engine->config.event_capacity) {
+    return;
+  }
+  tail = (engine->event_head + engine->event_count) % engine->config.event_capacity;
+  event = &engine->events[tail];
+  memset(event, 0, sizeof(*event));
+  event->struct_size = (uint32_t)sizeof(*event);
+  event->api_version = MOL_API_VERSION;
+  event->event_type = MOL_EVENT_METRONOME_TICK;
+  event->frame = engine->current_frame;
+  event->payload[MOL_EVENT_PAYLOAD_METRONOME_ACCENT] = accent;
+  event->payload[MOL_EVENT_PAYLOAD_METRONOME_BEAT] = beat;
+  ++engine->event_count;
+}
+
 static float mol_note_frequency(uint8_t note) {
   return 440.0f * powf(2.0f, ((float)note - 69.0f) / 12.0f);
 }
@@ -320,6 +372,37 @@ static void mol_process_note_on(mol_engine_t* engine, const mol_command_t* comma
   }
 }
 
+static void mol_reschedule_metronome(mol_engine_t* engine) {
+  uint32_t steps_per_quarter = (uint32_t)engine->time_signature_denominator / 4u;
+  if (mol_transport_step_at_or_after(engine->config.sample_rate, engine->tempo_milli_bpm,
+                                     steps_per_quarter, engine->transport_frame,
+                                     &engine->metronome_beat_index) != MOL_OK ||
+      mol_transport_step_frame(engine->config.sample_rate, engine->tempo_milli_bpm,
+                               steps_per_quarter, engine->metronome_beat_index,
+                               &engine->metronome_next_frame) != MOL_OK) {
+    engine->metronome_next_frame = UINT64_MAX;
+  }
+}
+
+static void mol_process_metronome_tick(mol_engine_t* engine) {
+  uint8_t beat = (uint8_t)(engine->metronome_beat_index % engine->time_signature_numerator);
+  uint8_t accent = beat == 0u ? 1u : 0u;
+  engine->metronome_duration =
+      (uint32_t)(MOL_METRONOME_DURATION_SECONDS * (float)engine->config.sample_rate);
+  engine->metronome_remaining = engine->metronome_duration;
+  engine->metronome_phase = 0.0f;
+  engine->metronome_phase_increment =
+      (accent != 0u ? 1760.0f : 1320.0f) / (float)engine->config.sample_rate;
+  mol_push_metronome_event(engine, accent, beat);
+  ++engine->metronome_beat_index;
+  if (mol_transport_step_frame(engine->config.sample_rate, engine->tempo_milli_bpm,
+                               (uint32_t)engine->time_signature_denominator / 4u,
+                               engine->metronome_beat_index,
+                               &engine->metronome_next_frame) != MOL_OK) {
+    engine->metronome_next_frame = UINT64_MAX;
+  }
+}
+
 static void mol_process_command(mol_engine_t* engine, const mol_command_t* command) {
   uint32_t index;
   switch (command->command_type) {
@@ -381,6 +464,39 @@ static void mol_process_command(mol_engine_t* engine, const mol_command_t* comma
       break;
     case MOL_COMMAND_SET_CHORD_MODE:
       engine->chord_mode = (mol_chord_mode_t)command->payload.integer.value;
+      break;
+    case MOL_COMMAND_SET_TEMPO:
+      (void)mol_tempo_to_milli_bpm(command->payload.scalar.value, &engine->tempo_milli_bpm);
+      mol_reschedule_metronome(engine);
+      mol_push_transport_event(engine, command);
+      break;
+    case MOL_COMMAND_SET_TIME_SIGNATURE:
+      engine->time_signature_numerator = command->payload.time_signature.numerator;
+      engine->time_signature_denominator = command->payload.time_signature.denominator;
+      mol_reschedule_metronome(engine);
+      mol_push_transport_event(engine, command);
+      break;
+    case MOL_COMMAND_TRANSPORT_START:
+      engine->transport_running = 1u;
+      mol_reschedule_metronome(engine);
+      mol_push_transport_event(engine, command);
+      break;
+    case MOL_COMMAND_TRANSPORT_STOP:
+      engine->transport_running = 0u;
+      engine->metronome_remaining = 0u;
+      mol_push_transport_event(engine, command);
+      break;
+    case MOL_COMMAND_TRANSPORT_SEEK:
+      engine->transport_frame = command->payload.transport.frame;
+      engine->metronome_remaining = 0u;
+      mol_reschedule_metronome(engine);
+      mol_push_transport_event(engine, command);
+      break;
+    case MOL_COMMAND_SET_METRONOME:
+      engine->metronome_enabled = command->payload.metronome.enabled;
+      engine->metronome_level = command->payload.metronome.level;
+      engine->metronome_remaining = 0u;
+      mol_reschedule_metronome(engine);
       break;
     case MOL_COMMAND_RESET_ENGINE:
       mol_engine_reset(engine);
@@ -444,6 +560,22 @@ static float mol_render_voice(mol_engine_t* engine, mol_voice_t* voice) {
   return sample * voice->envelope * voice->velocity;
 }
 
+static float mol_render_metronome(mol_engine_t* engine) {
+  float envelope;
+  float sample;
+  if (engine->metronome_remaining == 0u || engine->metronome_duration == 0u) {
+    return 0.0f;
+  }
+  envelope = (float)engine->metronome_remaining / (float)engine->metronome_duration;
+  sample = sinf(2.0f * MOL_PI * engine->metronome_phase) * envelope * engine->metronome_level;
+  engine->metronome_phase += engine->metronome_phase_increment;
+  if (engine->metronome_phase >= 1.0f) {
+    engine->metronome_phase -= 1.0f;
+  }
+  --engine->metronome_remaining;
+  return sample;
+}
+
 static float mol_render_frame(mol_engine_t* engine) {
   float mixed = 0.0f;
   uint32_t index;
@@ -452,9 +584,14 @@ static float mol_render_frame(mol_engine_t* engine) {
     mol_scheduled_command_t scheduled = mol_command_heap_pop(engine);
     mol_process_command(engine, &scheduled.command);
   }
+  if (engine->transport_running != 0u && engine->metronome_enabled != 0u &&
+      engine->transport_frame >= engine->metronome_next_frame) {
+    mol_process_metronome_tick(engine);
+  }
   for (index = 0u; index < engine->config.max_voices; ++index) {
     mixed += mol_render_voice(engine, &engine->voices[index]);
   }
+  mixed += mol_render_metronome(engine);
   mixed *= engine->master_gain;
   if (!isfinite(mixed)) {
     mixed = 0.0f;
@@ -464,6 +601,9 @@ static float mol_render_frame(mol_engine_t* engine) {
     mixed = -1.0f;
   }
   ++engine->current_frame;
+  if (engine->transport_running != 0u) {
+    ++engine->transport_frame;
+  }
   return mixed;
 }
 
@@ -587,8 +727,8 @@ mol_result_t mol_engine_init(void* memory, size_t memory_size, const mol_engine_
                                                 sizeof(mol_event_t), config->event_capacity);
   engine->config = *config;
   engine->memory_size = required;
-  engine->master_gain = MOL_MASTER_GAIN_DEFAULT;
   engine->magic = MOL_ENGINE_MAGIC;
+  mol_engine_reset(engine);
   *out_engine = engine;
   return MOL_OK;
 }
@@ -616,6 +756,19 @@ void mol_engine_reset(mol_engine_t* engine) {
     engine->scale_tonic = 0u;
     engine->scale_mapping = MOL_SCALE_MAP_NEAREST;
     engine->chord_mode = MOL_CHORD_OFF;
+    engine->transport_frame = 0u;
+    engine->metronome_next_frame = 0u;
+    engine->metronome_beat_index = 0u;
+    engine->tempo_milli_bpm = 100000u;
+    engine->metronome_remaining = 0u;
+    engine->metronome_duration = 0u;
+    engine->metronome_level = 0.5f;
+    engine->metronome_phase = 0.0f;
+    engine->metronome_phase_increment = 0.0f;
+    engine->time_signature_numerator = 4u;
+    engine->time_signature_denominator = 4u;
+    engine->transport_running = 0u;
+    engine->metronome_enabled = 0u;
   }
 }
 
@@ -674,6 +827,29 @@ mol_result_t mol_engine_submit(mol_engine_t* engine, const mol_command_t* comman
           (uint32_t)command->payload.integer.value >= MOL_CHORD_MODE_COUNT) {
         return MOL_ERROR_INVALID_ARGUMENT;
       }
+      break;
+    case MOL_COMMAND_SET_TEMPO: {
+      uint32_t ignored;
+      if (mol_tempo_to_milli_bpm(command->payload.scalar.value, &ignored) != MOL_OK) {
+        return MOL_ERROR_INVALID_ARGUMENT;
+      }
+      break;
+    }
+    case MOL_COMMAND_SET_TIME_SIGNATURE:
+      if (!mol_time_signature_is_valid(command->payload.time_signature.numerator,
+                                       command->payload.time_signature.denominator)) {
+        return MOL_ERROR_INVALID_ARGUMENT;
+      }
+      break;
+    case MOL_COMMAND_SET_METRONOME:
+      if (command->payload.metronome.enabled > 1u || !isfinite(command->payload.metronome.level) ||
+          command->payload.metronome.level < 0.0f || command->payload.metronome.level > 1.0f) {
+        return MOL_ERROR_INVALID_ARGUMENT;
+      }
+      break;
+    case MOL_COMMAND_TRANSPORT_START:
+    case MOL_COMMAND_TRANSPORT_STOP:
+    case MOL_COMMAND_TRANSPORT_SEEK:
       break;
     case MOL_COMMAND_ALL_NOTES_OFF:
     case MOL_COMMAND_ALL_SOUND_OFF:
@@ -776,6 +952,12 @@ mol_result_t mol_engine_get_state(const mol_engine_t* engine, mol_engine_state_t
   state->scale_mapping = engine->scale_mapping;
   state->chord_mode = engine->chord_mode;
   state->sustain = engine->sustain;
+  state->transport_frame = engine->transport_frame;
+  state->tempo = (float)engine->tempo_milli_bpm / 1000.0f;
+  state->time_signature_numerator = engine->time_signature_numerator;
+  state->time_signature_denominator = engine->time_signature_denominator;
+  state->transport_running = engine->transport_running;
+  state->metronome_enabled = engine->metronome_enabled;
   return MOL_OK;
 }
 
@@ -785,5 +967,6 @@ mol_capability_flags_t mol_engine_get_capabilities(const mol_engine_t* engine) {
   }
   return MOL_CAPABILITY_CALLER_MEMORY | MOL_CAPABILITY_INTERLEAVED_F32 | MOL_CAPABILITY_PLANAR_F32 |
          MOL_CAPABILITY_POLYPHONIC_SYNTH | MOL_CAPABILITY_SAMPLE_ACCURATE_COMMANDS |
-         MOL_CAPABILITY_SCALE_LOCK | MOL_CAPABILITY_CHORD_MODE | MOL_CAPABILITY_CONTINUOUS_SUSTAIN;
+         MOL_CAPABILITY_SCALE_LOCK | MOL_CAPABILITY_CHORD_MODE | MOL_CAPABILITY_CONTINUOUS_SUSTAIN |
+         MOL_CAPABILITY_TRANSPORT | MOL_CAPABILITY_METRONOME;
 }
