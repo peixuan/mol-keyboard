@@ -149,15 +149,22 @@ if(NOT CMAKE_CROSSCOMPILING AND (MOL_BUILD_TOOLS OR MOL_BUILD_DAEMON OR MOL_BUIL
   mol_enable_warnings(mol_service_control)
   mol_enable_optional_instrumentation(mol_service_control)
 
-  add_library(mol_local_ipc STATIC src/control/local_ipc.cpp src/control/service_paths.cpp)
+  find_package(Threads REQUIRED)
+  add_library(
+    mol_local_ipc STATIC src/control/local_ipc.cpp src/control/loopback_websocket.cpp
+                         src/control/service_paths.cpp)
   add_library(mol::local_ipc ALIAS mol_local_ipc)
   target_include_directories(mol_local_ipc PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/control)
   target_compile_features(mol_local_ipc PUBLIC cxx_std_17)
+  target_link_libraries(mol_local_ipc PUBLIC Threads::Threads)
   set_target_properties(mol_local_ipc PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
   mol_enable_warnings(mol_local_ipc)
   mol_enable_optional_instrumentation(mol_local_ipc)
   if(MSVC)
     target_compile_definitions(mol_local_ipc PRIVATE _CRT_SECURE_NO_WARNINGS)
+  endif()
+  if(WIN32)
+    target_link_libraries(mol_local_ipc PRIVATE ws2_32)
   endif()
   if(MOL_BUILD_FUZZERS AND WIN32)
     target_compile_definitions(

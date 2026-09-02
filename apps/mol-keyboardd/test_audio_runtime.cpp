@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -42,6 +43,19 @@ int main() {
   if (runtime.snapshot(state) != MOL_OK || state.sample_rate == 0u || state.channel_count != 2u ||
       state.current_frame == 0u) {
     std::fprintf(stderr, "Runtime state snapshot failed\n");
+    return 1;
+  }
+  std::array<mol_event_t, 64u> events{};
+  const std::size_t event_count = runtime.poll_events(events.data(), events.size());
+  bool received_note_started = false;
+  for (std::size_t index = 0u; index < event_count; ++index) {
+    received_note_started =
+        received_note_started ||
+        (events[index].event_type == MOL_EVENT_NOTE_STARTED && events[index].gesture_id == 99u &&
+         events[index].payload[MOL_EVENT_PAYLOAD_NOTE] == 60u);
+  }
+  if (!received_note_started) {
+    std::fprintf(stderr, "Runtime event transport did not receive note start\n");
     return 1;
   }
 

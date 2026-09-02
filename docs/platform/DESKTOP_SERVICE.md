@@ -1,13 +1,36 @@
 # Desktop headless service
 
 `mol-keyboardd` runs in the foreground as the current user and does not open a
-window, Web server, or LAN listener. It uses a Windows Named Pipe or POSIX Unix
-domain socket for local JSON-RPC. Start it manually with:
+window, Web server, or LAN listener by default. It uses a Windows Named Pipe or
+POSIX Unix domain socket for local JSON-RPC. Start it manually with:
 
 ```sh
 mol-keyboardd
 molctl status
 ```
+
+## Browser controller
+
+The optional browser control endpoint must be enabled explicitly and only binds
+the IPv4 loopback interface. Every allowed Web origin is an exact match; no
+wildcards are accepted. For the Vite development server, run:
+
+```sh
+mol-keyboardd --websocket-port 8766 --web-origin http://127.0.0.1:4173
+```
+
+The service prints a `ws://127.0.0.1:8766/control` endpoint and a fresh 256-bit
+session token after startup. Enter both in the Web UI. The UI clears the token
+field after a successful connection and never persists it. Restart the service
+to rotate the token. Do not put the token in source files, shell history, URLs
+that are shared with other people, or diagnostic reports.
+
+The server checks the peer address, exact `Origin`, token, WebSocket masking and
+UTF-8, and applies the same 64 KiB bound as local IPC. It accepts JSON-RPC text
+frames only. Invalid binary, fragmented, oversized, or malformed frames are
+closed. Core events are copied out of the audio callback through a fixed-size
+SPSC queue and delivered as bounded `engine.events` notifications; the network
+thread never runs in the audio callback.
 
 Use `--null-backend` for service, CI, and diagnostics on a machine without an
 audio device. A paired Bluetooth speaker works when the operating system exposes

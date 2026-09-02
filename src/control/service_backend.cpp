@@ -507,6 +507,7 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
     result["device_notifications"] = Json::number(metrics.device_notifications);
     result["device_reroutes"] = Json::number(metrics.device_reroutes);
     result["dropped_commands"] = Json::number(metrics.dropped_commands);
+    result["dropped_events"] = Json::number(metrics.dropped_events);
     result["input_events"] = Json::number(metrics.input_events);
     result["non_finite_samples"] = Json::number(metrics.non_finite_samples);
     result["render_failures"] = Json::number(metrics.render_failures);
@@ -712,7 +713,8 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
     return ok_result();
   }
   if (method == "performance.control") {
-    allow_members(params, {"control", "value", "mode", "rate", "gate", "octaves", "random_seed"});
+    allow_members(params, {"control", "value", "mode", "rate", "gate", "octaves", "random_seed",
+                           "enabled", "level", "time_ms", "type", "tonic", "mapping"});
     const std::string control = string_value(required(params, "control"), "control", 32u);
     mol_command_t value = command(MOL_COMMAND_SUSTAIN);
     if (control == "arpeggiator") {
@@ -735,6 +737,35 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
       require_ok(runtime_.submit(value), "performance control");
       return ok_result();
     }
+    if (control == "scale") {
+      value.command_type = MOL_COMMAND_SET_SCALE;
+      value.payload.scale.type = static_cast<std::uint32_t>(
+          u64_value(required(params, "type"), "type", MOL_SCALE_TYPE_COUNT - 1u));
+      value.payload.scale.tonic =
+          static_cast<std::uint8_t>(u64_value(required(params, "tonic"), "tonic", 11u));
+      value.payload.scale.mapping = static_cast<std::uint8_t>(
+          u64_value(required(params, "mapping"), "mapping", MOL_SCALE_MAPPING_COUNT - 1u));
+      require_ok(runtime_.submit(value), "performance control");
+      return ok_result();
+    }
+    if (control == "metronome") {
+      value.command_type = MOL_COMMAND_SET_METRONOME;
+      value.payload.metronome.enabled =
+          bool_value(required(params, "enabled"), "enabled") ? 1u : 0u;
+      value.payload.metronome.level =
+          static_cast<float>(real_value(required(params, "level"), "level", 0.0, 1.0));
+      require_ok(runtime_.submit(value), "performance control");
+      return ok_result();
+    }
+    if (control == "portamento") {
+      value.command_type = MOL_COMMAND_SET_PORTAMENTO;
+      value.payload.portamento.mode = static_cast<std::uint32_t>(
+          u64_value(required(params, "mode"), "mode", MOL_PORTAMENTO_MODE_COUNT - 1u));
+      value.payload.portamento.time_ms =
+          static_cast<float>(real_value(required(params, "time_ms"), "time_ms", 0.0, 2000.0));
+      require_ok(runtime_.submit(value), "performance control");
+      return ok_result();
+    }
     const double scalar = real_value(required(params, "value"), "value", -24.0, 24.0);
     if (control == "sustain") {
       if (scalar < 0.0 || scalar > 1.0) throw RpcError(kInvalidParams, "sustain must be 0..1");
@@ -749,6 +780,16 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
       value.payload.scalar.value = static_cast<float>(scalar);
     } else if (control == "chord") {
       value.command_type = MOL_COMMAND_SET_CHORD_MODE;
+      value.payload.integer.value = static_cast<std::int32_t>(scalar);
+    } else if (control == "octave") {
+      if (scalar < -3.0 || scalar > 3.0 || scalar != std::trunc(scalar))
+        throw RpcError(kInvalidParams, "octave must be an integer from -3..3");
+      value.command_type = MOL_COMMAND_SET_OCTAVE_SHIFT;
+      value.payload.integer.value = static_cast<std::int32_t>(scalar);
+    } else if (control == "transpose") {
+      if (scalar != std::trunc(scalar))
+        throw RpcError(kInvalidParams, "transpose must be an integer from -24..24");
+      value.command_type = MOL_COMMAND_SET_TRANSPOSE;
       value.payload.integer.value = static_cast<std::int32_t>(scalar);
     } else {
       throw RpcError(kInvalidParams, "unknown performance control: " + control);

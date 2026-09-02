@@ -219,6 +219,14 @@ int main() {
     dispatch(dispatcher, "performance.control", "{\"control\":\"sustain\",\"value\":1}");
     dispatch(dispatcher, "performance.control",
              "{\"control\":\"arpeggiator\",\"mode\":1,\"rate\":3}");
+    dispatch(dispatcher, "performance.control",
+             "{\"control\":\"scale\",\"type\":1,\"tonic\":2,\"mapping\":0}");
+    dispatch(dispatcher, "performance.control",
+             "{\"control\":\"metronome\",\"enabled\":true,\"level\":0.5}");
+    dispatch(dispatcher, "performance.control",
+             "{\"control\":\"portamento\",\"mode\":1,\"time_ms\":120}");
+    dispatch(dispatcher, "performance.control", "{\"control\":\"octave\",\"value\":1}");
+    dispatch(dispatcher, "performance.control", "{\"control\":\"transpose\",\"value\":-2}");
     dispatch(dispatcher, "performance.noteOff", "{\"gesture\":42}");
     dispatch(dispatcher, "recording.stop", "{\"name\":\"take.molseq\"}");
     const molseq::Json recordings = dispatch(dispatcher, "recording.list");

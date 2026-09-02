@@ -44,6 +44,7 @@ struct RuntimeMetrics {
   std::uint64_t device_notifications = 0u;
   std::uint64_t device_reroutes = 0u;
   std::uint64_t input_events = 0u;
+  std::uint64_t dropped_events = 0u;
 };
 
 struct BenchmarkResult {

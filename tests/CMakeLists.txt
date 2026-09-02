@@ -96,6 +96,17 @@ if(TARGET mol_local_ipc)
   mol_enable_warnings(mol_local_ipc_tests)
   mol_enable_optional_instrumentation(mol_local_ipc_tests)
   add_test(NAME mol_local_ipc_tests COMMAND mol_local_ipc_tests)
+
+  add_executable(mol_loopback_websocket_tests unit/test_loopback_websocket.cpp)
+  target_link_libraries(mol_loopback_websocket_tests PRIVATE mol::local_ipc Threads::Threads)
+  set_target_properties(
+    mol_loopback_websocket_tests PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
+  mol_enable_warnings(mol_loopback_websocket_tests)
+  mol_enable_optional_instrumentation(mol_loopback_websocket_tests)
+  if(WIN32)
+    target_link_libraries(mol_loopback_websocket_tests PRIVATE ws2_32)
+  endif()
+  add_test(NAME mol_loopback_websocket_tests COMMAND mol_loopback_websocket_tests)
 endif()
 
 add_executable(mol_recording_tests unit/test_recording.c)

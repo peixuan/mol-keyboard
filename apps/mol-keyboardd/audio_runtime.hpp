@@ -2,9 +2,11 @@
 #ifndef MOL_KEYBOARDD_AUDIO_RUNTIME_HPP_
 #define MOL_KEYBOARDD_AUDIO_RUNTIME_HPP_
 
+#include <cstddef>
 #include <memory>
 #include <string>
 
+#include "mol/event.h"
 #include "service_runtime.hpp"
 
 namespace molkeyboardd {
@@ -37,6 +39,7 @@ class AudioRuntime final : public molcontrol::ServiceRuntime {
   void request_shutdown() override;
 
   [[nodiscard]] bool shutdown_requested() const;
+  std::size_t poll_events(mol_event_t* events, std::size_t capacity) noexcept;
 
  private:
   class Impl;

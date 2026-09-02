@@ -28,6 +28,8 @@ namespace {
 constexpr std::size_t kEngineMemoryBytes = 1048576u;
 constexpr std::size_t kCommandQueueCapacity = 1024u;
 constexpr std::size_t kCommandQueueMask = kCommandQueueCapacity - 1u;
+constexpr std::size_t kEventQueueCapacity = 2048u;
+constexpr std::size_t kEventQueueMask = kEventQueueCapacity - 1u;
 constexpr ma_uint32 kChannelCount = 2u;
 constexpr ma_uint32 kRequestedPeriodFrames = 128u;
 constexpr ma_uint32 kRequestedPeriods = 3u;
@@ -35,6 +37,8 @@ constexpr ma_uint32 kMaximumCommandsPerCallback = 256u;
 
 static_assert((kCommandQueueCapacity & kCommandQueueMask) == 0u,
               "command queue capacity must be a power of two");
+static_assert((kEventQueueCapacity & kEventQueueMask) == 0u,
+              "event queue capacity must be a power of two");
 
 struct EngineMemory {
   alignas(std::max_align_t) std::array<unsigned char, kEngineMemoryBytes> bytes{};
@@ -102,6 +106,31 @@ class CommandQueue {
   std::array<Cell, kCommandQueueCapacity> cells_{};
   std::atomic<std::size_t> enqueue_position_{0u};
   std::atomic<std::size_t> dequeue_position_{0u};
+};
+
+class EventQueue {
+ public:
+  bool push(const mol_event_t& event) noexcept {
+    const std::size_t head = head_.load(std::memory_order_relaxed);
+    const std::size_t next = (head + 1u) & kEventQueueMask;
+    if (next == tail_.load(std::memory_order_acquire)) return false;
+    events_[head] = event;
+    head_.store(next, std::memory_order_release);
+    return true;
+  }
+
+  bool pop(mol_event_t& event) noexcept {
+    const std::size_t tail = tail_.load(std::memory_order_relaxed);
+    if (tail == head_.load(std::memory_order_acquire)) return false;
+    event = events_[tail];
+    tail_.store((tail + 1u) & kEventQueueMask, std::memory_order_release);
+    return true;
+  }
+
+ private:
+  std::array<mol_event_t, kEventQueueCapacity> events_{};
+  std::atomic<std::size_t> head_{0u};
+  std::atomic<std::size_t> tail_{0u};
 };
 
 #if defined(_WIN32)
@@ -172,6 +201,7 @@ class AudioRuntime::Impl {
   void maintenance_loop();
   void shutdown_device(bool shutdown_engine = true);
   void drain_commands() noexcept;
+  void drain_events() noexcept;
   mol_result_t synchronize(mol_engine_state_t* state, const molseq::SequenceDocument* load,
                            molseq::SequenceDocument* recording);
   static void data_callback(ma_device* device, void* output, const void* input,
@@ -189,6 +219,7 @@ class AudioRuntime::Impl {
   std::unique_ptr<PhysicalInputAdapter> physical_input = make_physical_input_adapter();
   mol_engine_t* engine = nullptr;
   CommandQueue commands;
+  EventQueue events;
   molcontrol::AudioStatus status;
   std::string input_id;
   std::atomic<bool> shutdown_requested{false};
@@ -205,6 +236,7 @@ class AudioRuntime::Impl {
   std::atomic<std::uint64_t> device_notifications{0u};
   std::atomic<std::uint64_t> device_reroutes{0u};
   std::atomic<std::uint64_t> input_events{0u};
+  std::atomic<std::uint64_t> dropped_events{0u};
 };
 
 bool AudioRuntime::Impl::initialize_context(bool use_null_backend, std::string& error) {
@@ -420,6 +452,18 @@ void AudioRuntime::Impl::drain_commands() noexcept {
   }
 }
 
+void AudioRuntime::Impl::drain_events() noexcept {
+  if (engine == nullptr) return;
+  std::array<mol_event_t, 64u> batch{};
+  std::uint32_t count = 0u;
+  do {
+    count = mol_engine_poll_events(engine, batch.data(), static_cast<std::uint32_t>(batch.size()));
+    for (std::uint32_t index = 0u; index < count; ++index) {
+      if (!events.push(batch[index])) dropped_events.fetch_add(1u, std::memory_order_relaxed);
+    }
+  } while (count == batch.size());
+}
+
 mol_result_t AudioRuntime::Impl::synchronize(mol_engine_state_t* state,
                                              const molseq::SequenceDocument* load,
                                              molseq::SequenceDocument* recording) {
@@ -434,6 +478,7 @@ mol_result_t AudioRuntime::Impl::synchronize(mol_engine_state_t* state,
   drain_commands();
   std::array<float, 2u> output{};
   mol_result_t result = mol_engine_render_interleaved_f32(engine, output.data(), 1u, kChannelCount);
+  drain_events();
   if (result == MOL_OK && load != nullptr)
     result = mol_engine_load_sequence(engine, &load->config, load->events.data(),
                                       static_cast<std::uint32_t>(load->events.size()));
@@ -478,6 +523,7 @@ void AudioRuntime::Impl::data_callback(ma_device* device_pointer, void* output, 
     impl->render_failures.fetch_add(1u, std::memory_order_relaxed);
     return;
   }
+  impl->drain_events();
   std::uint64_t invalid = 0u;
   for (std::size_t index = 0u; index < sample_count; ++index) {
     if (!std::isfinite(samples[index])) {
@@ -547,6 +593,7 @@ molcontrol::RuntimeMetrics AudioRuntime::metrics() const {
   result.device_notifications = impl_->device_notifications.load(std::memory_order_relaxed);
   result.device_reroutes = impl_->device_reroutes.load(std::memory_order_relaxed);
   result.input_events = impl_->input_events.load(std::memory_order_relaxed);
+  result.dropped_events = impl_->dropped_events.load(std::memory_order_relaxed);
   return result;
 }
 
@@ -710,6 +757,13 @@ void AudioRuntime::request_shutdown() {
 
 bool AudioRuntime::shutdown_requested() const {
   return impl_->shutdown_requested.load(std::memory_order_acquire);
+}
+
+std::size_t AudioRuntime::poll_events(mol_event_t* events, std::size_t capacity) noexcept {
+  if (events == nullptr && capacity != 0u) return 0u;
+  std::size_t count = 0u;
+  while (count < capacity && impl_->events.pop(events[count])) ++count;
+  return count;
 }
 
 }  // namespace molkeyboardd
