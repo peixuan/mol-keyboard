@@ -117,7 +117,7 @@ if(NOT CMAKE_CROSSCOMPILING AND (MOL_BUILD_TOOLS OR MOL_BUILD_DAEMON OR MOL_BUIL
   mol_enable_warnings(mol_json)
   mol_enable_optional_instrumentation(mol_json)
 
-  add_library(mol_jsonrpc STATIC src/control/jsonrpc.cpp)
+  add_library(mol_jsonrpc STATIC src/control/jsonrpc.cpp src/control/service_rpc.cpp)
   add_library(mol::jsonrpc ALIAS mol_jsonrpc)
   target_include_directories(mol_jsonrpc PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/control)
   target_link_libraries(mol_jsonrpc PUBLIC mol::json)

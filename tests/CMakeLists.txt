@@ -68,6 +68,14 @@ if(TARGET mol_jsonrpc)
   mol_enable_warnings(mol_jsonrpc_tests)
   mol_enable_optional_instrumentation(mol_jsonrpc_tests)
   add_test(NAME mol_jsonrpc_tests COMMAND mol_jsonrpc_tests)
+
+  add_executable(mol_service_rpc_tests unit/test_service_rpc.cpp)
+  target_link_libraries(mol_service_rpc_tests PRIVATE mol::jsonrpc)
+  set_target_properties(mol_service_rpc_tests PROPERTIES CXX_EXTENSIONS OFF
+                                                         CXX_STANDARD_REQUIRED ON)
+  mol_enable_warnings(mol_service_rpc_tests)
+  mol_enable_optional_instrumentation(mol_service_rpc_tests)
+  add_test(NAME mol_service_rpc_tests COMMAND mol_service_rpc_tests)
 endif()
 
 add_executable(mol_recording_tests unit/test_recording.c)
