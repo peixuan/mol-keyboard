@@ -3,8 +3,8 @@
 | Gate | State | Evidence |
 |---|---|---|
 | M0 engineering baseline | passed | Windows x64 and Wasm Debug/Release tests pass; C/C++ consumers link; ESP32 and ESP32-S3 firmware compile the same ISO C11 core with ESP-IDF 6.1 |
-| M1 portable sound path | in progress | Native/Wasm synthesis, deterministic PCM16 WAV, real Windows WASAPI and browser AudioWorklet runtime paths, and ESP32/ESP32-S3 I2S firmware builds are verified; mobile platform call entries pending |
-| M2 music semantics | not started | Depends on M1 |
+| M1 portable sound path | passed | Same C4 sequence is 261.25 Hz with finite output in Native, Wasm, and the ESP32 32 kHz core path; allocation-free desktop/worklet/I2S callbacks and Android Oboe, Apple AudioUnit, and Harmony OHAudio call entries exist |
+| M2 music semantics | in progress | Highest unmet gate after M1 |
 | M3 instruments and DSP | not started | Depends on M2 |
 | M4 recording and tools | not started | Depends on M3 |
 | M5 desktop headless product | not started | Depends on M4 |

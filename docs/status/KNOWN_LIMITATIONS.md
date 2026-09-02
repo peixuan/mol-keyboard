@@ -1,6 +1,7 @@
 # Known Limitations
 
-The repository has completed M0 and is implementing M1. The native core and
+The repository has completed the M0 and M1 architecture gates and is
+implementing M2. The native core and
 PCM16 WAV renderer produce a single polyBLEP saw instrument with ADSR and fixed
 polyphony, and the same core runs in a verified browser AudioWorklet and Windows
 WASAPI callback. There is not yet a service, complete PWA, or end-user
@@ -16,3 +17,9 @@ and Ninja 1.13.2 in its developer environment. Emscripten 6.0.5 and ESP-IDF 6.1
 are provisioned in ignored local caches. Hardware, background-audio, latency,
 long-duration underrun, end-to-end latency, and device-routing recovery claims
 therefore remain unverified.
+
+Android, Apple, and HarmonyOS currently provide M1 native call entries, not
+complete applications. The Android and Harmony sources pass strict host-side
+source compilation; the Apple entry is source-reviewed only. Platform SDK
+builds, packaging/signing, legal background-audio integration, actual
+low-latency status, and physical-device tests remain M7/M8 work.

@@ -2,13 +2,13 @@
 
 ## Current milestone
 
-M0 portability baseline and M1 portable sound path.
+M2 complete music semantics. M0 and M1 are complete.
 
 ## Last verified commit
 
-`674adf0` (`build: pin audited miniaudio dependency`) is the last verified
-commit. The desktop realtime host below was verified in the current worktree
-and will be committed atomically.
+`c28512c` (`feat(harmony): add OHAudio Node-API entry`) is the last verified
+commit. Native Debug/Release and WebAssembly Debug/Release were rebuilt and
+tested after that change on 2026-09-02.
 
 ## Completed requirements
 
@@ -60,14 +60,37 @@ and will be committed atomically.
   109 callbacks/52,320 frames, measured C4 at 261.25 Hz, and reported zero
   render failures and non-finite samples. The reported three 480-frame native
   periods are a 30 ms buffer-duration estimate, not an end-to-end latency claim.
+- A shared, fixed-memory platform audio runtime gives native hosts one C11
+  command/render path and accepts variable callback sizes without allocation.
+- Oboe 1.10.0 is pinned by exact commit, archive hash, license snapshot, notices,
+  SBOM, and the automated dependency audit.
+- Android has a Kotlin-to-JNI-to-Oboe entry for arm64 and x86_64. Its callback
+  renders float PCM directly and publishes disconnection diagnostics without a
+  JVM callback or lifecycle work on the realtime thread.
+- Apple has an Objective-C++ AudioUnit entry with AVAudioSession playback setup
+  and interruption, route-change, and media-services-reset handling. PCM stays
+  inside the native render callback.
+- HarmonyOS has an ArkTS-to-Node-API-to-OHAudio entry. Node-API transfers only
+  lifecycle, bounded commands, and status; the OHAudio callback renders directly
+  through the shared runtime and reports underflow/route/interruption diagnostics.
+- Android and Harmony native sources compile in both MSVC configurations under
+  warnings-as-errors using declaration-only platform header subsets. Apple is
+  source-reviewed because Objective-C++ requires an unavailable Apple SDK.
+- The M1 gate is complete: the same C4 sequence measures 261.25 Hz in Native,
+  Wasm, and the ESP32 32 kHz core path, all analyzed samples are finite, the
+  callbacks are allocation-free, and every required platform call entry exists.
 
 ## In-progress work
 
-- Android, Apple, and Harmony native call entries.
+- M2 music semantics: 30-key mapping, octave/transpose, scale lock, chord mode,
+  sustain, portamento, transport, metronome, arpeggiator, gesture ownership,
+  sample-accurate scheduling, and property tests.
 
 ## Blocked platform checks
 
-- Android NDK, Apple SDKs, and HarmonyOS SDKs have not been discovered or verified.
+- Android NDK, Apple SDKs, and DevEco/HarmonyOS SDKs have not been discovered or
+  verified. An official Android NDK download was attempted but the endpoint was
+  unreachable from this host.
 - Physical devices and signing credentials have not been provided.
 
 ## Exact validation commands
@@ -88,8 +111,9 @@ build/dev-release/apps/mol-play/mol-play --duration 1.05 --note 60 --velocity 0.
 
 The evidence render was 384,044 bytes with peak 0.19609803, RMS 0.06978670,
 zero clipped samples, zero non-finite samples, and zero underruns.
-Both native configurations pass 9/9 CTest tests, including dependency audit,
+Both native configurations pass 10/10 CTest tests, including dependency audit,
 device enumeration, and the one-second null-backend realtime callback test.
+They also compile the Android and Harmony native entries under warnings-as-errors.
 
 With the pinned Emscripten SDK environment active:
 
@@ -102,7 +126,7 @@ cmake --build --preset wasm-release
 ctest --preset wasm-release
 ```
 
-Both configurations passed 7/7 tests on 2026-09-02. One test audits the locked
+Both configurations passed 8/8 tests on 2026-09-02. One test audits the locked
 dependencies and license snapshot. The worklet conformance test loads the
 single-file worklet artifact in a mocked worklet global and verifies stereo C4,
 finite output, message-driven note control, and release to silence. The browser
@@ -130,8 +154,10 @@ above. Physical I2S playback and sustained-run counters remain unverified.
   activated through its documented toolchain environment.
 - Visual Studio 2026 Developer Command Prompt 18.8.0 provides MSVC 19.51.36248
   and Ninja 1.13.2; both Debug and Release validation succeeded on 2026-09-02.
+- Apple source compilation, Android NDK builds, and HarmonyOS builds cannot run
+  on the currently available host; their status documents do not claim otherwise.
 
 ## Next highest-priority task
 
-Add the Android, Apple, and Harmony native call entries required to complete
-the M1 portability gate.
+Implement M2's complete deterministic music-command semantics and cross-Native/
+Wasm event-stream conformance before expanding platform product shells.

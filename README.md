@@ -16,7 +16,9 @@ It does not contain code or assets from an earlier MoL Keyboard project.
 
 ## Current status / 当前状态
 
-Development starts with a freestanding-friendly ISO C11 core. Platform claims
+The M0 engineering baseline and M1 portable sound-path gate are complete;
+development is now implementing M2 music semantics on the
+freestanding-friendly ISO C11 core. Platform claims
 are recorded only after real builds or runtime checks. See
 [`docs/status/IMPLEMENTATION_STATUS.md`](docs/status/IMPLEMENTATION_STATUS.md)
 and [`docs/status/PLATFORM_MATRIX.md`](docs/status/PLATFORM_MATRIX.md) for current
