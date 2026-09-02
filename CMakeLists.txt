@@ -117,6 +117,19 @@ if(NOT CMAKE_CROSSCOMPILING AND (MOL_BUILD_TOOLS OR MOL_BUILD_DAEMON OR MOL_BUIL
   mol_enable_warnings(mol_json)
   mol_enable_optional_instrumentation(mol_json)
 
+  add_library(mol_sequence_document STATIC apps/mol-seq/sequence_document.cpp)
+  add_library(mol::sequence_document ALIAS mol_sequence_document)
+  target_include_directories(mol_sequence_document PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/apps/mol-seq)
+  target_link_libraries(mol_sequence_document PUBLIC mol::core mol::json)
+  target_compile_features(mol_sequence_document PUBLIC cxx_std_17)
+  set_target_properties(mol_sequence_document PROPERTIES CXX_EXTENSIONS OFF
+                                                         CXX_STANDARD_REQUIRED ON)
+  mol_enable_warnings(mol_sequence_document)
+  mol_enable_optional_instrumentation(mol_sequence_document)
+  if(MSVC)
+    target_compile_definitions(mol_sequence_document PRIVATE _CRT_SECURE_NO_WARNINGS)
+  endif()
+
   add_library(mol_jsonrpc STATIC src/control/jsonrpc.cpp src/control/service_rpc.cpp)
   add_library(mol::jsonrpc ALIAS mol_jsonrpc)
   target_include_directories(mol_jsonrpc PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/control)
