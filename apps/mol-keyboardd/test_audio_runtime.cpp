@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include "audio_runtime.hpp"
 
@@ -77,6 +78,14 @@ int main() {
   }
   const molcontrol::AudioStatus audio = runtime.audio_status();
   if (!audio.available || !audio.null_sink || audio.backend != "Null") return 1;
+  const std::vector<molcontrol::DeviceInfo> inputs = runtime.input_devices();
+  for (const molcontrol::DeviceInfo& input : inputs) {
+    if (!input.is_physical_input) continue;
+    if (runtime.attach_input(input.id) != MOL_OK || runtime.active_input_id() != input.id ||
+        runtime.detach_input() != MOL_OK)
+      return 1;
+    break;
+  }
   runtime.request_shutdown();
   if (!runtime.shutdown_requested()) return 1;
   runtime.stop();
