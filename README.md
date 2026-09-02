@@ -17,9 +17,9 @@ It does not contain code or assets from an earlier MoL Keyboard project.
 ## Current status / 当前状态
 
 The M0-M4 quality gates and the M5 desktop and M6 Web/PWA implementations are
-complete; development is now implementing the Android and iOS product shells
-around the freestanding-friendly ISO C11 core. Platform claims are recorded
-only after real builds or runtime checks. See
+complete. The Android application is dual-ABI build-verified and
+runtime-verified on an Android 15 emulator; iOS is the current M7 implementation
+gate. Platform claims are recorded only after real builds or runtime checks. See
 [`docs/status/IMPLEMENTATION_STATUS.md`](docs/status/IMPLEMENTATION_STATUS.md)
 and [`docs/status/PLATFORM_MATRIX.md`](docs/status/PLATFORM_MATRIX.md) for current
 evidence.
@@ -100,10 +100,17 @@ executes in the complete offline-capable Web/PWA instrument and builds into
 ESP32/ESP32-S3 firmware with a configurable I2S host. From `apps/web`, run
 `npm ci` followed by `npm run build` or `npm run test:browser`.
 
+The Android application packages the same local UI and renders exclusively
+through JNI, Oboe/AAudio, and the C core. Build it with
+`platforms/android/build-app.ps1 Debug` (or `build-app.sh` on POSIX hosts); see
+[`platforms/android/README.md`](platforms/android/README.md) for the pinned SDK
+and emulator test commands.
+
 `mol-keyboardd` 与 `molctl` 已可在无界面模式下通过仅限本机的 IPC 完成演奏、音色切换、
 录音、回放和诊断；无音频设备的机器可使用 `--null-backend`。同一份 C 核心也已在
 完整的离线 Web/PWA 乐器中通过验证，并构建为带可配置 I2S 宿主的 ESP32/ESP32-S3
-固件。当前继续实现 Android 与 iOS 产品外壳。
+固件。Android 双 ABI 应用已完成构建，并在 Android 15 模拟器上通过
+UI→JNI→Oboe/AAudio→C 核心及后台/锁屏生命周期验证；当前继续实现 iOS 应用。
 
 ## Platform boundaries / 平台边界
 

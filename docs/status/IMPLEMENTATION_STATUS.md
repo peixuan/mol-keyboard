@@ -2,17 +2,19 @@
 
 ## Current milestone
 
-M6 Web/PWA implementation is complete and runtime-verified in current Chrome,
-Edge, Firefox, and mobile-emulated Chromium. Physical Bluetooth/evdev,
-macOS/Safari, and physical mobile acceptance remain environment-blocked. M7
-Android/iOS is the highest gate with locally actionable implementation work.
-M0 through M4 and the M5 desktop implementation are complete.
+M7 Android/iOS is active. The Android application is implementation-complete,
+dual-ABI build-verified, and runtime-verified on an Android 15 x86_64 emulator.
+iOS is now the highest locally actionable implementation gate. Physical
+Bluetooth/evdev, macOS/Safari, and physical mobile acceptance remain
+environment-blocked. M0 through M4, the M5 desktop implementation, and the M6
+Web/PWA implementation are complete.
 
 ## Last verified commit
 
-`601f0b7` (`fix(web): handle audio suspension and device changes`) is the last
-verified code commit. The validation below was run on 2026-09-03 after that
-commit. Documentation changes do not alter binaries.
+`ed73cb3` (`test(android): verify native audio lifecycle on emulator`) is the
+last verified product-code commit. The validation below was run on 2026-09-03
+after the subsequent dependency and CI commits. Documentation changes do not
+alter binaries.
 
 ## Completed requirements
 
@@ -27,7 +29,7 @@ commit. Documentation changes do not alter binaries.
 - The M1 path renders measured C4 through Native, WebAssembly/AudioWorklet,
   desktop miniaudio, and the ESP32 core/I2S host. Android Oboe, Apple AudioUnit,
   and Harmony OHAudio native entries use the shared fixed-memory callback
-  runtime; unavailable SDK/device validation remains explicitly unclaimed.
+  runtime; Apple and Harmony SDK/device validation remains explicitly unclaimed.
 - M2 implements the 30-key map, octave and transpose, eight scales and twelve
   tonics, ten chord modes, sustain, six deterministic arpeggiator modes and six
   rates, monophonic portamento, transport, time signatures, and metronome. The
@@ -91,12 +93,23 @@ commit. Documentation changes do not alter binaries.
   matrix passed 15 applicable cases with 21 explicit capability skips. Detailed
   evidence and the unclaimed Safari boundary are in
   `docs/web/M6_WEB_EVIDENCE.md`.
+- The Android application packages that same complete local UI without network
+  permission, uses a bounded allow-listed JS bridge, and runs the shared core
+  through JNI and Oboe in a legal `mediaPlayback` foreground service. Debug,
+  unsigned Release, instrumentation, lint, both required ABIs, configurable
+  application ID, privacy/notices packaging, route/focus handlers, foreground
+  hardware keys, and private recording persistence are implemented.
+- The Android 15 x86_64 emulator exercised the real packaged UI-to-AAudio path
+  at 48 kHz with zero render/non-finite failures. Callback count advanced from
+  162 in background to 263 with the screen off, then the idle background stream
+  and foreground state stopped. Detailed evidence and physical-device
+  boundaries are in `docs/mobile/M7_ANDROID_EVIDENCE.md`.
 
 ## In-progress work
 
-- M7: build complete Android and iOS applications around their existing native
-  audio entries, including packaged UI, foreground/background policy, physical
-  keyboard input, route/interruption handling, and privacy metadata.
+- M7: build the complete iOS application around the existing AudioUnit entry,
+  including packaged UI, AVAudioSession lifecycle, background policy, hardware
+  keyboard input, route/interruption handling, storage, and privacy metadata.
 
 ## Blocked platform checks
 
@@ -107,7 +120,8 @@ commit. Documentation changes do not alter binaries.
   physical evdev keyboard nor native Linux audio hardware. Those M5 acceptance
   paths and macOS compilation/runtime remain unverified.
 - Physical Android/Apple/Harmony/ESP32 devices, signing credentials, and
-  long-run device time are not available. No device-verified status is claimed.
+  long-run device time are not available. The Android emulator result is not
+  promoted to device verification.
 
 ## Exact validation commands and results
 
@@ -147,11 +161,33 @@ Emscripten 6.0.5 and Node.js 22.16.0 passed 24/24 tests in Debug and LTO
 MinSizeRel. Both configurations match the Native event, sequence-fixture, and
 18-preset audio-metric goldens.
 
-The production Web bundle passed 9/9 Node tests. Playwright 1.62.1 ran 36
+The production Web bundle passed 11/11 Node tests. Playwright 1.62.1 ran 36
 browser project/test combinations: 15 applicable cases passed and 21 were
 explicitly skipped by capability. System Chrome 151.0.7922.175, system Edge
 152.0.4191.53, Firefox 153.0, Chromium 151.0.7922.34 mobile emulation, and
 WebKit 26.5 desktop/mobile rendering were covered. Actual Safari is not claimed.
+
+With JDK 21, Android API 36, Build Tools 36.0.0, NDK 28.2.13676358, and CMake
+3.31.6 installed:
+
+```powershell
+& "$env:EMSDK/emsdk_env.ps1"
+platforms/android/build-app.ps1 Debug
+$env:MOL_SKIP_WEB_BUILD = "1"
+platforms/android/build-app.ps1 DebugAndroidTest
+platforms/android/build-app.ps1 Release
+Push-Location platforms/android
+./gradlew.bat :app:lintDebug --no-daemon --no-configuration-cache
+Pop-Location
+```
+
+The reproducible Debug pipeline passed 24/24 Wasm tests, 11/11 Web tests,
+TypeScript strict checking, the production UI build, and the dual-ABI Android
+build. Debug, unsigned Release, device-test APKs, R8/lintVital, and full Debug
+lint all passed. The official Android 15/API 35 x86_64 emulator returned AAudio
+API 2, 48 kHz, 36,480 rendered frames at the foreground checkpoint, 162
+background callbacks, 263 screen-off callbacks, no render/non-finite failure,
+successful idle shutdown, and instrumentation code `-1`.
 
 For sanitizer and Patch fuzz validation, activate the Visual Studio environment
 and place Clang 22 on `PATH`:
@@ -189,7 +225,7 @@ results.
 
 ## Next highest-priority task
 
-Implement M7 Android/iOS applications, starting with reproducible Android
-arm64-v8a/x86_64 builds and a packaged local Web UI connected through a bounded
-versioned bridge. Keep Apple/Safari and other physical-device checks explicit
-until matching hardware and toolchains are available.
+Implement the M7 iOS application around the build-reviewed AudioUnit host and
+package the shared local UI through WKWebView. Keep Apple/Safari and all
+physical-device checks explicit until matching hardware and toolchains are
+available.

@@ -40,8 +40,9 @@ app/build/outputs/apk/release/app-release-unsigned.apk
 app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 ```
 
-The release APK is release-ready but intentionally unsigned. Production
-signing credentials must stay outside the repository.
+The Release APK uses R8/resource shrinking but is intentionally unsigned.
+Production signing credentials must stay outside the repository; physical
+device acceptance is still required before claiming release-ready status.
 
 The default application ID can be overridden without changing the Kotlin/JNI
 namespace:

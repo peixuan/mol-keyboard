@@ -42,11 +42,31 @@ The tiny `source_check/include` files only supply declarations missing from
 Windows while parsing Android's public headers; they are never visible to an
 Android build. This is source-level evidence, not Android build verification.
 
-## Current verification boundary
+## Application runtime
 
-The Android host has not been built with an NDK or run on a device on the
-current Windows machine. No Android SDK or NDK was installed, and the official
-NDK download endpoint was unreachable from this host. Therefore Android stays
-`source-checked`, not `build-verified` or `device-verified`. Audio focus, the
-`mediaPlayback` foreground service, persistent notification, UI, packaging,
-and device route/background tests remain M7 work.
+The Gradle application under `platforms/android/app` packages the complete
+local Web UI and connects it to the native runtime through a strict,
+versioned, allow-listed bridge. It does not request `INTERNET`, disables backup,
+blocks remote navigation, and exposes no arbitrary file or command interface.
+
+The bound `mediaPlayback` foreground service owns `AudioRuntime` independently
+of the Activity. It requests media audio focus, follows device callbacks and
+the becoming-noisy broadcast, restarts Oboe away from its realtime callbacks,
+and restores the loaded sequence and persistent controls. Only explicit
+playback or metronome activity may continue after the UI is backgrounded;
+otherwise the stream and foreground state stop. The normal hardware-key map is
+handled by the foreground Activity and is never advertised as background input.
+
+## Verification boundary
+
+Debug, unsigned Release, and instrumentation APKs have been built with Android
+API 36, NDK 28.2.13676358, CMake 3.31.6, and both `arm64-v8a`/`x86_64` ABIs.
+Android lint passes. The packaged x86_64 application is runtime-verified on an
+official Android 15/API 35 emulator through UI, bridge, JNI, AAudio, and the C
+engine. The same automated run verifies foreground notification state,
+background rendering, screen-off continuation, and idle shutdown. See
+`docs/mobile/M7_ANDROID_EVIDENCE.md` for exact commands, hashes, and counters.
+
+No physical device was available. Arm64 playback, physical keyboard input,
+wired/Bluetooth route changes, external audio-focus interruption, latency, and
+long-duration behavior therefore remain unclaimed device gates.

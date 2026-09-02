@@ -17,7 +17,11 @@ startup check, but has not run on a physical board. I2S signal, sound, timing,
 Bluetooth/GPIO input, sustained operation, and ESP32 Classic A2DP Source remain
 unverified.
 
-Android, Apple, and HarmonyOS currently provide native audio call entries, not
-complete M7/M8 product applications. Their platform packaging, legal background
-audio, complete UI shells, route/focus handling, and physical-device tests are
-the next implementation and device gates.
+Android now provides a complete dual-ABI application and is runtime-verified on
+an Android 15 x86_64 emulator, including AAudio rendering, legal foreground
+state, background/screen-off continuation, and idle shutdown. No physical
+Android device was available, so arm64 playback, hardware keyboard, actual
+Bluetooth or wired route changes, focus interruption, latency, and sustained
+playback remain unverified. Apple still has only its native M1 audio entry, and
+HarmonyOS has only its M1 platform entry; their complete applications,
+toolchain builds, and physical-device tests are the next gates.
