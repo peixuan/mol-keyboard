@@ -21,7 +21,9 @@ enum {
   MOL_ERROR_BUFFER_TOO_SMALL = 7,
   MOL_ERROR_UNSUPPORTED = 8,
   MOL_ERROR_OVERFLOW = 9,
-  MOL_ERROR_INTERNAL = 10
+  MOL_ERROR_INTERNAL = 10,
+  MOL_ERROR_CORRUPT_DATA = 11,
+  MOL_ERROR_IO = 12
 };
 
 /** Returns a stable ASCII description for a result code. */
@@ -31,4 +33,4 @@ const char* mol_result_string(mol_result_t result);
 }
 #endif
 
-#endif  /* MOL_RESULT_H_ */
+#endif /* MOL_RESULT_H_ */

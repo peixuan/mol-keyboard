@@ -1551,6 +1551,10 @@ const char* mol_result_string(mol_result_t result) {
       return "overflow";
     case MOL_ERROR_INTERNAL:
       return "internal error";
+    case MOL_ERROR_CORRUPT_DATA:
+      return "corrupt data";
+    case MOL_ERROR_IO:
+      return "I/O error";
     default:
       return "unknown result";
   }

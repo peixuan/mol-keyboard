@@ -47,6 +47,13 @@ if(MOL_BUILD_TOOLS AND NOT CMAKE_CROSSCOMPILING)
       ${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_patch_compiler.cmake)
 endif()
 
+add_executable(mol_sequence_tests unit/test_sequence.c)
+target_link_libraries(mol_sequence_tests PRIVATE mol::core)
+set_target_properties(mol_sequence_tests PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_sequence_tests)
+mol_enable_optional_instrumentation(mol_sequence_tests)
+add_test(NAME mol_sequence_tests COMMAND mol_sequence_tests)
+
 add_executable(mol_instrument_tests integration/test_instruments.c)
 target_link_libraries(mol_instrument_tests PRIVATE mol::core)
 set_target_properties(mol_instrument_tests PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)

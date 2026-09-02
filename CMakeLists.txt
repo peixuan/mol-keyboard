@@ -14,7 +14,7 @@ include(cmake/MolSanitizers.cmake)
 
 add_library(mol_core src/c_api/mol_engine.c src/dsp/mol_dsp.c src/effects/mol_effects.c
                      src/music/mol_music.c src/patch/mol_patch.c
-                     src/patch/mol_builtin_patches.c
+                     src/patch/mol_builtin_patches.c src/sequence/mol_sequence.c
                      src/patch/generated/mol_patch_grand_piano.c
                      src/patch/generated/mol_patch_electric_piano.c
                      src/patch/generated/mol_patch_harpsichord.c

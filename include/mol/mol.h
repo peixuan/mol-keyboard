@@ -10,6 +10,7 @@
 #include "mol/music.h"
 #include "mol/patch.h"
 #include "mol/result.h"
+#include "mol/sequence.h"
 #include "mol/transport.h"
 #include "mol/version.h"
 

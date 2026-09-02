@@ -10,6 +10,7 @@ idf_component_register(
     "${MOL_REPOSITORY_ROOT}/src/music/mol_music.c"
     "${MOL_REPOSITORY_ROOT}/src/patch/mol_patch.c"
     "${MOL_REPOSITORY_ROOT}/src/patch/mol_builtin_patches.c"
+    "${MOL_REPOSITORY_ROOT}/src/sequence/mol_sequence.c"
     "${MOL_REPOSITORY_ROOT}/src/patch/generated/mol_patch_grand_piano.c"
     "${MOL_REPOSITORY_ROOT}/src/patch/generated/mol_patch_electric_piano.c"
     "${MOL_REPOSITORY_ROOT}/src/patch/generated/mol_patch_harpsichord.c"
