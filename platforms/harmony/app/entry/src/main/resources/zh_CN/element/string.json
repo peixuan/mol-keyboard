@@ -1,0 +1,20 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "低延迟原生乐器键盘"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "张多少的键盘"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "张多少的键盘"
+    },
+    {
+      "name": "background_reason",
+      "value": "在后台继续用户主动开始的序列回放和节拍器声音"
+    }
+  ]
+}

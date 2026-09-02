@@ -61,6 +61,12 @@ mol_enable_warnings(mol_wire_tests)
 mol_enable_optional_instrumentation(mol_wire_tests)
 add_test(NAME mol_wire_tests COMMAND mol_wire_tests)
 
+add_test(
+  NAME mol_harmony_project_audit
+  COMMAND
+    ${CMAKE_COMMAND} -DMOL_SOURCE_DIR=${PROJECT_SOURCE_DIR} -P
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_harmony_project.cmake)
+
 if(TARGET mol_jsonrpc)
   add_executable(mol_jsonrpc_tests unit/test_jsonrpc.cpp)
   target_link_libraries(mol_jsonrpc_tests PRIVATE mol::jsonrpc)

@@ -1,0 +1,9 @@
+/build/
+/entry/build/
+/entry/.cxx/
+/.hvigor/
+/node_modules/
+/oh_modules/
+/.idea/
+/local.properties
+/oh-package-lock.json5

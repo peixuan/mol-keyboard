@@ -1,0 +1,20 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Low-latency native musical keyboard"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "MoL Keyboard"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "MoL Keyboard"
+    },
+    {
+      "name": "background_reason",
+      "value": "Continue user-started sequence playback and metronome output in the background"
+    }
+  ]
+}
