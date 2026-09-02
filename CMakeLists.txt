@@ -144,6 +144,7 @@ endif()
 if(MOL_BUILD_TOOLS)
   add_subdirectory(apps/mol-patchc)
   add_subdirectory(apps/mol-render)
+  add_subdirectory(tools/audio-analyze)
 endif()
 
 set(_mol_desktop_audio_available OFF)
