@@ -5,17 +5,17 @@ toolchain result recorded here.
 
 | Platform | Status | Verified | Toolchain / device | Command and evidence |
 |---|---|---|---|---|
-| Windows x64 | runtime-verified (M1 desktop audio) | 2026-09-02 | VS 2026 18.8.0; MSVC 19.51.36248; miniaudio 0.11.25; WASAPI | Debug/Release 10/10 tests; real default device at 48 kHz; C4 261.25 Hz; zero render/non-finite failures |
+| Windows x64 | runtime-verified (M3 core and desktop audio) | 2026-09-02 | VS 2026 18.8.0; MSVC 19.51.36248; miniaudio 0.11.25; WASAPI; Clang 22.1.3 sanitizers | Debug/Release 24/24 tests; Standard 18-preset audio golden; ASan/UBSan 19/19 including Patch fuzz; real default device at 48 kHz |
 | Windows arm64 | planned | — | Not evaluated | Pending |
 | Linux x86_64 | planned | — | Not available on this host | Pending CI or Linux host |
 | Linux aarch64 | planned | — | Not available on this host | Pending CI or device |
 | macOS arm64/x64 | planned | — | Apple SDK not available on this host | Pending macOS host |
-| WebAssembly | runtime-verified (M1 core/worklet) | 2026-09-02 | Emscripten 6.0.5; Node.js 22.16.0; Chromium | Debug/Release 8/8 tests; real AudioWorklet C4 261.25 Hz; Release worklet 15,089 bytes |
+| WebAssembly | runtime-verified (M3 core/worklet) | 2026-09-02 | Emscripten 6.0.5; Node.js 22.16.0; Chromium | Debug/Release 20/20 tests; all 18 Standard-preset PCM metrics match Native golden tolerances; real AudioWorklet C4 261.25 Hz |
 | Android arm64/x86_64 | source-checked (M1 Oboe entry) | 2026-09-02 | Oboe 1.10.0 headers; MSVC strict source check; Android NDK unavailable | Kotlin/JNI/Oboe path present; actual ABI build and device remain unverified |
 | iOS arm64 | source-reviewed (M1 AudioUnit entry) | 2026-09-02 | Apple SDK unavailable on this host | Objective-C++/AVAudioSession/AudioUnit path present; compilation and device remain unverified |
 | HarmonyOS arm64 | source-checked (M1 OHAudio entry) | 2026-09-02 | OpenHarmony audio declarations at c2e9f5b; MSVC strict source check; DevEco SDK unavailable | ArkTS/Node-API/OHAudio path present; OHOS build and device remain unverified |
-| ESP32 | build-verified (M1 core/I2S) | 2026-09-02 | ESP-IDF 6.1; GNU 15.2.0 | Configurable standard-I2S firmware built; image 124,256 bytes; mapped core flash code 2,660 bytes |
-| ESP32-S3 | build-verified (M1 core/I2S) | 2026-09-02 | ESP-IDF 6.1; GNU 15.2.0 | Configurable standard-I2S firmware built; image 149,520 bytes; mapped core flash code 2,672 bytes; no Classic A2DP claim |
+| ESP32 | build-verified (M3 Tiny core/I2S) | 2026-09-02 | ESP-IDF 6.1; GNU 15.2.0 | Current firmware with all 18 patches and effects built; app binary 146,704 bytes; core archive 20,422 bytes; 33,572 bytes internal DRAM remain |
+| ESP32-S3 | build-verified (M3 Tiny core/I2S) | 2026-09-02 | ESP-IDF 6.1; GNU 15.2.0 | Current firmware with all 18 patches and effects built; app binary 172,560 bytes; core archive 20,646 bytes; 169,105 bytes internal RAM remain; no Classic A2DP claim |
 
 ## Capability boundaries
 

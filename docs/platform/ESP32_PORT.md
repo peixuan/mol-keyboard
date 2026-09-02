@@ -63,10 +63,14 @@ Target configuration is stored in each build directory, so both target builds
 coexist without sharing an `sdkconfig`. On 2026-09-02, ESP-IDF 6.1 and GNU
 15.2.0 produced these map-backed results:
 
-| Target | Application image | `libmol_core.a` flash code | Host static DRAM |
+| Target | Application image | `libmol_core.a` | Internal memory used / available |
 |---|---:|---:|---:|
-| ESP32 | 124,256 bytes | 2,660 bytes | 22,168 bytes |
-| ESP32-S3 | 149,520 bytes | 2,672 bytes | 22,168 bytes |
+| ESP32 | 146,704 bytes | 20,422 bytes | 147,164 / 180,736 bytes |
+| ESP32-S3 | 172,560 bytes | 20,646 bytes | 172,655 / 341,760 bytes |
+
+The component builds the complete M3 Tiny graph and stores all 18 fixed
+120-byte compiled Patches in flash. The host reserves a 131,072-byte static
+engine arena; no PSRAM is required by this baseline.
 
 GPIO/HID input, persistence, configuration mode, and original-ESP32 A2DP Source
 remain M9 work. ESP32-S3 never advertises Classic Bluetooth A2DP Source.

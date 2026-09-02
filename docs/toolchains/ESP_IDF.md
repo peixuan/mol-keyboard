@@ -51,8 +51,10 @@ idf.py -B build-esp32 size-components
 idf.py -B build-esp32s3 size-components
 ```
 
-On 2026-09-02 the ESP32 image was 124,256 bytes and the ESP32-S3 image was
-149,520 bytes. The size tool attributed 2,660 and 2,672 bytes of flash code to
-`libmol_core.a`, respectively. The firmware host's mapped static DRAM was
-22,168 bytes on both targets, including the 16 KiB engine arena, the static
-audio task stack, and fixed render/PCM buffers.
+On 2026-09-02 the complete M3 Tiny build produced 146,704-byte ESP32 and
+172,560-byte ESP32-S3 app binaries. `libmol_core.a` contributes 20,422 and
+20,646 bytes respectively, including 2,532 bytes of compiled Patch flash data.
+The firmware now reserves a 131,072-byte static engine arena for the complete
+voice/effect graph. The size tool reports 147,164 / 180,736 bytes of internal
+DRAM used on ESP32 and 172,655 / 341,760 bytes of internal memory used on
+ESP32-S3. These measurements include all 18 preset IDs.

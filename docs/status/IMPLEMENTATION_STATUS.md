@@ -2,178 +2,138 @@
 
 ## Current milestone
 
-M3 instruments, DSP, and effects. M0, M1, and M2 are complete.
+M4 recording, playback, and offline tools is the highest unmet gate. M0 through
+M3 are complete.
 
 ## Last verified commit
 
-`56b00f8` (`test(music): lock cross-target event semantics`) is the last
-verified commit. Native Debug/Release and WebAssembly Debug/Release were rebuilt
-and tested after that change on 2026-09-02.
+`40be63a` (`test(fuzz): exercise patch parsers with sanitizers`) is the last
+verified code commit. The validation below was run on 2026-09-02 after that
+commit. Documentation changes do not alter binaries.
 
 ## Completed requirements
 
-- Project identity, clean-room statement, Apache-2.0 license, privacy policy,
-  and bilingual introductory documentation are present.
-- The required development branch is `codex/mol-keyboard-v1`.
-- `mol_core` is ISO C11 and initializes entirely in aligned caller-owned memory.
-- Debug and release builds pass warnings-as-errors with MSVC 19.51.36248.
-- C and C++17 consumers link and run against the same public C ABI.
-- Interleaved and planar rendering is allocation-free and advances frame time.
-- The arena now contains fixed-capacity voices, scheduled commands, and events.
-- A polyBLEP saw oscillator, ADSR envelope, deterministic voice allocation, and
-  sample-accurate command heap produce real polyphonic audio.
-- Automated analysis measured rendered MIDI C4 within 1 Hz of 261.6256 Hz,
-  rejected NaN/Inf, verified release to silence, and exercised eight voices plus stealing.
-- `mol-render` creates deterministic little-endian 16-bit PCM mono/stereo WAV
-  files without opening an audio device and reports duration, peak, RMS,
-  clipping, non-finite samples, and underruns.
-- CTest validates the RIFF/WAVE header and verifies that rendered PCM is non-silent.
-- Emscripten 6.0.5 compiles the same core and all portable C/C++ tests in Debug
-  and LTO Release configurations.
-- A fixed-memory ES module exposes the engine to workers and passed a Node.js
-  Wasm C4 conformance test at 261.25 Hz with peak 0.24512254.
-- The LTO Release Web artifacts are 3,897-byte Wasm and 9,862-byte JS loader files.
-- A separate fixed-memory, single-file AudioWorklet artifact runs the same core
-  without asynchronous module setup in the render scope. Node conformance and
-  a real Chromium `OfflineAudioContext` both measured C4 at 261.25 Hz; the
-  Release worklet artifact is 15,089 bytes.
-- ESP-IDF 6.1 builds the exact core source as a Tiny-profile component for both
-  ESP32 and ESP32-S3 with independently generated target configuration.
-- Both firmware targets contain a bounded static-memory 32 kHz C4 conformance
-  check, a configurable ESP-IDF standard I2S TX host, fixed DMA geometry,
-  saturated PCM16 conversion, a statically allocated high-priority render task,
-  watchdog integration, and periodic underrun/timing/memory diagnostics.
-- ESP32 produced a 124,256-byte image with 2,660 bytes of mapped core flash
-  code; ESP32-S3 produced a 149,520-byte image with 2,672 bytes of mapped core
-  flash code. The firmware host reserves 22,168 bytes of static DRAM on each.
-- An independent native 32 kHz PCM16 render measured the firmware's C4 sequence
-  at 261.25 Hz with peak 0.19390869, zero non-finite samples, and zero underruns.
-- miniaudio 0.11.25 is pinned by commit and archive hash with a preserved
-  license, locked build options, third-party notice, SPDX 2.3 SBOM, dependency
-  audit documentation, and an automated license-integrity test.
-- `mol-play` enumerates desktop playback devices with reusable backend IDs,
-  follows the system default, reports actual sample rate and native period
-  geometry, and renders directly into an allocation-free device callback.
-- Debug and LTO Release null-backend realtime tests measured C4 at 261.25 Hz
-  with finite, non-silent output and zero render failures.
-- A real Release WASAPI run opened the Windows default output at 48 kHz, handled
-  109 callbacks/52,320 frames, measured C4 at 261.25 Hz, and reported zero
-  render failures and non-finite samples. The reported three 480-frame native
-  periods are a 30 ms buffer-duration estimate, not an end-to-end latency claim.
-- A shared, fixed-memory platform audio runtime gives native hosts one C11
-  command/render path and accepts variable callback sizes without allocation.
-- Oboe 1.10.0 is pinned by exact commit, archive hash, license snapshot, notices,
-  SBOM, and the automated dependency audit.
-- Android has a Kotlin-to-JNI-to-Oboe entry for arm64 and x86_64. Its callback
-  renders float PCM directly and publishes disconnection diagnostics without a
-  JVM callback or lifecycle work on the realtime thread.
-- Apple has an Objective-C++ AudioUnit entry with AVAudioSession playback setup
-  and interruption, route-change, and media-services-reset handling. PCM stays
-  inside the native render callback.
-- HarmonyOS has an ArkTS-to-Node-API-to-OHAudio entry. Node-API transfers only
-  lifecycle, bounded commands, and status; the OHAudio callback renders directly
-  through the shared runtime and reports underflow/route/interruption diagnostics.
-- Android and Harmony native sources compile in both MSVC configurations under
-  warnings-as-errors using declaration-only platform header subsets. Apple is
-  source-reviewed because Objective-C++ requires an unavailable Apple SDK.
-- The M1 gate is complete: the same C4 sequence measures 261.25 Hz in Native,
-  Wasm, and the ESP32 32 kHz core path, all analyzed samples are finite, the
-  callbacks are allocation-free, and every required platform call entry exists.
-- The M2 gate is complete: the default 30-key HID map, octave/transpose, all 8
-  scales and 12 tonics, all 10 chord modes, continuous sustain, gesture-owned
-  releases, sample-accurate commands, monophonic linear portamento, unified
-  transport, accented metronome, six arpeggiator modes and six rates, including
-  seeded deterministic random selection, are implemented in the portable core.
-- Native and WebAssembly produce the same checked-in 35-event conformance digest
-  (`83658a826364c67e`), transport frame, and final zero-voice/zero-gesture state.
-  The test never rewrites its golden file.
-- Property tests require sample-for-sample and event-for-event equality across
-  unrelated render block sizes, run 2,000 deterministic random legal operations
-  without NaN/Inf, and prove eventual sound/gesture cleanup.
-- Absolute rational transport tests cover every quarter-note step through two
-  hours at 48 kHz/120 BPM and reach frame 345,600,000 with zero cumulative
-  rounding drift.
+- The repository baseline, clean-room statement, Apache-2.0 licensing, privacy
+  policy, bilingual introduction, CMake profiles, warnings-as-errors, dependency
+  audit, locked miniaudio/Oboe sources, notices, and SPDX SBOM are present.
+- `mol_core` is ISO C11 with a stable public C ABI and caller-owned aligned
+  storage. Its render path has no allocation, blocking, logging, or language
+  runtime callback.
+- The same core sources build and run under MSVC, Emscripten, and ESP-IDF. C and
+  C++17 consumers link against the public API.
+- The M1 path renders measured C4 through Native, WebAssembly/AudioWorklet,
+  desktop miniaudio, and the ESP32 core/I2S host. Android Oboe, Apple AudioUnit,
+  and Harmony OHAudio native entries use the shared fixed-memory callback
+  runtime; unavailable SDK/device validation remains explicitly unclaimed.
+- M2 implements the 30-key map, octave and transpose, eight scales and twelve
+  tonics, ten chord modes, sustain, six deterministic arpeggiator modes and six
+  rates, monophonic portamento, transport, time signatures, and metronome. The
+  Native/Wasm event golden is 35 events with digest `9e6cebee9d02f409` and
+  transport frame 50,000. Two-hour rational transport reaches frame 345,600,000
+  with zero cumulative drift.
+- M3 provides the complete portable DSP primitives, six real synthesis model
+  families, 18 strict bilingual JSON Patches, a deterministic fixed-layout
+  Patch compiler/decoder, embedded compiled Patches, graceful and hard preset
+  switching, deterministic voice stealing, Chorus, Delay, Reverb, mixer, DC
+  blocking, limiting, parameter smoothing, and transition ramps.
+- Every preset renders finite non-silent distinguishable output from C3 through
+  C7. Rapid 64-frame hard switches through all 18 presets remain below the 0.25
+  sample-step threshold. The Tiny profile exposes every preset ID.
+- The fixed Standard golden sequence calibrates all 18 integrated RMS values to
+  0.011469–0.012139. Native and Wasm compare peak, RMS, DC, stereo difference,
+  step, attack, active end, spectral centroid, and three spectral bands using
+  documented tolerances; tests never overwrite the golden.
+- `mol-render` writes deterministic PCM16 mono/stereo WAV with explicit preset,
+  note, velocity, sample-rate, duration, and gate controls. `mol-audio-analyze`
+  checks bounded RIFF/WAVE input and reports the required audio diagnostics.
+- The Patch parser has a Clang libFuzzer entry covering arbitrary JSON and
+  binary input plus successful-parse round trips. ASan/UBSan builds all core
+  tests and the fuzzer; the Windows ASan runtime is deployed by CMake.
+- ESP-IDF 6.1 currently builds the complete Tiny core, effects, and all 18
+  compiled Patches for ESP32 and ESP32-S3. The current app binaries are 146,704
+  and 172,560 bytes respectively, and the core archives are 20,422 and 20,646
+  bytes. Detailed M3 evidence is in `docs/audio/M3_AUDIO_EVIDENCE.md`.
 
 ## In-progress work
 
-- M3 DSP modules, 18 data-driven instruments, Patch compiler, Chorus, Delay,
-  Reverb, master mixer/limiter, loudness calibration, golden audio, and automated
-  audio analysis.
+- M4: event recording, deterministic playback, Mol Sequence Format v1,
+  Standard MIDI File conversion, offline render integration, parser fuzzing,
+  round-trip/truncation/golden tests, and long-sequence streaming.
 
 ## Blocked platform checks
 
-- Android NDK, Apple SDKs, and DevEco/HarmonyOS SDKs have not been discovered or
-  verified. An official Android NDK download was attempted but the endpoint was
-  unreachable from this host.
-- Physical devices and signing credentials have not been provided.
+- Apple SDKs and DevEco/HarmonyOS SDKs are not available on this Windows host.
+- Physical Android/Apple/Harmony/ESP32 devices, audio hardware, signing
+  credentials, and long-run device time are not available. No device-verified
+  status is claimed.
 
-## Exact validation commands
+## Exact validation commands and results
 
-Run from a Visual Studio 2026 x64 developer shell with Ninja 1.13.2 on `PATH`:
+From a Visual Studio 2026 x64 developer shell with Ninja on `PATH`:
 
 ```powershell
 cmake --preset dev-debug
 cmake --build --preset dev-debug
-ctest --preset dev-debug
+ctest --preset dev-debug --output-on-failure
 cmake --preset dev-release
 cmake --build --preset dev-release
-ctest --preset dev-release
-build/dev-release/apps/mol-render/mol-render --output build/dev-release/c4-evidence.wav --duration 2 --sample-rate 48000 --channels 2 --note 60 --velocity 0.8
-build/dev-release/apps/mol-play/mol-play --list-devices
-build/dev-release/apps/mol-play/mol-play --duration 1.05 --note 60 --velocity 0.25
+ctest --preset dev-release --output-on-failure
 ```
 
-The evidence render was 384,044 bytes with peak 0.19609803, RMS 0.06978670,
-zero clipped samples, zero non-finite samples, and zero underruns.
-Both native configurations pass 17/17 CTest tests, including dependency audit,
-M2 unit/property/event conformance, device enumeration, and the one-second
-null-backend realtime callback test. They also compile the Android and Harmony
-native entries under warnings-as-errors.
+MSVC 19.51.36248 passed 24/24 tests in Debug and LTO Release. A separate Tiny
+profile passed 21/21; a Standard build with Chorus, Delay, and Reverb all
+disabled passed 21/21.
 
-With the pinned Emscripten SDK environment active:
+With the pinned Emscripten environment active:
 
 ```powershell
 cmake --preset wasm-debug
 cmake --build --preset wasm-debug
-ctest --preset wasm-debug
+ctest --preset wasm-debug --output-on-failure
 cmake --preset wasm-release
 cmake --build --preset wasm-release
-ctest --preset wasm-release
+ctest --preset wasm-release --output-on-failure
 ```
 
-Both configurations passed 15/15 tests on 2026-09-02. One test audits the locked
-dependencies and license snapshot. M2 tests include the same exact event golden
-used by Native and deterministic block-size/property checks. The worklet
-conformance test loads the single-file worklet artifact in a mocked worklet
-global and verifies stereo C4, finite output, message-driven note control, and
-release to silence. The browser smoke page additionally passed in the Codex
-in-app Chromium browser with `frequency=261.2500` and `peak=0.24512254`.
+Emscripten 6.0.5 and Node.js 22.16.0 passed 20/20 tests in Debug and LTO
+MinSizeRel. Both configurations match the Native event golden and 18-preset
+audio-metric golden tolerances.
 
-With the pinned ESP-IDF environment active:
+For sanitizer and Patch fuzz validation, activate the Visual Studio environment
+and place Clang 22 on `PATH`:
 
 ```powershell
-cd platforms/esp32
-idf.py -B build-esp32 set-target esp32
-idf.py -B build-esp32 build
-idf.py -B build-esp32s3 set-target esp32s3
-idf.py -B build-esp32s3 build
+cmake --preset fuzz-clang
+cmake --build --preset fuzz-clang
+ctest --preset fuzz-clang --output-on-failure
 ```
 
-Both targets built successfully with ESP-IDF 6.1 and GNU 15.2.0 on 2026-09-02.
-The build-local `sdkconfig` files allow the two configurations to coexist.
-`idf.py size-components` verified the mapped core and host sizes recorded
-above. Physical I2S playback and sustained-run counters remain unverified.
+The ASan/UBSan configuration passed 19/19 tests. Its Patch libFuzzer smoke ran
+for 20 seconds with the bounded JSON and compiled binary seeds and produced no
+finding.
 
-## Known failures
+With the pinned ESP-IDF environment active, from `platforms/esp32`:
 
-- `ninja`, `cl`, `emcc`, and `idf.py` are not on the default `PATH`; each is
-  activated through its documented toolchain environment.
-- Visual Studio 2026 Developer Command Prompt 18.8.0 provides MSVC 19.51.36248
-  and Ninja 1.13.2; both Debug and Release validation succeeded on 2026-09-02.
-- Apple source compilation, Android NDK builds, and HarmonyOS builds cannot run
-  on the currently available host; their status documents do not claim otherwise.
+```powershell
+idf.py -B build-esp32 build
+idf.py -B build-esp32 size-components
+idf.py -B build-esp32s3 build
+idf.py -B build-esp32s3 size-components
+```
+
+Both ESP-IDF 6.1/GNU 15.2.0 targets rebuilt successfully. ESP32 uses 147,164 of
+180,736 bytes reported internal DRAM (33,572 free); ESP32-S3 uses 172,655 of
+341,760 bytes reported internal memory (169,105 free). These are build/map
+results, not physical playback results.
+
+## Known environment constraints
+
+- `cl`, Emscripten, ESP-IDF, and the Clang ASan runtime are activated through
+  their toolchain environments and are not all on the default `PATH`.
+- Cross-platform source checks are not promoted to device verification.
 
 ## Next highest-priority task
 
-Implement M3's complete DSP graph and 18 data-driven instruments, beginning with
-the oscillator/envelope/filter building blocks and Patch schema/compiler.
+Implement M4 beginning with the versioned, bounded `.molseq` parser/writer and
+deterministic record/playback round trip, then connect MIDI conversion and the
+offline tools to that format.
