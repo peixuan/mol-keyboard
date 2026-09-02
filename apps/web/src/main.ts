@@ -22,7 +22,7 @@ import {
   noteAtPoint,
   noteName,
 } from "./keyboard";
-import { hasAndroidNativeBridge, NativeAudioEngine } from "./native-engine";
+import { hasNativeBridge, NativeAudioEngine } from "./native-engine";
 
 interface ActiveGesture {
   readonly id: number;
@@ -236,7 +236,7 @@ template.innerHTML = `
 class MolKeyboardApp extends HTMLElement {
   private readonly standaloneEngine = new MolAudioEngine();
   private readonly serviceEngine = new ServiceAudioEngine();
-  private readonly nativeEngine = hasAndroidNativeBridge() ? new NativeAudioEngine() : undefined;
+  private readonly nativeEngine = hasNativeBridge() ? new NativeAudioEngine() : undefined;
   private engine: AudioBackend = this.nativeEngine ?? this.standaloneEngine;
   private readonly activeKeys = new Map<string, ActiveGesture>();
   private readonly activePointers = new Map<number, ActiveGesture>();

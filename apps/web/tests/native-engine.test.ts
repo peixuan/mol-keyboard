@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { hasAndroidNativeBridge, NativeAudioEngine } from "../src/native-engine.ts";
+import { hasNativeBridge, NativeAudioEngine } from "../src/native-engine.ts";
 
 interface NativeRequest {
   readonly version: number;
@@ -11,12 +11,14 @@ interface NativeRequest {
 
 function installBridge(
   handler: (request: NativeRequest) => Record<string, unknown>,
+  asynchronous = false,
 ): () => void {
   const previous = Object.getOwnPropertyDescriptor(globalThis, "window");
   const bridgeWindow = {
     MolKeyboardNative: {
-      dispatch(text: string): string {
-        return JSON.stringify(handler(JSON.parse(text) as NativeRequest));
+      dispatch(text: string): string | Promise<string> {
+        const response = JSON.stringify(handler(JSON.parse(text) as NativeRequest));
+        return asynchronous ? Promise.resolve(response) : response;
       },
     },
     clearInterval,
@@ -62,7 +64,7 @@ test("native bridge starts, reports its route, and transports complete commands"
   });
 
   try {
-    assert.equal(hasAndroidNativeBridge(), true);
+    assert.equal(hasNativeBridge(), true);
     const engine = new NativeAudioEngine();
     const batches: unknown[] = [];
     let deviceChanges = 0;
@@ -134,8 +136,34 @@ test("native recording transfer is bounded and bridge failures are contained", a
 
     rejectCommands = true;
     engine.noteOn(60, 0.8, 7);
+    await wait(0);
     assert.equal(engine.droppedCommandCount, 1);
     assert.equal(await engine.setMasterGain(0.5), false);
+    await engine.close();
+  } finally {
+    restore();
+  }
+});
+
+test("the native engine accepts a promise-based WKWebView bridge", async () => {
+  const restore = installBridge((request) => {
+    if (request.method === "runtime.start") return { ok: true };
+    if (request.method === "runtime.status") {
+      return { active: true, ok: true, routeRevision: 0, sampleRate: 48_000 };
+    }
+    if (request.method === "events.poll") return { events: [], ok: true };
+    if (request.method === "command.submit") return { ok: true, result: 0 };
+    return { error: "unexpected method", ok: false };
+  }, true);
+
+  try {
+    const engine = new NativeAudioEngine();
+    await engine.start();
+    assert.equal(engine.state, "running");
+    assert.equal(await engine.setMetronome(true, 0.4), true);
+    engine.noteOn(60, 0.8, 44);
+    await wait(0);
+    assert.equal(engine.droppedCommandCount, 0);
     await engine.close();
   } finally {
     restore();

@@ -1,12 +1,12 @@
 import type { AudioBackend } from "./audio-backend";
 import type { EngineEvent } from "./audio-engine";
 
-interface AndroidBridge {
-  dispatch(request: string): string;
+interface NativeBridge {
+  dispatch(request: string): string | Promise<string>;
 }
 
 interface NativeWindow extends Window {
-  readonly MolKeyboardNative?: AndroidBridge;
+  readonly MolKeyboardNative?: NativeBridge;
 }
 
 type NativeParams = Readonly<Record<string, boolean | number | string>>;
@@ -70,10 +70,12 @@ function base64ToBinary(encoded: string): Uint8Array {
   return bytes;
 }
 
-export function hasAndroidNativeBridge(): boolean {
+export function hasNativeBridge(): boolean {
   return typeof window !== "undefined" &&
     typeof (window as NativeWindow).MolKeyboardNative?.dispatch === "function";
 }
+
+export const hasAndroidNativeBridge = hasNativeBridge;
 
 export class NativeAudioEngine extends EventTarget implements AudioBackend {
   private currentState: AudioContextState | "idle" = "idle";
@@ -99,10 +101,10 @@ export class NativeAudioEngine extends EventTarget implements AudioBackend {
   }
 
   async start(): Promise<void> {
-    this.request("runtime.start", {});
+    await this.request("runtime.start", {});
     const deadline = performance.now() + START_TIMEOUT_MS;
     while (performance.now() < deadline) {
-      const status = this.tryRequest("runtime.status", {});
+      const status = await this.tryRequest("runtime.status", {});
       if (status?.active === true) {
         this.applyStatus(status);
         this.startPolling();
@@ -110,7 +112,7 @@ export class NativeAudioEngine extends EventTarget implements AudioBackend {
       }
       await new Promise((resolve) => window.setTimeout(resolve, 25));
     }
-    throw new Error("The native Oboe runtime did not start");
+    throw new Error("The native audio runtime did not start");
   }
 
   close(): Promise<void> {
@@ -203,27 +205,25 @@ export class NativeAudioEngine extends EventTarget implements AudioBackend {
     return command === undefined ? Promise.resolve(false) : this.control(command);
   }
 
-  exportRecording(): Promise<Uint8Array | undefined> {
+  async exportRecording(): Promise<Uint8Array | undefined> {
     try {
-      const response = this.request("recording.export", {});
-      return Promise.resolve(
-        typeof response.base64 === "string" ? base64ToBinary(response.base64) : undefined,
-      );
+      const response = await this.request("recording.export", {});
+      return typeof response.base64 === "string" ? base64ToBinary(response.base64) : undefined;
     } catch {
-      return Promise.resolve(undefined);
+      return undefined;
     }
   }
 
-  loadRecording(bytes: Uint8Array): Promise<boolean> {
-    if (bytes.length === 0 || bytes.length > MAXIMUM_RECORDING_BYTES) return Promise.resolve(false);
+  async loadRecording(bytes: Uint8Array): Promise<boolean> {
+    if (bytes.length === 0 || bytes.length > MAXIMUM_RECORDING_BYTES) return false;
     try {
-      return Promise.resolve(this.request("recording.load", { base64: binaryToBase64(bytes) }).ok === true);
+      return (await this.request("recording.load", { base64: binaryToBase64(bytes) })).ok === true;
     } catch {
-      return Promise.resolve(false);
+      return false;
     }
   }
 
-  private control(
+  private async control(
     type: number,
     integer0 = 0,
     integer1 = 0,
@@ -233,11 +233,9 @@ export class NativeAudioEngine extends EventTarget implements AudioBackend {
     scalar1 = 0,
   ): Promise<boolean> {
     try {
-      return Promise.resolve(
-        this.submit(type, 0, integer0, integer1, integer2, integer3, scalar0, scalar1),
-      );
+      return await this.submit(type, 0, integer0, integer1, integer2, integer3, scalar0, scalar1);
     } catch {
-      return Promise.resolve(false);
+      return false;
     }
   }
 
@@ -251,13 +249,13 @@ export class NativeAudioEngine extends EventTarget implements AudioBackend {
     scalar0 = 0,
     scalar1 = 0,
   ): void {
-    try {
-      if (!this.submit(type, gesture, integer0, integer1, integer2, integer3, scalar0, scalar1)) {
+    void this.submit(type, gesture, integer0, integer1, integer2, integer3, scalar0, scalar1)
+      .then((accepted) => {
+        if (!accepted) this.droppedCommands += 1;
+      })
+      .catch(() => {
         this.droppedCommands += 1;
-      }
-    } catch {
-      this.droppedCommands += 1;
-    }
+      });
   }
 
   private submit(
@@ -269,8 +267,8 @@ export class NativeAudioEngine extends EventTarget implements AudioBackend {
     integer3: number,
     scalar0: number,
     scalar1: number,
-  ): boolean {
-    const response = this.request("command.submit", {
+  ): Promise<boolean> {
+    return this.request("command.submit", {
       type,
       gesture,
       i0: integer0,
@@ -279,20 +277,19 @@ export class NativeAudioEngine extends EventTarget implements AudioBackend {
       i3: integer3,
       f0: scalar0,
       f1: scalar1,
-    });
-    return response.ok === true;
+    }).then((response) => response.ok === true);
   }
 
   private startPolling(): void {
     if (this.pollTimer !== undefined) return;
-    this.pollTimer = window.setInterval(() => this.poll(), POLL_INTERVAL_MS);
+    this.pollTimer = window.setInterval(() => void this.poll(), POLL_INTERVAL_MS);
   }
 
-  private poll(): void {
-    const status = this.tryRequest("runtime.status", {});
+  private async poll(): Promise<void> {
+    const status = await this.tryRequest("runtime.status", {});
     if (status === undefined) return;
     this.applyStatus(status);
-    const response = this.tryRequest("events.poll", {});
+    const response = await this.tryRequest("events.poll", {});
     if (response === undefined || !Array.isArray(response.events)) return;
     const fields = response.events;
     if (
@@ -334,24 +331,27 @@ export class NativeAudioEngine extends EventTarget implements AudioBackend {
     }
   }
 
-  private tryRequest(method: string, params: NativeParams): NativeResponse | undefined {
+  private async tryRequest(
+    method: string,
+    params: NativeParams,
+  ): Promise<NativeResponse | undefined> {
     try {
-      return this.request(method, params);
+      return await this.request(method, params);
     } catch {
       return undefined;
     }
   }
 
-  private request(method: string, params: NativeParams): NativeResponse {
+  private async request(method: string, params: NativeParams): Promise<NativeResponse> {
     const bridge = (window as NativeWindow).MolKeyboardNative;
-    if (bridge === undefined) throw new Error("The Android native bridge is unavailable");
-    const raw = bridge.dispatch(JSON.stringify({ version: 1, method, params }));
+    if (bridge === undefined) throw new Error("The native bridge is unavailable");
+    const raw = await bridge.dispatch(JSON.stringify({ version: 1, method, params }));
     if (raw.length < 2 || raw.length > MAXIMUM_RESPONSE_CHARS) {
-      throw new Error("The Android native bridge returned an invalid response size");
+      throw new Error("The native bridge returned an invalid response size");
     }
     const response = JSON.parse(raw) as unknown;
     if (!isObject(response) || typeof response.ok !== "boolean") {
-      throw new Error("The Android native bridge returned an invalid response");
+      throw new Error("The native bridge returned an invalid response");
     }
     if (!response.ok) {
       const message = typeof response.error === "string" ? response.error.slice(0, 256) : "Native request failed";
