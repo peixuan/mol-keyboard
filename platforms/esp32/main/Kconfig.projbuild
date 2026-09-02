@@ -1,5 +1,10 @@
 menu "MoL Keyboard audio host"
 
+    config MOL_INPUT_QUEUE_LENGTH
+        int "Bounded cross-task input command queue length"
+        range 32 128
+        default 64
+
     config MOL_I2S_SAMPLE_RATE
         int "I2S sample rate"
         range 16000 48000
@@ -51,5 +56,135 @@ menu "MoL Keyboard audio host"
         int "Static audio task stack size in bytes"
         range 3072 16384
         default 4096
+
+    config MOL_GPIO_MATRIX_ENABLE
+        bool "Enable the reference 5x6 GPIO keyboard matrix"
+        default y
+
+    if MOL_GPIO_MATRIX_ENABLE
+
+    config MOL_GPIO_ROW0
+        int "Matrix row 0 GPIO"
+        range 0 48
+        default 13 if IDF_TARGET_ESP32
+        default 7 if IDF_TARGET_ESP32S3
+
+    config MOL_GPIO_ROW1
+        int "Matrix row 1 GPIO"
+        range 0 48
+        default 14 if IDF_TARGET_ESP32
+        default 8 if IDF_TARGET_ESP32S3
+
+    config MOL_GPIO_ROW2
+        int "Matrix row 2 GPIO"
+        range 0 48
+        default 16 if IDF_TARGET_ESP32
+        default 9 if IDF_TARGET_ESP32S3
+
+    config MOL_GPIO_ROW3
+        int "Matrix row 3 GPIO"
+        range 0 48
+        default 17 if IDF_TARGET_ESP32
+        default 10 if IDF_TARGET_ESP32S3
+
+    config MOL_GPIO_ROW4
+        int "Matrix row 4 GPIO"
+        range 0 48
+        default 18 if IDF_TARGET_ESP32
+        default 11 if IDF_TARGET_ESP32S3
+
+    config MOL_GPIO_COLUMN0
+        int "Matrix column 0 GPIO"
+        range 0 48
+        default 19 if IDF_TARGET_ESP32
+        default 12 if IDF_TARGET_ESP32S3
+
+    config MOL_GPIO_COLUMN1
+        int "Matrix column 1 GPIO"
+        range 0 48
+        default 21 if IDF_TARGET_ESP32
+        default 13 if IDF_TARGET_ESP32S3
+
+    config MOL_GPIO_COLUMN2
+        int "Matrix column 2 GPIO"
+        range 0 48
+        default 23 if IDF_TARGET_ESP32
+        default 14 if IDF_TARGET_ESP32S3
+
+    config MOL_GPIO_COLUMN3
+        int "Matrix column 3 GPIO"
+        range 0 48
+        default 27 if IDF_TARGET_ESP32
+        default 15 if IDF_TARGET_ESP32S3
+
+    config MOL_GPIO_COLUMN4
+        int "Matrix column 4 GPIO"
+        range 0 48
+        default 32 if IDF_TARGET_ESP32
+        default 16 if IDF_TARGET_ESP32S3
+
+    config MOL_GPIO_COLUMN5
+        int "Matrix column 5 GPIO"
+        range 0 48
+        default 33 if IDF_TARGET_ESP32
+        default 17 if IDF_TARGET_ESP32S3
+
+    config MOL_GPIO_SCAN_PERIOD_MS
+        int "Matrix scan period in milliseconds"
+        range 1 5
+        default 1
+
+    config MOL_GPIO_SETTLE_US
+        int "Row settle time in microseconds"
+        range 1 50
+        default 3
+
+    config MOL_GPIO_DEBOUNCE_MS
+        int "Matrix debounce time in milliseconds"
+        range 5 20
+        default 8
+
+    choice MOL_GPIO_GHOST_POLICY
+        prompt "Matrix ghosting policy"
+        default MOL_GPIO_GHOST_SUPPRESS
+
+        config MOL_GPIO_GHOST_SUPPRESS
+            bool "Suppress ambiguous rectangles (no diodes)"
+
+        config MOL_GPIO_GHOST_ALLOW
+            bool "Allow all scanned keys (diode matrix)"
+    endchoice
+
+    config MOL_GPIO_VELOCITY_PERCENT
+        int "Fixed key velocity in percent"
+        range 1 100
+        default 80
+
+    config MOL_GPIO_CONFIG_KEY
+        int "Key index used to enter configuration mode"
+        range 0 29
+        default 29
+
+    config MOL_GPIO_CONFIG_HOLD_MS
+        int "Configuration-key hold time in milliseconds"
+        range 1000 10000
+        default 3000
+
+    config MOL_GPIO_TASK_PRIORITY
+        int "GPIO scan task priority"
+        range 1 19
+        default 12
+
+    config MOL_GPIO_TASK_CORE
+        int "GPIO scan task core affinity"
+        range 0 1
+        default 0
+
+    config MOL_GPIO_TASK_STACK_SIZE
+        int "Static GPIO scan task stack size in bytes"
+        range 2048 8192
+        default 3072
+
+    endif
 
 endmenu

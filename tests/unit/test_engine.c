@@ -84,7 +84,7 @@ static void test_tiny_embedded_budget(void) {
   static test_storage_t storage;
   mol_engine_config_t config = mol_engine_config_default();
   mol_engine_t* engine = NULL;
-  config.max_voices = 8u;
+  config.max_voices = 12u;
   config.command_capacity = 32u;
   config.event_capacity = 32u;
   EXPECT_TRUE(mol_engine_query_memory(&config) <= 131072u);

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include <inttypes.h>
 #include <math.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -16,6 +17,8 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "gpio_matrix.h"
+#include "input_queue.h"
 #include "mol/mol.h"
 #include "sequence_fixture.h"
 
@@ -34,15 +37,28 @@ typedef union mol_esp32_engine_storage {
 } mol_esp32_engine_storage_t;
 
 typedef struct mol_esp32_audio_stats {
-  volatile uint32_t dma_queue_overflows;
+  atomic_uint_least32_t dma_queue_overflows;
+  atomic_uint_least32_t render_failures;
+  atomic_uint_least32_t write_failures;
+  atomic_uint_least32_t partial_writes;
+  atomic_uint_least32_t render_deadline_misses;
+  atomic_uint_least32_t watchdog_failures;
+  atomic_uint_least32_t submitted_commands;
+  atomic_uint_least32_t max_render_time_us;
+  atomic_uint_least32_t rendered_frames;
+} mol_esp32_audio_stats_t;
+
+typedef struct mol_esp32_audio_snapshot {
+  uint32_t dma_queue_overflows;
   uint32_t render_failures;
   uint32_t write_failures;
   uint32_t partial_writes;
   uint32_t render_deadline_misses;
   uint32_t watchdog_failures;
+  uint32_t submitted_commands;
   uint32_t max_render_time_us;
-  uint64_t rendered_frames;
-} mol_esp32_audio_stats_t;
+  uint32_t rendered_frames;
+} mol_esp32_audio_snapshot_t;
 
 static const char* const kTag = "mol-keyboard";
 static mol_esp32_engine_storage_t engine_memory;
@@ -57,6 +73,38 @@ static mol_esp32_audio_stats_t audio_stats;
 
 _Static_assert(CONFIG_MOL_AUDIO_TASK_PRIORITY < configMAX_PRIORITIES,
                "Audio task priority must be below configMAX_PRIORITIES");
+
+static void update_max_render_time(uint32_t value) {
+  uint_least32_t observed =
+      atomic_load_explicit(&audio_stats.max_render_time_us, memory_order_relaxed);
+  while ((uint_least32_t)value > observed &&
+         !atomic_compare_exchange_weak_explicit(&audio_stats.max_render_time_us, &observed, value,
+                                                memory_order_relaxed, memory_order_relaxed)) {
+  }
+}
+
+static mol_esp32_audio_snapshot_t audio_stats_snapshot(void) {
+  mol_esp32_audio_snapshot_t snapshot;
+  snapshot.dma_queue_overflows =
+      (uint32_t)atomic_load_explicit(&audio_stats.dma_queue_overflows, memory_order_relaxed);
+  snapshot.render_failures =
+      (uint32_t)atomic_load_explicit(&audio_stats.render_failures, memory_order_relaxed);
+  snapshot.write_failures =
+      (uint32_t)atomic_load_explicit(&audio_stats.write_failures, memory_order_relaxed);
+  snapshot.partial_writes =
+      (uint32_t)atomic_load_explicit(&audio_stats.partial_writes, memory_order_relaxed);
+  snapshot.render_deadline_misses =
+      (uint32_t)atomic_load_explicit(&audio_stats.render_deadline_misses, memory_order_relaxed);
+  snapshot.watchdog_failures =
+      (uint32_t)atomic_load_explicit(&audio_stats.watchdog_failures, memory_order_relaxed);
+  snapshot.submitted_commands =
+      (uint32_t)atomic_load_explicit(&audio_stats.submitted_commands, memory_order_relaxed);
+  snapshot.max_render_time_us =
+      (uint32_t)atomic_load_explicit(&audio_stats.max_render_time_us, memory_order_relaxed);
+  snapshot.rendered_frames =
+      (uint32_t)atomic_load_explicit(&audio_stats.rendered_frames, memory_order_relaxed);
+  return snapshot;
+}
 
 static mol_command_t make_note_on(void) {
   mol_command_t command;
@@ -147,7 +195,7 @@ static bool IRAM_ATTR on_send_queue_overflow(i2s_chan_handle_t handle, i2s_event
   mol_esp32_audio_stats_t* stats = (mol_esp32_audio_stats_t*)user_context;
   (void)handle;
   (void)event;
-  ++stats->dma_queue_overflows;
+  atomic_fetch_add_explicit(&stats->dma_queue_overflows, 1u, memory_order_relaxed);
   return false;
 }
 
@@ -197,7 +245,7 @@ static void audio_render_task(void* context) {
 
 #if CONFIG_ESP_TASK_WDT_EN
   if (esp_task_wdt_add(NULL) != ESP_OK) {
-    ++audio_stats.watchdog_failures;
+    atomic_fetch_add_explicit(&audio_stats.watchdog_failures, 1u, memory_order_relaxed);
   }
 #endif
 
@@ -206,6 +254,8 @@ static void audio_render_task(void* context) {
     size_t bytes_written = 0u;
     esp_err_t write_result;
     uint32_t index;
+    atomic_fetch_add_explicit(&audio_stats.submitted_commands, mol_input_drain(engine),
+                              memory_order_relaxed);
     mol_result_t render_result = mol_engine_render_interleaved_f32(
         engine, render_buffer, MOL_ESP32_RENDER_FRAMES, MOL_ESP32_CHANNEL_COUNT);
 
@@ -214,32 +264,31 @@ static void audio_render_task(void* context) {
         pcm_buffer[index] = float_to_pcm16(render_buffer[index]);
       }
     } else {
-      ++audio_stats.render_failures;
+      atomic_fetch_add_explicit(&audio_stats.render_failures, 1u, memory_order_relaxed);
       memset(pcm_buffer, 0, sizeof(pcm_buffer));
     }
 
     {
       const uint32_t render_time_us = (uint32_t)(esp_timer_get_time() - render_start);
-      if (render_time_us > audio_stats.max_render_time_us) {
-        audio_stats.max_render_time_us = render_time_us;
-      }
+      update_max_render_time(render_time_us);
       if (render_time_us > render_deadline_us) {
-        ++audio_stats.render_deadline_misses;
+        atomic_fetch_add_explicit(&audio_stats.render_deadline_misses, 1u, memory_order_relaxed);
       }
     }
 
     write_result = i2s_channel_write(i2s_tx_channel, pcm_buffer, sizeof(pcm_buffer), &bytes_written,
                                      MOL_ESP32_WRITE_TIMEOUT_MS);
     if (write_result != ESP_OK) {
-      ++audio_stats.write_failures;
+      atomic_fetch_add_explicit(&audio_stats.write_failures, 1u, memory_order_relaxed);
     } else if (bytes_written != sizeof(pcm_buffer)) {
-      ++audio_stats.partial_writes;
+      atomic_fetch_add_explicit(&audio_stats.partial_writes, 1u, memory_order_relaxed);
     }
-    audio_stats.rendered_frames += MOL_ESP32_RENDER_FRAMES;
+    atomic_fetch_add_explicit(&audio_stats.rendered_frames, MOL_ESP32_RENDER_FRAMES,
+                              memory_order_relaxed);
 
 #if CONFIG_ESP_TASK_WDT_EN
     if (esp_task_wdt_reset() != ESP_OK) {
-      ++audio_stats.watchdog_failures;
+      atomic_fetch_add_explicit(&audio_stats.watchdog_failures, 1u, memory_order_relaxed);
     }
 #endif
   }
@@ -262,7 +311,7 @@ void app_main(void) {
            sequence_summary.event_count, sequence_summary.final_frame);
   config.sample_rate = CONFIG_MOL_I2S_SAMPLE_RATE;
   config.channel_count = MOL_ESP32_CHANNEL_COUNT;
-  config.max_voices = 8u;
+  config.max_voices = 12u;
   config.command_capacity = 32u;
   config.event_capacity = 32u;
   if (mol_engine_query_memory(&config) > sizeof(engine_memory.bytes)) {
@@ -284,12 +333,34 @@ void app_main(void) {
   ESP_LOGI(kTag, "Tiny core C4 passed: frequency=%.4f Hz peak=%.6f", (double)frequency,
            (double)peak);
 
+  mol_engine_shutdown(engine);
+  engine = NULL;
+  result = mol_engine_init(engine_memory.bytes, sizeof(engine_memory.bytes), &config, &engine);
+  if (result != MOL_OK) {
+    ESP_LOGE(kTag, "Clean engine initialization failed: %s", mol_result_string(result));
+    return;
+  }
+
+  mol_input_queue_init();
   initialize_i2s();
   audio_task_handle = xTaskCreateStaticPinnedToCore(
       audio_render_task, "mol-audio", CONFIG_MOL_AUDIO_TASK_STACK_SIZE, NULL,
       CONFIG_MOL_AUDIO_TASK_PRIORITY, audio_task_stack, &audio_task_control,
       CONFIG_MOL_AUDIO_TASK_CORE);
   ESP_ERROR_CHECK(audio_task_handle != NULL ? ESP_OK : ESP_ERR_NO_MEM);
+#if CONFIG_MOL_GPIO_MATRIX_ENABLE
+  ESP_ERROR_CHECK(mol_gpio_matrix_start());
+  ESP_LOGI(kTag, "GPIO matrix active: 5x6, debounce=%d ms, ghost=%s, config key=%d hold=%d ms",
+           CONFIG_MOL_GPIO_DEBOUNCE_MS,
+#if CONFIG_MOL_GPIO_GHOST_ALLOW
+           "diode/allow",
+#else
+           "suppress-ambiguous",
+#endif
+           CONFIG_MOL_GPIO_CONFIG_KEY, CONFIG_MOL_GPIO_CONFIG_HOLD_MS);
+#else
+  ESP_LOGI(kTag, "GPIO matrix capability=unsupported (disabled by build configuration)");
+#endif
   ESP_LOGI(kTag,
            "I2S active: %" PRIu32
            " Hz, BCLK=%d WS=%d DOUT=%d, DMA=%d x %u, "
@@ -299,16 +370,32 @@ void app_main(void) {
            CONFIG_MOL_AUDIO_TASK_PRIORITY, CONFIG_MOL_AUDIO_TASK_CORE);
 
   for (;;) {
+    mol_esp32_audio_snapshot_t audio_snapshot;
+    mol_input_queue_stats_t input_stats;
+    mol_gpio_matrix_stats_t gpio_stats;
     vTaskDelay(pdMS_TO_TICKS(MOL_ESP32_DIAGNOSTIC_PERIOD_MS));
-    ESP_LOGI(kTag,
-             "audio frames=%" PRIu64 " render_fail=%" PRIu32 " write_fail=%" PRIu32
-             " partial=%" PRIu32 " dma_q_ovf=%" PRIu32 " deadline_miss=%" PRIu32
-             " max_render_us=%" PRIu32 " wdt_fail=%" PRIu32 " stack_min=%u internal_heap_min=%u",
-             audio_stats.rendered_frames, audio_stats.render_failures, audio_stats.write_failures,
-             audio_stats.partial_writes, audio_stats.dma_queue_overflows,
-             audio_stats.render_deadline_misses, audio_stats.max_render_time_us,
-             audio_stats.watchdog_failures,
-             (unsigned int)uxTaskGetStackHighWaterMark(audio_task_handle),
-             (unsigned int)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL));
+    audio_snapshot = audio_stats_snapshot();
+    input_stats = mol_input_queue_stats();
+    gpio_stats = mol_gpio_matrix_stats();
+    if (mol_input_take_config_mode_request()) {
+      ESP_LOGI(kTag, "Configuration mode requested by physical hold gesture");
+    }
+    ESP_LOGI(
+        kTag,
+        "audio frames=%" PRIu32 " render_fail=%" PRIu32 " write_fail=%" PRIu32 " partial=%" PRIu32
+        " dma_q_ovf=%" PRIu32 " deadline_miss=%" PRIu32 " max_render_us=%" PRIu32
+        " wdt_fail=%" PRIu32 " commands=%" PRIu32 " input_queued=%" PRIu32 " input_drop=%" PRIu32
+        " input_reject=%" PRIu32 " input_high=%" PRIu32 " gpio_scans=%" PRIu32
+        " gpio_events=%" PRIu32 " gpio_ghost=%" PRIu32 " gpio_fail=%" PRIu32
+        " audio_stack_min=%u gpio_stack_min=%" PRIu32 " internal_heap_min=%u",
+        audio_snapshot.rendered_frames, audio_snapshot.render_failures,
+        audio_snapshot.write_failures, audio_snapshot.partial_writes,
+        audio_snapshot.dma_queue_overflows, audio_snapshot.render_deadline_misses,
+        audio_snapshot.max_render_time_us, audio_snapshot.watchdog_failures,
+        audio_snapshot.submitted_commands, input_stats.queued, input_stats.dropped,
+        input_stats.rejected, input_stats.high_water, gpio_stats.scans, gpio_stats.transitions,
+        gpio_stats.ghost_scans, gpio_stats.delivery_failures,
+        (unsigned int)uxTaskGetStackHighWaterMark(audio_task_handle), gpio_stats.stack_high_water,
+        (unsigned int)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL));
   }
 }

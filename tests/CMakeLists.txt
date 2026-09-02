@@ -61,6 +61,16 @@ mol_enable_warnings(mol_wire_tests)
 mol_enable_optional_instrumentation(mol_wire_tests)
 add_test(NAME mol_wire_tests COMMAND mol_wire_tests)
 
+add_executable(
+  mol_esp32_matrix_tests unit/test_esp32_matrix.c
+                         ${PROJECT_SOURCE_DIR}/platforms/esp32/main/matrix_logic.c)
+target_include_directories(mol_esp32_matrix_tests
+                           PRIVATE ${PROJECT_SOURCE_DIR}/platforms/esp32/main)
+set_target_properties(mol_esp32_matrix_tests PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_esp32_matrix_tests)
+mol_enable_optional_instrumentation(mol_esp32_matrix_tests)
+add_test(NAME mol_esp32_matrix_tests COMMAND mol_esp32_matrix_tests)
+
 add_test(
   NAME mol_harmony_project_audit
   COMMAND
