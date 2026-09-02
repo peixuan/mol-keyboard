@@ -16,9 +16,10 @@ It does not contain code or assets from an earlier MoL Keyboard project.
 
 ## Current status / 当前状态
 
-The M0-M4 quality gates are complete; development is now implementing the M5
-desktop headless product around the freestanding-friendly ISO C11 core. Platform claims
-are recorded only after real builds or runtime checks. See
+The M0-M4 quality gates and M5 desktop headless implementation are complete;
+development is now implementing the M6 Web/PWA product around the
+freestanding-friendly ISO C11 core. Platform claims are recorded only after
+real builds or runtime checks. See
 [`docs/status/IMPLEMENTATION_STATUS.md`](docs/status/IMPLEMENTATION_STATUS.md)
 and [`docs/status/PLATFORM_MATRIX.md`](docs/status/PLATFORM_MATRIX.md) for current
 evidence.
@@ -84,15 +85,25 @@ Sustain: Space
 
 ## Headless and Web use / 无界面与 Web 使用
 
-The verified first headless entry point is `mol-render`; `mol-keyboardd` and
-`molctl` remain planned. The same C core now executes as WebAssembly in a
-verified AudioWorklet and builds into ESP32/ESP32-S3 firmware with a configurable
-I2S host. Products are not claimed as available until their milestone evidence
-is recorded.
+Start the foreground desktop service and control it from another terminal:
 
-首个已验证的无界面入口是 `mol-render`，`mol-keyboardd` 与 `molctl` 仍在计划中。
-同一份 C 核心现已在 WebAssembly AudioWorklet 中通过验证，并已构建为带可配置 I2S
-宿主的 ESP32/ESP32-S3 固件；在里程碑证据完成前，不会将产品标记为可用。
+```powershell
+build/dev-release/apps/mol-keyboardd/mol-keyboardd
+build/dev-release/apps/molctl/molctl status
+build/dev-release/apps/molctl/molctl preset set violin
+build/dev-release/apps/molctl/molctl doctor
+```
+
+`mol-keyboardd` uses local-only IPC and the operating system's audio devices;
+use `--null-backend` on machines without audio hardware. The same C core also
+executes as WebAssembly in a verified AudioWorklet and builds into
+ESP32/ESP32-S3 firmware with a configurable I2S host. The complete M6 PWA UI is
+the current work.
+
+`mol-keyboardd` 与 `molctl` 已可在无界面模式下通过仅限本机的 IPC 完成演奏、音色切换、
+录音、回放和诊断；无音频设备的机器可使用 `--null-backend`。同一份 C 核心也已在
+WebAssembly AudioWorklet 中通过验证，并构建为带可配置 I2S 宿主的 ESP32/ESP32-S3
+固件。当前继续实现完整的 M6 PWA 界面。
 
 ## Platform boundaries / 平台边界
 

@@ -2,12 +2,14 @@
 
 ## Current milestone
 
-M5 desktop headless product is the highest unmet gate. M0 through M4 are
-complete.
+M5 desktop headless implementation is complete and runtime-verified on Windows
+and Linux/WSL. Physical Bluetooth/evdev acceptance and macOS build/runtime
+acceptance remain environment-blocked. M6 Web/PWA is the highest gate with
+locally actionable implementation work. M0 through M4 are complete.
 
 ## Last verified commit
 
-`8db93a9` (`test(sequence): verify shared fixture across targets`) is the last
+`c87e1a1` (`fix(build): pass sanitized control tests on Windows`) is the last
 verified code commit. The validation below was run on 2026-09-03 after that
 commit. Documentation changes do not alter binaries.
 
@@ -61,27 +63,41 @@ commit. Documentation changes do not alter binaries.
   and normal or 2x high-quality rendering; and emits duration, peak, RMS,
   clipped, NaN/Inf, underrun, SHA-256, and JSON-report evidence. CTest checks
   WAV headers and independently recomputes each report hash.
-- Patch and Mol Sequence parser/writer Clang libFuzzer entries cover arbitrary
-  input and successful-parse round trips. ASan/UBSan builds all portable tests
-  and both fuzzers; the Windows ASan runtime is deployed for all test binaries.
+- Patch and Mol Sequence parser/writer, MolWireEventV1, and JSON-RPC Clang
+  libFuzzer entries cover arbitrary bounded input and successful-parse round
+  trips where applicable. ASan/UBSan builds all portable and control-plane
+  tests; the Windows ASan runtime is deployed for all test binaries.
 - Native and Wasm parse the exact same generated 12-event sequence fixture and
   match one golden summary. The ESP32 and ESP32-S3 startup paths parse those
   same checked-in bytes before I2S starts; both firmware targets compile. The
   current app binaries are 153,440 and 179,328 bytes respectively. Detailed M4
   evidence is in `docs/sequence/M4_SEQUENCE_EVIDENCE.md`.
+- The desktop product now includes `mol-keyboardd`, `molctl`, miniaudio output
+  and hotplug recovery, Windows Raw Input/Linux evdev/macOS IOHIDManager input
+  adapters, bounded local IPC, all 41 specified JSON-RPC methods, strict atomic
+  configuration, recording/playback, actionable doctor/self-test/benchmark,
+  and user startup assets for Windows, systemd, and launchd.
+- An independent Windows Release process used the active 48 kHz stereo WASAPI
+  device, exposed the physical Raw Input adapter, passed doctor and a 96,000
+  frame benchmark at 80.68 times realtime with no non-finite samples, and shut
+  down with exit code 0. Linux/Clang ran the service lifecycle over a private
+  Unix socket under WSL. Detailed evidence and unclaimed hardware boundaries
+  are in `docs/service/M5_DESKTOP_EVIDENCE.md`.
 
 ## In-progress work
 
-- M5: implement the foreground-by-default `mol-keyboardd` service and `molctl`
-  control client, including bounded JSON-RPC, authentication policy, observable
-  health/state, desktop input/output integration, and clean-checkout evidence.
+- M6: build the complete standards-based TypeScript/Web Components PWA around
+  the verified AudioWorklet Wasm core, beginning with standalone MessagePort
+  control and browser lifecycle safety.
 
 ## Blocked platform checks
 
 - Apple SDKs and DevEco/HarmonyOS SDKs are not available on this Windows host.
-- Physical Android/Apple/Harmony/ESP32 devices, audio hardware, signing
-  credentials, and long-run device time are not available. No device-verified
-  status is claimed.
+- No Bluetooth output was exposed for the Windows run. WSL exposes neither a
+  physical evdev keyboard nor native Linux audio hardware. Those M5 acceptance
+  paths and macOS compilation/runtime remain unverified.
+- Physical Android/Apple/Harmony/ESP32 devices, signing credentials, and
+  long-run device time are not available. No device-verified status is claimed.
 
 ## Exact validation commands and results
 
@@ -96,9 +112,15 @@ cmake --build --preset dev-release
 ctest --preset dev-release --output-on-failure
 ```
 
-MSVC 19.51.36248 passed 51/51 tests in Debug and LTO Release. A separate Tiny
-profile passed 21/21; a Standard build with Chorus, Delay, and Reverb all
-disabled passed 21/21.
+MSVC 19.51.36248 passed 63/63 tests in Debug and LTO Release. This includes an
+independent daemon process, realtime runtime, local IPC, all service methods,
+CLI validation, configuration restart, recording/playback, and prior core/tool
+coverage. A separate Tiny profile passed 21/21; a Standard build with Chorus,
+Delay, and Reverb all disabled passed 21/21.
+
+Under WSL, Linux x86_64 Clang 21.1.8 built the desktop service and passed 63/63
+tests. The daemon process used its null sink and a private Unix socket; physical
+Linux devices remain unclaimed.
 
 With the pinned Emscripten environment active:
 
@@ -111,7 +133,7 @@ cmake --build --preset wasm-release
 ctest --preset wasm-release --output-on-failure
 ```
 
-Emscripten 6.0.5 and Node.js 22.16.0 passed 23/23 tests in Debug and LTO
+Emscripten 6.0.5 and Node.js 22.16.0 passed 24/24 tests in Debug and LTO
 MinSizeRel. Both configurations match the Native event, sequence-fixture, and
 18-preset audio-metric goldens.
 
@@ -124,9 +146,9 @@ cmake --build --preset fuzz-clang
 ctest --preset fuzz-clang --output-on-failure
 ```
 
-The ASan/UBSan configuration passed 23/23 tests. Its Patch and Mol Sequence
-libFuzzer smoke sessions each ran for 20 seconds with valid corpus seeds and
-produced no finding.
+The ASan/UBSan configuration passed 30/30 tests. Patch, Mol Sequence,
+MolWireEventV1, and JSON-RPC libFuzzer smoke sessions each ran for 20 seconds
+and produced no finding.
 
 With the pinned ESP-IDF environment active, from `platforms/esp32`:
 
@@ -151,6 +173,7 @@ results.
 
 ## Next highest-priority task
 
-Implement M5 beginning with the bounded transport-neutral JSON-RPC dispatcher,
-then connect `mol-keyboardd` and `molctl` through a local authenticated control
-transport.
+Implement M6 beginning with the complete standalone TypeScript/Web Components
+UI, MessagePort AudioWorklet control, gesture-safe keyboard/touch input, and
+offline PWA storage. Keep the blocked physical M5/macOS checks explicit until
+matching hardware and an Apple toolchain are available.
