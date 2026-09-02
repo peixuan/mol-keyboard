@@ -51,6 +51,12 @@ const submitPortamento = molModule.cwrap("mol_wasm_submit_portamento", "number",
 const submitAction = molModule.cwrap("mol_wasm_submit_action", "number", ["number"]);
 const pollEvents = molModule.cwrap("mol_wasm_poll_events", "number", []);
 const eventBuffer = molModule.cwrap("mol_wasm_event_buffer", "number", []);
+const exportRecording = molModule.cwrap("mol_wasm_export_recording", "number", []);
+const recordingLastError = molModule.cwrap("mol_wasm_recording_last_error", "number", []);
+const recordingBuffer = molModule.cwrap("mol_wasm_recording_buffer", "number", []);
+const sequenceInputBuffer = molModule.cwrap("mol_wasm_sequence_input_buffer", "number", []);
+const sequenceInputCapacity = molModule.cwrap("mol_wasm_sequence_input_capacity", "number", []);
+const loadSequence = molModule.cwrap("mol_wasm_load_sequence", "number", ["number"]);
 const render = molModule.cwrap("mol_wasm_render", "number", ["number", "number"]);
 
 const MOL_RENDER_QUANTUM = 128;
@@ -117,7 +123,11 @@ class MolAudioProcessor extends AudioWorkletProcessor {
       if (!this.ready || message === null || typeof message !== "object") {
         return;
       }
-      if (message.type === "events") {
+      if (message.type === "recording-export") {
+        this.handleRecordingExport(message);
+      } else if (message.type === "recording-load") {
+        this.handleRecordingLoad(message);
+      } else if (message.type === "events") {
         if (!Array.isArray(message.events) || message.events.length > MOL_MAX_MESSAGE_EVENTS) {
           this.port.postMessage({ type: "events-processed", accepted: 0, rejected: 1 });
           return;
@@ -144,6 +154,51 @@ class MolAudioProcessor extends AudioWorkletProcessor {
         }
       }
     };
+  }
+
+  handleRecordingExport(message) {
+    const requestId = integerInRange(message.requestId, 1, 0xffffffff) ? message.requestId : 0;
+    const size = exportRecording();
+    const pointer = recordingBuffer();
+    const capacity = sequenceInputCapacity();
+    if (requestId === 0 || size <= 0 || size > capacity || pointer === 0) {
+      this.port.postMessage({
+        type: "recording-exported",
+        requestId,
+        accepted: false,
+        diagnostic: { size, pointer, capacity, coreError: recordingLastError() },
+      });
+      return;
+    }
+    const bytes = new Uint8Array(size);
+    bytes.set(molModule.HEAPU8.subarray(pointer, pointer + size));
+    this.port.postMessage({ type: "recording-exported", requestId, accepted: true, bytes }, [
+      bytes.buffer,
+    ]);
+  }
+
+  handleRecordingLoad(message) {
+    const requestId = integerInRange(message.requestId, 1, 0xffffffff) ? message.requestId : 0;
+    const bytes = message.bytes;
+    const capacity = sequenceInputCapacity();
+    if (
+      requestId === 0 ||
+      !(bytes instanceof Uint8Array) ||
+      bytes.length === 0 ||
+      bytes.length > capacity
+    ) {
+      this.port.postMessage({ type: "recording-loaded", requestId, accepted: false });
+      return;
+    }
+    const pointer = sequenceInputBuffer();
+    molModule.HEAPU8.set(bytes, pointer);
+    const result = loadSequence(bytes.length);
+    this.port.postMessage({
+      type: "recording-loaded",
+      requestId,
+      accepted: result === 0,
+      result,
+    });
   }
 
   handleEvent(message) {

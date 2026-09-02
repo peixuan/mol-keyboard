@@ -8,6 +8,7 @@
 
 #define MOL_WASM_MAX_FRAMES 128u
 #define MOL_WASM_MAX_EVENTS 64u
+#define MOL_WASM_SEQUENCE_BYTES 2097152u
 
 typedef union mol_wasm_storage {
   long double floating_alignment;
@@ -21,6 +22,54 @@ static mol_engine_t* mol_wasm_engine;
 static float mol_wasm_output[MOL_WASM_MAX_FRAMES * 2u];
 static mol_event_t mol_wasm_core_events[MOL_WASM_MAX_EVENTS];
 static uint32_t mol_wasm_event_words[MOL_WASM_MAX_EVENTS * 4u];
+static mol_sequence_config_t mol_wasm_sequence_config;
+static mol_sequence_event_t mol_wasm_sequence_events[MOL_PROFILE_SEQUENCE_EVENTS];
+static uint8_t mol_wasm_sequence_output[MOL_WASM_SEQUENCE_BYTES];
+static uint8_t mol_wasm_sequence_input[MOL_WASM_SEQUENCE_BYTES];
+static uint32_t mol_wasm_sequence_output_size;
+static int32_t mol_wasm_recording_error;
+
+typedef struct mol_wasm_sequence_writer {
+  size_t offset;
+} mol_wasm_sequence_writer_t;
+
+typedef struct mol_wasm_sequence_reader {
+  size_t offset;
+  size_t size;
+  uint32_t event_count;
+} mol_wasm_sequence_reader_t;
+
+static mol_result_t mol_wasm_write_sequence(void* user_data, const uint8_t* data, size_t size) {
+  mol_wasm_sequence_writer_t* destination = (mol_wasm_sequence_writer_t*)user_data;
+  if (destination == NULL || data == NULL || destination->offset > MOL_WASM_SEQUENCE_BYTES ||
+      size > MOL_WASM_SEQUENCE_BYTES - destination->offset) {
+    return MOL_ERROR_BUFFER_TOO_SMALL;
+  }
+  memcpy(mol_wasm_sequence_output + destination->offset, data, size);
+  destination->offset += size;
+  return MOL_OK;
+}
+
+static size_t mol_wasm_read_sequence(void* user_data, uint8_t* data, size_t capacity) {
+  mol_wasm_sequence_reader_t* source = (mol_wasm_sequence_reader_t*)user_data;
+  size_t remaining;
+  size_t copy_size;
+  if (source == NULL || data == NULL || source->offset > source->size) return 0u;
+  remaining = source->size - source->offset;
+  copy_size = capacity < remaining ? capacity : remaining;
+  memcpy(data, mol_wasm_sequence_input + source->offset, copy_size);
+  source->offset += copy_size;
+  return copy_size;
+}
+
+static mol_result_t mol_wasm_collect_event(void* user_data, const mol_sequence_event_t* event) {
+  mol_wasm_sequence_reader_t* reader = (mol_wasm_sequence_reader_t*)user_data;
+  if (reader == NULL || event == NULL || reader->event_count >= MOL_PROFILE_SEQUENCE_EVENTS) {
+    return MOL_ERROR_BUFFER_TOO_SMALL;
+  }
+  mol_wasm_sequence_events[reader->event_count++] = *event;
+  return MOL_OK;
+}
 
 static mol_command_t mol_wasm_command(mol_command_type_t type) {
   mol_command_t command;
@@ -206,6 +255,87 @@ EMSCRIPTEN_KEEPALIVE uint32_t mol_wasm_poll_events(void) {
 }
 
 EMSCRIPTEN_KEEPALIVE const uint32_t* mol_wasm_event_buffer(void) { return mol_wasm_event_words; }
+
+EMSCRIPTEN_KEEPALIVE uint32_t mol_wasm_export_recording(void) {
+  mol_sequence_writer_t writer;
+  mol_wasm_sequence_writer_t destination;
+  uint32_t event_count = 0u;
+  uint32_t index;
+  mol_result_t result;
+  if (mol_wasm_engine == NULL) return 0u;
+  mol_wasm_recording_error = MOL_OK;
+  memset(&destination, 0, sizeof(destination));
+  memset(&mol_wasm_sequence_config, 0, sizeof(mol_wasm_sequence_config));
+  mol_wasm_sequence_config.struct_size = (uint32_t)sizeof(mol_wasm_sequence_config);
+  mol_wasm_sequence_config.api_version = MOL_API_VERSION;
+  mol_wasm_sequence_output_size = 0u;
+  result = mol_engine_copy_recording(mol_wasm_engine, &mol_wasm_sequence_config,
+                                     mol_wasm_sequence_events, MOL_PROFILE_SEQUENCE_EVENTS,
+                                     &event_count);
+  if (result != MOL_OK) {
+    mol_wasm_recording_error = result;
+    return 0u;
+  }
+  if (event_count == 0u) {
+    mol_wasm_recording_error = MOL_ERROR_INVALID_STATE;
+    return 0u;
+  }
+  memset(&writer, 0, sizeof(writer));
+  writer.struct_size = (uint32_t)sizeof(writer);
+  writer.api_version = MOL_API_VERSION;
+  result = mol_sequence_writer_init(&writer, &mol_wasm_sequence_config, mol_wasm_write_sequence,
+                                    &destination);
+  for (index = 0u; result == MOL_OK && index < event_count; ++index) {
+    result = mol_sequence_writer_append(&writer, &mol_wasm_sequence_events[index]);
+  }
+  if (result == MOL_OK) result = mol_sequence_writer_finalize(&writer);
+  if (result != MOL_OK || destination.offset > UINT32_MAX) {
+    mol_wasm_recording_error = result != MOL_OK ? result : MOL_ERROR_OVERFLOW;
+    return 0u;
+  }
+  mol_wasm_sequence_output_size = (uint32_t)destination.offset;
+  return mol_wasm_sequence_output_size;
+}
+
+EMSCRIPTEN_KEEPALIVE int32_t mol_wasm_recording_last_error(void) {
+  return mol_wasm_recording_error;
+}
+
+EMSCRIPTEN_KEEPALIVE const uint8_t* mol_wasm_recording_buffer(void) {
+  return mol_wasm_sequence_output;
+}
+
+EMSCRIPTEN_KEEPALIVE uint8_t* mol_wasm_sequence_input_buffer(void) {
+  return mol_wasm_sequence_input;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t mol_wasm_sequence_input_capacity(void) {
+  return MOL_WASM_SEQUENCE_BYTES;
+}
+
+EMSCRIPTEN_KEEPALIVE int mol_wasm_load_sequence(uint32_t size) {
+  mol_wasm_sequence_reader_t source;
+  mol_sequence_callbacks_t callbacks;
+  mol_result_t result;
+  if (mol_wasm_engine == NULL || size == 0u || size > MOL_WASM_SEQUENCE_BYTES) {
+    return MOL_ERROR_INVALID_ARGUMENT;
+  }
+  memset(&source, 0, sizeof(source));
+  source.size = size;
+  memset(&callbacks, 0, sizeof(callbacks));
+  callbacks.struct_size = (uint32_t)sizeof(callbacks);
+  callbacks.api_version = MOL_API_VERSION;
+  callbacks.on_event = mol_wasm_collect_event;
+  callbacks.user_data = &source;
+  memset(&mol_wasm_sequence_config, 0, sizeof(mol_wasm_sequence_config));
+  mol_wasm_sequence_config.struct_size = (uint32_t)sizeof(mol_wasm_sequence_config);
+  mol_wasm_sequence_config.api_version = MOL_API_VERSION;
+  result = mol_sequence_read_stream(mol_wasm_read_sequence, &source, &mol_wasm_sequence_config,
+                                    &callbacks);
+  if (result != MOL_OK || source.offset != source.size) return result;
+  return mol_engine_load_sequence(mol_wasm_engine, &mol_wasm_sequence_config,
+                                  mol_wasm_sequence_events, source.event_count);
+}
 
 EMSCRIPTEN_KEEPALIVE const float* mol_wasm_render(uint32_t frame_count, uint32_t channel_count) {
   if (mol_wasm_engine == NULL || frame_count > MOL_WASM_MAX_FRAMES || channel_count == 0u ||

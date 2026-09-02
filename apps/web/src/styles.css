@@ -600,6 +600,50 @@ input[type="range"] {
   font-weight: 900;
 }
 
+.recording-library {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  padding: 18px 22px;
+  border: solid var(--ink);
+  border-width: 0 2px 2px;
+  background: var(--paper);
+}
+
+.recording-library label {
+  display: flex;
+  min-width: 220px;
+  flex: 1;
+  gap: 7px;
+  flex-direction: column;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.recording-library select,
+.recording-library button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: var(--cream);
+  color: var(--ink);
+  font-weight: 750;
+}
+
+.recording-library button {
+  cursor: pointer;
+}
+
+.recording-library output {
+  padding-bottom: 13px;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10px;
+}
+
 .studio-controls {
   margin-top: 62px;
 }
@@ -750,7 +794,8 @@ footer p {
   }
 
   .control-heading,
-  .transport-controls {
+  .transport-controls,
+  .recording-library {
     align-items: stretch;
     flex-direction: column;
   }
@@ -761,6 +806,10 @@ footer p {
 
   [data-recording-state] {
     margin: 8px 0 0;
+  }
+
+  .recording-library label {
+    min-width: 0;
   }
 
   .diagnostics dl {

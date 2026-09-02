@@ -2,6 +2,14 @@ import "./styles.css";
 import { type EngineEvent, MolAudioEngine } from "./audio-engine";
 import { ARPEGGIATORS, CHORDS, PRESETS, SCALES, optionsMarkup } from "./catalog";
 import {
+  type WebSettings,
+  listRecordings,
+  loadRecording as loadStoredRecording,
+  loadSettings,
+  saveRecording,
+  saveSettings,
+} from "./persistence";
+import {
   BINDING_BY_CODE,
   BINDING_BY_NOTE,
   KEY_BINDINGS,
@@ -144,6 +152,13 @@ template.innerHTML = `
         <button type="button" data-transport="play" data-en="Play back" data-zh="回放">Play back</button>
         <span data-recording-state role="status" data-en="No take yet" data-zh="尚无录音">No take yet</span>
       </div>
+      <div class="recording-library">
+        <label><span data-en="Saved takes" data-zh="已保存录音">Saved takes</span>
+          <select data-recording-list aria-label="Saved recordings"><option value="">—</option></select>
+        </label>
+        <button type="button" data-recording-load data-en="Load selected" data-zh="载入所选">Load selected</button>
+        <output data-recording-storage>IndexedDB / OPFS</output>
+      </div>
 
       <div class="studio-controls" data-studio hidden>
         <div class="studio-section">
@@ -201,8 +216,12 @@ class MolKeyboardApp extends HTMLElement {
   private startButton: HTMLButtonElement | undefined;
   private nextGestureId = 1;
   private coreEventCount = 0;
+  private recording = false;
   private language: "en" | "zh" = navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
   private connected = false;
+  private settingsReady: Promise<void> = Promise.resolve();
+  private configurationPromise: Promise<void> | undefined;
+  private saveSettingsTimer: number | undefined;
 
   connectedCallback(): void {
     if (this.connected) return;
@@ -218,6 +237,8 @@ class MolKeyboardApp extends HTMLElement {
     this.bindControls();
     this.applyLanguage(this.language);
     this.updateRuntimeFacts();
+    this.settingsReady = this.restoreSettings();
+    void this.refreshRecordings();
     this.drawKeyboard();
   }
 
@@ -264,11 +285,15 @@ class MolKeyboardApp extends HTMLElement {
 
   private bindControls(): void {
     for (const button of this.querySelectorAll<HTMLButtonElement>("[data-mode]")) {
-      button.addEventListener("click", () => this.setMode(button.dataset.mode === "studio"));
+      button.addEventListener("click", () => {
+        this.setMode(button.dataset.mode === "studio");
+        this.scheduleSettingsSave();
+      });
     }
     this.querySelector<HTMLSelectElement>("[data-language]")?.addEventListener("change", (event) => {
       const value = (event.currentTarget as HTMLSelectElement).value;
       this.applyLanguage(value === "zh" ? "zh" : "en");
+      this.scheduleSettingsSave();
     });
     this.querySelector<HTMLSelectElement>("[data-backend]")?.addEventListener("change", (event) => {
       const value = (event.currentTarget as HTMLSelectElement).value;
@@ -282,6 +307,7 @@ class MolKeyboardApp extends HTMLElement {
       } else {
         this.setStatus("Standalone Web audio selected", "ready");
       }
+      this.scheduleSettingsSave();
     });
 
     this.bindSelect("preset", (value) => this.engine.setPreset(value));
@@ -333,15 +359,18 @@ class MolKeyboardApp extends HTMLElement {
     );
 
     this.querySelector("[data-transport='record']")?.addEventListener("click", () => {
-      this.runControl("record", this.engine.action("record-start"));
+      this.runControl("record", this.startRecording());
     });
     this.querySelector("[data-transport='stop']")?.addEventListener("click", () => {
-      this.runControl("stop recording", this.engine.action("record-stop"));
-      this.runControl("stop playback", this.engine.action("playback-stop"));
+      void this.stopTransport();
     });
     this.querySelector("[data-transport='play']")?.addEventListener("click", () => {
-      this.runControl("playback", this.engine.action("playback-start"));
+      this.runControl("playback", this.playRecording());
     });
+    this.querySelector("[data-recording-load]")?.addEventListener("click", () => {
+      void this.loadSelectedRecording();
+    });
+    this.addEventListener("change", () => this.scheduleSettingsSave());
   }
 
   private bindSelect(control: string, submit: (value: number) => Promise<boolean>): void {
@@ -364,6 +393,7 @@ class MolKeyboardApp extends HTMLElement {
         output.value = control === "portamento-time" ? `${value} ms` : `${Math.round(value * 100)}%`;
       }
       if (submitOnInput) this.runControl(control, submit(value));
+      this.scheduleSettingsSave();
     };
     input.addEventListener("input", update);
   }
@@ -407,6 +437,227 @@ class MolKeyboardApp extends HTMLElement {
     if (panel !== null) panel.hidden = !studio;
   }
 
+  private async startRecording(): Promise<boolean> {
+    await this.ensureConfigured();
+    return this.engine.action("record-start");
+  }
+
+  private async stopTransport(): Promise<void> {
+    try {
+      await this.ensureConfigured();
+      if (!this.recording) {
+        await this.engine.action("playback-stop");
+        return;
+      }
+      const recordingStopped = this.waitForEngineEvent(
+        (event) => event.type === 7 && event.detail === 0,
+        2_000,
+      );
+      const stoppedRecording = await this.engine.action("record-stop");
+      await this.engine.action("playback-stop");
+      if (!stoppedRecording) return;
+      await recordingStopped;
+      const bytes = await this.engine.exportRecording();
+      if (bytes === undefined) throw new Error("The engine could not export the recorded sequence");
+      const label = this.language === "zh" ? "浏览器录音" : "Browser take";
+      const metadata = await saveRecording(bytes, `${label} ${new Date().toLocaleTimeString()}`);
+      const storage = this.querySelector<HTMLOutputElement>("[data-recording-storage]");
+      if (storage !== null) storage.value = `${metadata.size} B · ${metadata.storage.toUpperCase()}`;
+      await this.refreshRecordings(metadata.id);
+    } catch (error: unknown) {
+      this.setStatus(error instanceof Error ? error.message : "Could not save recording", "error");
+    }
+  }
+
+  private waitForEngineEvent(
+    predicate: (event: EngineEvent) => boolean,
+    timeoutMs: number,
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const timer = window.setTimeout(() => {
+        this.engine.removeEventListener("engineevents", listener);
+        reject(new Error("Timed out waiting for the audio engine state"));
+      }, timeoutMs);
+      const listener = (event: Event): void => {
+        const events = (event as CustomEvent<readonly EngineEvent[]>).detail;
+        if (!events.some(predicate)) return;
+        window.clearTimeout(timer);
+        this.engine.removeEventListener("engineevents", listener);
+        resolve();
+      };
+      this.engine.addEventListener("engineevents", listener);
+    });
+  }
+
+  private async playRecording(): Promise<boolean> {
+    await this.ensureConfigured();
+    return this.engine.action("playback-start");
+  }
+
+  private async loadSelectedRecording(): Promise<void> {
+    const select = this.querySelector<HTMLSelectElement>("[data-recording-list]");
+    if (select === null || select.value === "") return;
+    try {
+      await this.ensureConfigured();
+      const bytes = await loadStoredRecording(select.value);
+      const accepted = await this.engine.loadRecording(bytes);
+      if (!accepted) throw new Error("The audio engine rejected the saved sequence");
+      this.setRecordingState("recorded");
+    } catch (error: unknown) {
+      this.setStatus(error instanceof Error ? error.message : "Could not load recording", "error");
+    }
+  }
+
+  private async refreshRecordings(selectedId?: string): Promise<void> {
+    const select = this.querySelector<HTMLSelectElement>("[data-recording-list]");
+    if (select === null) return;
+    try {
+      const recordings = await listRecordings();
+      select.replaceChildren(new Option("—", ""));
+      for (const recording of recordings) {
+        const option = new Option(`${recording.name} · ${recording.size} B`, recording.id);
+        select.add(option);
+      }
+      if (selectedId !== undefined) select.value = selectedId;
+    } catch (error: unknown) {
+      const storage = this.querySelector<HTMLOutputElement>("[data-recording-storage]");
+      if (storage !== null) {
+        storage.value = error instanceof Error ? error.message : "Storage unavailable";
+      }
+    }
+  }
+
+  private async restoreSettings(): Promise<void> {
+    const result = await loadSettings();
+    const settings = result.settings;
+    this.setControlValue("preset", settings.preset);
+    this.setControlValue("scale", settings.scale);
+    this.setControlValue("tonic", settings.tonic);
+    this.setControlValue("octave", settings.octave);
+    this.setControlValue("volume", settings.volume);
+    this.setControlValue("chord", settings.chord);
+    this.setControlValue("arpeggiator", settings.arpeggiator);
+    this.setControlValue("arp-rate", settings.arpeggiatorRate);
+    this.setControlValue("gate", settings.arpeggiatorGate);
+    this.setControlValue("arp-octaves", settings.arpeggiatorOctaves);
+    this.setControlValue("tempo", settings.tempo);
+    this.setControlValue("time-signature", settings.timeSignature);
+    this.setControlValue("portamento", settings.portamento);
+    this.setControlValue("portamento-time", settings.portamentoTime);
+    this.setControlValue("chorus", settings.chorus);
+    this.setControlValue("delay", settings.delay);
+    this.setControlValue("reverb", settings.reverb);
+    const metronome = this.querySelector<HTMLInputElement>("[data-control='metronome']");
+    if (metronome !== null) metronome.checked = settings.metronome;
+    const backend = this.querySelector<HTMLSelectElement>("[data-backend]");
+    if (backend !== null) backend.value = settings.backend;
+    this.setMode(settings.mode === "studio");
+    this.applyLanguage(settings.language);
+    for (const control of ["volume", "chorus", "delay", "reverb", "gate", "portamento-time"]) {
+      this.updateRangeOutput(control);
+    }
+    const storage = this.querySelector<HTMLElement>("[data-storage-state]");
+    if (storage !== null) storage.textContent = result.storage === "indexeddb" ? "IndexedDB ready" : "Unavailable";
+    if (result.diagnostic !== undefined) this.setStatus(result.diagnostic, "error");
+  }
+
+  private setControlValue(name: string, value: string | number): void {
+    const control = this.control(name);
+    if (control !== null) control.value = String(value);
+  }
+
+  private updateRangeOutput(control: string): void {
+    const value = this.controlNumber(control);
+    const output = this.querySelector<HTMLOutputElement>(`[data-output='${control}']`);
+    if (output !== null) {
+      output.value = control === "portamento-time" ? `${value} ms` : `${Math.round(value * 100)}%`;
+    }
+  }
+
+  private collectSettings(): WebSettings {
+    const mode = this.querySelector<HTMLButtonElement>("[data-mode='studio']")?.getAttribute("aria-pressed");
+    const backendValue = this.querySelector<HTMLSelectElement>("[data-backend]")?.value;
+    const timeSignatureValue = this.control("time-signature")?.value;
+    return {
+      version: 1,
+      language: this.language,
+      mode: mode === "true" ? "studio" : "explore",
+      backend: backendValue === "service" || backendValue === "esp32" ? backendValue : "standalone",
+      preset: this.controlNumber("preset"),
+      scale: this.controlNumber("scale"),
+      tonic: this.controlNumber("tonic"),
+      octave: this.controlNumber("octave"),
+      volume: this.controlNumber("volume"),
+      metronome: this.querySelector<HTMLInputElement>("[data-control='metronome']")?.checked === true,
+      chord: this.controlNumber("chord"),
+      arpeggiator: this.controlNumber("arpeggiator"),
+      arpeggiatorRate: this.controlNumber("arp-rate"),
+      arpeggiatorGate: this.controlNumber("gate"),
+      arpeggiatorOctaves: this.controlNumber("arp-octaves"),
+      tempo: this.controlNumber("tempo"),
+      timeSignature:
+        timeSignatureValue === "3/4" || timeSignatureValue === "5/4" || timeSignatureValue === "6/8"
+          ? timeSignatureValue
+          : "4/4",
+      portamento: this.controlNumber("portamento"),
+      portamentoTime: this.controlNumber("portamento-time"),
+      chorus: this.controlNumber("chorus"),
+      delay: this.controlNumber("delay"),
+      reverb: this.controlNumber("reverb"),
+    };
+  }
+
+  private scheduleSettingsSave(): void {
+    if (this.saveSettingsTimer !== undefined) window.clearTimeout(this.saveSettingsTimer);
+    this.saveSettingsTimer = window.setTimeout(() => {
+      void saveSettings(this.collectSettings()).catch((error: unknown) => {
+        const storage = this.querySelector<HTMLElement>("[data-storage-state]");
+        if (storage !== null) storage.textContent = error instanceof Error ? error.message : "Save failed";
+      });
+    }, 180);
+  }
+
+  private async ensureConfigured(): Promise<void> {
+    await this.settingsReady;
+    await this.engine.start();
+    this.configurationPromise ??= this.applyCurrentSettings();
+    await this.configurationPromise;
+  }
+
+  private async applyCurrentSettings(): Promise<void> {
+    const [numerator = 4, denominator = 4] = (this.control("time-signature")?.value ?? "4/4")
+      .split("/")
+      .map(Number);
+    const results = await Promise.all([
+      this.engine.setPreset(this.controlNumber("preset")),
+      this.engine.setScale(this.controlNumber("scale"), this.controlNumber("tonic"), 0),
+      this.engine.setOctave(this.controlNumber("octave")),
+      this.engine.setMasterGain(this.controlNumber("volume")),
+      this.engine.setMetronome(
+        this.querySelector<HTMLInputElement>("[data-control='metronome']")?.checked === true,
+        0.5,
+      ),
+      this.engine.setChord(this.controlNumber("chord")),
+      this.engine.setArpeggiator(
+        this.controlNumber("arpeggiator"),
+        this.controlNumber("arp-rate"),
+        this.controlNumber("gate"),
+        this.controlNumber("arp-octaves"),
+        0x4d4f4c,
+      ),
+      this.engine.setTempo(this.controlNumber("tempo")),
+      this.engine.setTimeSignature(numerator, denominator),
+      this.engine.setPortamento(
+        this.controlNumber("portamento"),
+        this.controlNumber("portamento-time"),
+      ),
+      this.engine.setParameter(3, this.controlNumber("chorus")),
+      this.engine.setParameter(6, this.controlNumber("delay")),
+      this.engine.setParameter(11, this.controlNumber("reverb")),
+    ]);
+    if (results.some((accepted) => !accepted)) throw new Error("One or more saved controls were rejected");
+  }
+
   private applyLanguage(language: "en" | "zh"): void {
     this.language = language;
     document.documentElement.lang = language === "zh" ? "zh-CN" : "en";
@@ -438,6 +689,7 @@ class MolKeyboardApp extends HTMLElement {
       } else if (event.type === 3 || event.type === 8) {
         this.actualVoices.delete(key);
       } else if (event.type === 7) {
+        this.recording = event.detail !== 0;
         this.setRecordingState(event.detail !== 0 ? "recording" : "recorded");
       } else if (event.type === 14) {
         this.setRecordingState(event.detail !== 0 ? "playing" : "recorded");
@@ -502,8 +754,7 @@ class MolKeyboardApp extends HTMLElement {
     if (this.startButton !== undefined) this.startButton.disabled = true;
     this.setStatus("Loading the WebAssembly audio core…", "loading");
     try {
-      await this.engine.start();
-      this.onAudioReady();
+      await this.ensureConfigured();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Audio initialization failed.";
       this.setStatus(message, "error");
@@ -515,8 +766,8 @@ class MolKeyboardApp extends HTMLElement {
   private activate(note: number): ActiveGesture {
     const gesture = { id: this.allocateGestureId(), note };
     this.drawKeyboard();
-    void this.engine
-      .start()
+    void this
+      .ensureConfigured()
       .then(() => {
         if (!this.isGestureActive(gesture.id)) return;
         this.engine.noteOn(note, 0.82, gesture.id);

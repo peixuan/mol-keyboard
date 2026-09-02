@@ -38,6 +38,14 @@ export class MolAudioEngine extends EventTarget {
     number,
     { readonly resolve: (accepted: boolean) => void; readonly timer: number }
   >();
+  private readonly pendingExports = new Map<
+    number,
+    { readonly resolve: (bytes: Uint8Array | undefined) => void; readonly timer: number }
+  >();
+  private readonly pendingLoads = new Map<
+    number,
+    { readonly resolve: (accepted: boolean) => void; readonly timer: number }
+  >();
 
   get state(): AudioContextState | "idle" {
     return this.context?.state ?? "idle";
@@ -121,6 +129,37 @@ export class MolAudioEngine extends EventTarget {
     return this.sendControl({ control: "action", action });
   }
 
+  async exportRecording(): Promise<Uint8Array | undefined> {
+    await this.start();
+    if (this.node === undefined) return undefined;
+    const requestId = this.allocateRequestId();
+    return new Promise((resolve) => {
+      const timer = window.setTimeout(() => {
+        this.pendingExports.delete(requestId);
+        resolve(undefined);
+      }, CONTROL_TIMEOUT_MS);
+      this.pendingExports.set(requestId, { resolve, timer });
+      this.node?.port.postMessage({ type: "recording-export", requestId });
+    });
+  }
+
+  async loadRecording(bytes: Uint8Array): Promise<boolean> {
+    await this.start();
+    if (this.node === undefined || bytes.length === 0) return false;
+    const requestId = this.allocateRequestId();
+    const payload = bytes.slice();
+    return new Promise((resolve) => {
+      const timer = window.setTimeout(() => {
+        this.pendingLoads.delete(requestId);
+        resolve(false);
+      }, CONTROL_TIMEOUT_MS);
+      this.pendingLoads.set(requestId, { resolve, timer });
+      this.node?.port.postMessage({ type: "recording-load", requestId, bytes: payload }, [
+        payload.buffer,
+      ]);
+    });
+  }
+
   async close(): Promise<void> {
     this.allNotesOff();
     this.node?.disconnect();
@@ -135,6 +174,16 @@ export class MolAudioEngine extends EventTarget {
       pending.resolve(false);
     }
     this.pendingControls.clear();
+    for (const pending of this.pendingExports.values()) {
+      window.clearTimeout(pending.timer);
+      pending.resolve(undefined);
+    }
+    this.pendingExports.clear();
+    for (const pending of this.pendingLoads.values()) {
+      window.clearTimeout(pending.timer);
+      pending.resolve(false);
+    }
+    this.pendingLoads.clear();
   }
 
   private async initialize(): Promise<void> {
@@ -189,12 +238,31 @@ export class MolAudioEngine extends EventTarget {
       readonly accepted?: boolean;
       readonly count?: number;
       readonly words?: Uint32Array;
+      readonly bytes?: Uint8Array;
     };
     if (message.type === "control-processed" && Number.isInteger(message.requestId)) {
       const pending = this.pendingControls.get(message.requestId ?? 0);
       if (pending === undefined) return;
       window.clearTimeout(pending.timer);
       this.pendingControls.delete(message.requestId ?? 0);
+      pending.resolve(message.accepted === true);
+      return;
+    }
+    if (message.type === "recording-exported" && Number.isInteger(message.requestId)) {
+      const requestId = message.requestId ?? 0;
+      const pending = this.pendingExports.get(requestId);
+      if (pending === undefined) return;
+      window.clearTimeout(pending.timer);
+      this.pendingExports.delete(requestId);
+      pending.resolve(message.accepted === true ? message.bytes : undefined);
+      return;
+    }
+    if (message.type === "recording-loaded" && Number.isInteger(message.requestId)) {
+      const requestId = message.requestId ?? 0;
+      const pending = this.pendingLoads.get(requestId);
+      if (pending === undefined) return;
+      window.clearTimeout(pending.timer);
+      this.pendingLoads.delete(requestId);
       pending.resolve(message.accepted === true);
       return;
     }

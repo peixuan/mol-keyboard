@@ -35,6 +35,9 @@ if (processorConstructor === undefined) {
 
 const processor = new processorConstructor();
 processor.port.onmessage({
+  data: { type: "control", requestId: 6, control: "action", action: "record-start" },
+});
+processor.port.onmessage({
   data: {
     type: "events",
     events: [
@@ -122,4 +125,26 @@ if (peak > 0.000001) {
   throw new Error(`AudioWorklet release did not reach silence: peak=${peak}`);
 }
 
-process.stdout.write(`AudioWorklet C4 frequency=${frequency.toFixed(4)}Hz release=ok\n`);
+processor.port.onmessage({
+  data: { type: "control", requestId: 9, control: "action", action: "record-stop" },
+});
+processor.process([], [[left, right]], {});
+processor.port.onmessage({ data: { type: "recording-export", requestId: 10 } });
+const exported = processor.port.messages.at(-1);
+const magic = exported?.bytes instanceof Uint8Array
+  ? new TextDecoder().decode(exported.bytes.subarray(0, 4))
+  : "";
+if (exported?.accepted !== true || exported.bytes.length < 120 || magic !== "MOLS") {
+  throw new Error(`AudioWorklet recording export failed: ${JSON.stringify(exported)}`);
+}
+processor.port.onmessage({
+  data: { type: "recording-load", requestId: 11, bytes: exported.bytes },
+});
+const loaded = processor.port.messages.at(-1);
+if (loaded?.requestId !== 11 || loaded?.accepted !== true) {
+  throw new Error("AudioWorklet recording reload failed");
+}
+
+process.stdout.write(
+  `AudioWorklet C4 frequency=${frequency.toFixed(4)}Hz release=ok recording=${exported.bytes.length}B\n`,
+);
