@@ -6,9 +6,9 @@ M0 portability baseline and M1 portable sound path.
 
 ## Last verified commit
 
-`be59267` (`feat(render): add deterministic PCM WAV output`) is the last verified
-commit. The WebAssembly implementation below was verified in the current
-worktree and will be committed atomically.
+`6eb914f` (`feat(web): verify core WebAssembly synthesis`) is the last verified
+commit. The ESP-IDF implementation below was verified in the current worktree
+and will be committed atomically.
 
 ## Completed requirements
 
@@ -33,14 +33,18 @@ worktree and will be committed atomically.
 - A fixed-memory ES module exposes the engine to workers and passed a Node.js
   Wasm C4 conformance test at 261.25 Hz with peak 0.24512254.
 - The LTO Release Web artifacts are 3,897-byte Wasm and 9,862-byte JS loader files.
+- ESP-IDF 6.1 builds the exact core source as a Tiny-profile component for both
+  ESP32 and ESP32-S3 with independently generated target configuration.
+- Both firmware images contain a bounded static-memory C4 startup self-test;
+  ESP32 produced a 108,992-byte image and 2,664-byte core archive, while
+  ESP32-S3 produced a 121,648-byte image and 2,680-byte core archive.
 
 ## In-progress work
 
-- ESP-IDF component integration and a real ESP32/ESP32-S3 toolchain build.
+- Web AudioWorklet and ESP32 I2S minimum realtime output paths.
 
 ## Blocked platform checks
 
-- ESP-IDF is not installed on the current host; ESP32 builds are not verified.
 - Android NDK, Apple SDKs, and HarmonyOS SDKs have not been discovered or verified.
 - Physical devices and signing credentials have not been provided.
 
@@ -74,13 +78,27 @@ ctest --preset wasm-release
 
 Both configurations passed 5/5 tests on 2026-09-02.
 
+With the pinned ESP-IDF environment active:
+
+```powershell
+cd platforms/esp32
+idf.py -B build-esp32 set-target esp32
+idf.py -B build-esp32 build
+idf.py -B build-esp32s3 set-target esp32s3
+idf.py -B build-esp32s3 build
+```
+
+Both targets built successfully with ESP-IDF 6.1 and GNU 15.2.0 on 2026-09-02.
+The build-local `sdkconfig` files allow the two configurations to coexist.
+
 ## Known failures
 
-- `ninja`, `cl`, `emcc`, and `idf.py` are not on the default `PATH`.
+- `ninja`, `cl`, `emcc`, and `idf.py` are not on the default `PATH`; each is
+  activated through its documented toolchain environment.
 - Visual Studio 2026 Developer Command Prompt 18.8.0 provides MSVC 19.51.36248
   and Ninja 1.13.2; both Debug and Release validation succeeded on 2026-09-02.
 
 ## Next highest-priority task
 
-Provision the current stable ESP-IDF toolchain, add `mol_core` as a component,
-and perform real ESP32 and ESP32-S3 compile checks before I2S integration.
+Implement and test a Web AudioWorklet bridge and the ESP32 I2S output task to
+complete the next M1 portability gate.

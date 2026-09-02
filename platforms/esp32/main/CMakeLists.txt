@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
+
+idf_component_register(SRCS "main.c" REQUIRES mol_core)
+target_compile_options(${COMPONENT_LIB} PRIVATE -Wall -Wextra -Werror)

@@ -2,7 +2,7 @@
 
 | Gate | State | Evidence |
 |---|---|---|
-| M0 engineering baseline | in progress | Windows x64 and Wasm Debug/Release core plus C/C++ consumers verified; ESP-IDF pending |
+| M0 engineering baseline | passed | Windows x64 and Wasm Debug/Release tests pass; C/C++ consumers link; ESP32 and ESP32-S3 firmware compile the same ISO C11 core with ESP-IDF 6.1 |
 | M1 portable sound path | in progress | Native/Wasm synthesis and deterministic PCM16 WAV verified; realtime desktop, AudioWorklet, and ESP32 I2S pending |
 | M2 music semantics | not started | Depends on M1 |
 | M3 instruments and DSP | not started | Depends on M2 |

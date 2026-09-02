@@ -23,6 +23,17 @@
       "distributed": false,
       "build_options": ["upstream LLVM backend", "fixed WebAssembly memory"],
       "local_patches": []
+    },
+    {
+      "name": "ESP-IDF",
+      "version": "6.1",
+      "revision": "fff9895c82d744c7237be8847347bdd1b07c6643",
+      "source": "https://github.com/espressif/esp-idf.git",
+      "license": "Apache-2.0",
+      "usage": "ESP32 and ESP32-S3 firmware build SDK and toolchain manifest",
+      "distributed": false,
+      "build_options": ["minimal component build", "Tiny core profile"],
+      "local_patches": []
     }
   ]
 }

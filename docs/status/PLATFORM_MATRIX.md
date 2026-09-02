@@ -14,8 +14,8 @@ toolchain result recorded here.
 | Android arm64 | planned | — | Android NDK not discovered | Pending SDK discovery |
 | iOS arm64 | planned | — | Apple SDK not available on this host | Pending macOS host/device |
 | HarmonyOS arm64 | planned | — | DevEco SDK not discovered | Pending SDK and device |
-| ESP32 | planned | — | ESP-IDF not installed | `idf.py` discovery failed |
-| ESP32-S3 | planned | — | ESP-IDF not installed | `idf.py` discovery failed |
+| ESP32 | build-verified (M0/M1 core) | 2026-09-02 | ESP-IDF 6.1; GNU 15.2.0 | Minimal firmware built; image 108,992 bytes; core archive 2,664 bytes |
+| ESP32-S3 | build-verified (M0/M1 core) | 2026-09-02 | ESP-IDF 6.1; GNU 15.2.0 | Minimal firmware built; image 121,648 bytes; core archive 2,680 bytes |
 
 ## Capability boundaries
 
