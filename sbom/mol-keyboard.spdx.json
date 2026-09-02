@@ -186,6 +186,40 @@
       "licenseDeclared": "Apache-2.0",
       "copyrightText": "Copyright 2000-2013 JetBrains s.r.o.",
       "primaryPackagePurpose": "LIBRARY"
+    },
+    {
+      "name": "Espressif USB Host Library",
+      "SPDXID": "SPDXRef-Package-Espressif-USB",
+      "versionInfo": "1.5.0",
+      "downloadLocation": "https://components.espressif.com/components/espressif/usb/versions/1.5.0",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "6c2cff118141dbbca181d0d27d71801fdddfc78f7ac03ae43f6e5a8cbd89cb99"
+        }
+      ],
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "LIBRARY"
+    },
+    {
+      "name": "Espressif USB Host HID Driver",
+      "SPDXID": "SPDXRef-Package-Espressif-USB-Host-HID",
+      "versionInfo": "1.2.0",
+      "downloadLocation": "https://components.espressif.com/components/espressif/usb_host_hid/versions/1.2.0",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a6c5366f9b6d80b0d5f56d085d62941464512e0968b96c5877e76a80fcc23f13"
+        }
+      ],
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "LIBRARY"
     }
   ],
   "relationships": [
@@ -253,6 +287,16 @@
       "spdxElementId": "SPDXRef-Package-MoL-Keyboard",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Package-JetBrains-Annotations"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-MoL-Keyboard",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Espressif-USB"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-MoL-Keyboard",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Espressif-USB-Host-HID"
     }
   ]
 }

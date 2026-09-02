@@ -185,6 +185,42 @@
         "data conversion retained for device compatibility",
         "upstream examples and applications excluded"
       ]
+    },
+    {
+      "name": "Espressif USB Host Library",
+      "version": "1.5.0",
+      "commit": "eb4618660a83e80cd57dcda736edbfa884cb88cc",
+      "source": "https://github.com/espressif/esp-usb.git",
+      "registry": "https://components.espressif.com/components/espressif/usb/versions/1.5.0",
+      "component_hash_sha256": "6c2cff118141dbbca181d0d27d71801fdddfc78f7ac03ae43f6e5a8cbd89cb99",
+      "license_expression": "Apache-2.0",
+      "selected_license": "Apache-2.0",
+      "license_file": "third_party/licenses/espressif-usb-LICENSE.txt",
+      "license_file_sha256": "8c6db340475136df3c1201d458fa5755698eace76e510471ecc9d857d6083dac",
+      "local_modifications": [],
+      "build_options": [
+        "ESP32-S3 target only",
+        "USB Host library only",
+        "ESP-IDF Component Manager download with component hash verification"
+      ]
+    },
+    {
+      "name": "Espressif USB Host HID Driver",
+      "version": "1.2.0",
+      "commit": "0deb8045caf6eadd18089bbcb9ae1aaa505f449e",
+      "source": "https://github.com/espressif/esp-usb.git",
+      "registry": "https://components.espressif.com/components/espressif/usb_host_hid/versions/1.2.0",
+      "component_hash_sha256": "a6c5366f9b6d80b0d5f56d085d62941464512e0968b96c5877e76a80fcc23f13",
+      "license_expression": "Apache-2.0",
+      "selected_license": "Apache-2.0",
+      "license_file": "third_party/licenses/espressif-usb-host-hid-LICENSE.txt",
+      "license_file_sha256": "8c6db340475136df3c1201d458fa5755698eace76e510471ecc9d857d6083dac",
+      "local_modifications": [],
+      "build_options": [
+        "ESP32-S3 target only",
+        "Boot-protocol keyboard input only",
+        "ESP-IDF Component Manager download with component hash verification"
+      ]
     }
   ]
 }

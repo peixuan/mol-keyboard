@@ -9,6 +9,10 @@ set(_manifest "${MOL_SOURCE_DIR}/third_party/manifest.lock.json")
 set(_miniaudio_license
     "${MOL_SOURCE_DIR}/third_party/licenses/miniaudio-LICENSE.txt")
 set(_oboe_license "${MOL_SOURCE_DIR}/third_party/licenses/oboe-LICENSE.txt")
+set(_espressif_usb_license
+    "${MOL_SOURCE_DIR}/third_party/licenses/espressif-usb-LICENSE.txt")
+set(_espressif_hid_license
+    "${MOL_SOURCE_DIR}/third_party/licenses/espressif-usb-host-hid-LICENSE.txt")
 set(_typescript_license
     "${MOL_SOURCE_DIR}/third_party/licenses/typescript-LICENSE.txt")
 set(_typescript_notice
@@ -23,14 +27,18 @@ set(_android_wrapper
     "${MOL_SOURCE_DIR}/platforms/android/gradle/wrapper/gradle-wrapper.jar")
 set(_android_wrapper_properties
     "${MOL_SOURCE_DIR}/platforms/android/gradle/wrapper/gradle-wrapper.properties")
+set(_esp_component_manifest
+    "${MOL_SOURCE_DIR}/platforms/esp32/main/idf_component.yml")
 set(_sbom "${MOL_SOURCE_DIR}/sbom/mol-keyboard.spdx.json")
 foreach(_required_file "${_manifest}" "${_miniaudio_license}"
-                       "${_oboe_license}" "${_typescript_license}"
+                       "${_oboe_license}" "${_espressif_usb_license}"
+                       "${_espressif_hid_license}" "${_typescript_license}"
                        "${_typescript_notice}" "${_vite_license}"
                        "${_playwright_license}"
                        "${_web_lock}" "${_apache_license}"
                        "${_android_build}" "${_android_wrapper}"
-                       "${_android_wrapper_properties}" "${_sbom}")
+                       "${_android_wrapper_properties}"
+                       "${_esp_component_manifest}" "${_sbom}")
   if(NOT EXISTS "${_required_file}")
     message(FATAL_ERROR "Missing dependency audit file: ${_required_file}")
   endif()
@@ -96,9 +104,27 @@ string(JSON _oboe_commit GET "${_manifest_json}" dependencies 1 commit)
 string(JSON _oboe_archive_hash GET "${_manifest_json}" dependencies 1 archive_sha256)
 string(JSON _oboe_license_hash GET "${_manifest_json}" dependencies 1 license_file_sha256)
 string(JSON _oboe_patch_count LENGTH "${_manifest_json}" dependencies 1 local_modifications)
+string(JSON _usb_name GET "${_manifest_json}" dependencies 2 name)
+string(JSON _usb_version GET "${_manifest_json}" dependencies 2 version)
+string(JSON _usb_commit GET "${_manifest_json}" dependencies 2 commit)
+string(JSON _usb_component_hash GET "${_manifest_json}" dependencies 2
+       component_hash_sha256)
+string(JSON _usb_license_hash GET "${_manifest_json}" dependencies 2
+       license_file_sha256)
+string(JSON _usb_patch_count LENGTH "${_manifest_json}" dependencies 2
+       local_modifications)
+string(JSON _hid_name GET "${_manifest_json}" dependencies 3 name)
+string(JSON _hid_version GET "${_manifest_json}" dependencies 3 version)
+string(JSON _hid_commit GET "${_manifest_json}" dependencies 3 commit)
+string(JSON _hid_component_hash GET "${_manifest_json}" dependencies 3
+       component_hash_sha256)
+string(JSON _hid_license_hash GET "${_manifest_json}" dependencies 3
+       license_file_sha256)
+string(JSON _hid_patch_count LENGTH "${_manifest_json}" dependencies 3
+       local_modifications)
 
 if(NOT _schema EQUAL 1 OR NOT _component_count EQUAL 10 OR
-   NOT _dependency_count EQUAL 2 OR NOT _ci_name STREQUAL "actions/checkout" OR
+   NOT _dependency_count EQUAL 4 OR NOT _ci_name STREQUAL "actions/checkout" OR
    NOT _ci_revision STREQUAL "de0fac2e4500dabe0009e67214ff5f5447ce83dd" OR
    NOT _emsdk_name STREQUAL "Emscripten SDK" OR
    NOT _emsdk_revision STREQUAL
@@ -139,7 +165,19 @@ if(NOT _schema EQUAL 1 OR NOT _component_count EQUAL 10 OR
    NOT _oboe_commit STREQUAL "a81bb9f87d4105b84b682685d3bfbb5beca371d1" OR
    NOT _oboe_archive_hash STREQUAL
        "0e4245f8860c4287040a5d76501c588490bcc9cb57614c486c0c201a5dde3e9f" OR
-   NOT _oboe_patch_count EQUAL 0)
+   NOT _oboe_patch_count EQUAL 0 OR
+   NOT _usb_name STREQUAL "Espressif USB Host Library" OR
+   NOT _usb_version STREQUAL "1.5.0" OR
+   NOT _usb_commit STREQUAL "eb4618660a83e80cd57dcda736edbfa884cb88cc" OR
+   NOT _usb_component_hash STREQUAL
+       "6c2cff118141dbbca181d0d27d71801fdddfc78f7ac03ae43f6e5a8cbd89cb99" OR
+   NOT _usb_patch_count EQUAL 0 OR
+   NOT _hid_name STREQUAL "Espressif USB Host HID Driver" OR
+   NOT _hid_version STREQUAL "1.2.0" OR
+   NOT _hid_commit STREQUAL "0deb8045caf6eadd18089bbcb9ae1aaa505f449e" OR
+   NOT _hid_component_hash STREQUAL
+       "a6c5366f9b6d80b0d5f56d085d62941464512e0968b96c5877e76a80fcc23f13" OR
+   NOT _hid_patch_count EQUAL 0)
   message(FATAL_ERROR "The runtime dependency lock records are incomplete or unexpected")
 endif()
 
@@ -150,6 +188,16 @@ endif()
 file(SHA256 "${_oboe_license}" _actual_oboe_license_hash)
 if(NOT _actual_oboe_license_hash STREQUAL _oboe_license_hash)
   message(FATAL_ERROR "The Oboe license snapshot hash does not match the lock")
+endif()
+file(SHA256 "${_espressif_usb_license}" _actual_espressif_usb_license_hash)
+if(NOT _actual_espressif_usb_license_hash STREQUAL _usb_license_hash)
+  message(FATAL_ERROR
+          "The Espressif USB license snapshot hash does not match the lock")
+endif()
+file(SHA256 "${_espressif_hid_license}" _actual_espressif_hid_license_hash)
+if(NOT _actual_espressif_hid_license_hash STREQUAL _hid_license_hash)
+  message(FATAL_ERROR
+          "The Espressif USB HID license snapshot hash does not match the lock")
 endif()
 file(SHA256 "${_typescript_license}" _actual_typescript_license_hash)
 if(NOT _actual_typescript_license_hash STREQUAL _typescript_license_hash)
@@ -174,6 +222,22 @@ foreach(_android_component_index RANGE 6 9)
      _android_license_hash_${_android_component_index})
     message(FATAL_ERROR
             "An Android dependency license hash does not match the lock")
+  endif()
+endforeach()
+
+file(READ "${_esp_component_manifest}" _esp_component_manifest_text)
+foreach(_esp_component_record
+        "idf: \"==6.1\""
+        "espressif/usb:"
+        "version: \"1.5.0\""
+        "espressif/usb_host_hid:"
+        "version: \"1.2.0\""
+        "if: \"target in [esp32s3]\"")
+  string(FIND "${_esp_component_manifest_text}" "${_esp_component_record}"
+         _esp_component_position)
+  if(_esp_component_position EQUAL -1)
+    message(FATAL_ERROR
+            "The ESP-IDF managed component manifest does not match the lock")
   endif()
 endforeach()
 file(SHA256 "${_android_wrapper}" _actual_gradle_wrapper_hash)
@@ -250,7 +314,9 @@ string(JSON _gradle_package_name GET "${_sbom_json}" packages 9 name)
 string(JSON _agp_package_name GET "${_sbom_json}" packages 10 name)
 string(JSON _kotlin_package_name GET "${_sbom_json}" packages 11 name)
 string(JSON _annotations_package_name GET "${_sbom_json}" packages 12 name)
-if(NOT _spdx_version STREQUAL "SPDX-2.3" OR NOT _package_count EQUAL 13 OR
+string(JSON _usb_package_name GET "${_sbom_json}" packages 13 name)
+string(JSON _hid_package_name GET "${_sbom_json}" packages 14 name)
+if(NOT _spdx_version STREQUAL "SPDX-2.3" OR NOT _package_count EQUAL 15 OR
    NOT _dependency_name STREQUAL "miniaudio" OR
    NOT _oboe_package_name STREQUAL "Oboe" OR
    NOT _typescript_package_name STREQUAL "TypeScript" OR
@@ -259,7 +325,9 @@ if(NOT _spdx_version STREQUAL "SPDX-2.3" OR NOT _package_count EQUAL 13 OR
    NOT _gradle_package_name STREQUAL "Gradle" OR
    NOT _agp_package_name STREQUAL "Android Gradle Plugin" OR
    NOT _kotlin_package_name STREQUAL "Kotlin Standard Library" OR
-   NOT _annotations_package_name STREQUAL "JetBrains Java Annotations")
+   NOT _annotations_package_name STREQUAL "JetBrains Java Annotations" OR
+   NOT _usb_package_name STREQUAL "Espressif USB Host Library" OR
+   NOT _hid_package_name STREQUAL "Espressif USB Host HID Driver")
   message(FATAL_ERROR "The SPDX SBOM is incomplete")
 endif()
 
