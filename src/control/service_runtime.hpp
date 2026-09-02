@@ -17,6 +17,7 @@ struct DeviceInfo {
   bool is_default = false;
   bool is_active = false;
   bool is_bluetooth = false;
+  bool is_physical_input = false;
 };
 
 struct AudioStatus {

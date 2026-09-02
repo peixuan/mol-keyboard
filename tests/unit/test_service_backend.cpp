@@ -57,7 +57,7 @@ class TestRuntime final : public molcontrol::ServiceRuntime {
 
   std::vector<molcontrol::DeviceInfo> input_devices() override {
     return {{"keyboard:default", "Default keyboard", "test", true, input_id_ == "keyboard:default",
-             false}};
+             false, true}};
   }
 
   mol_result_t attach_input(const std::string& id) override {
@@ -209,6 +209,8 @@ int main() {
     dispatch(dispatcher, "recording.start");
     dispatch(dispatcher, "performance.noteOn", "{\"note\":60,\"velocity\":0.8,\"gesture\":42}");
     dispatch(dispatcher, "performance.control", "{\"control\":\"sustain\",\"value\":1}");
+    dispatch(dispatcher, "performance.control",
+             "{\"control\":\"arpeggiator\",\"mode\":1,\"rate\":3}");
     dispatch(dispatcher, "performance.noteOff", "{\"gesture\":42}");
     dispatch(dispatcher, "recording.stop", "{\"name\":\"take.molseq\"}");
     const molseq::Json recordings = dispatch(dispatcher, "recording.list");

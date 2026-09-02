@@ -222,6 +222,7 @@ if((MOL_BUILD_DESKTOP_AUDIO OR MOL_BUILD_DAEMON) AND _mol_desktop_audio_availabl
   endif()
   if(MOL_BUILD_DAEMON)
     add_subdirectory(apps/mol-keyboardd)
+    add_subdirectory(apps/molctl)
   endif()
 endif()
 

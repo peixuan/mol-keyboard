@@ -136,6 +136,7 @@ Json device_json(const DeviceInfo& device) {
   result["default"] = Json::boolean_value(device.is_default);
   result["id"] = Json::string(device.id);
   result["name"] = Json::string(device.name);
+  result["physical_input"] = Json::boolean_value(device.is_physical_input);
   return Json::object_value(std::move(result));
 }
 
@@ -290,7 +291,11 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
     result["channel_counts"] = Json::array_value(std::move(channels));
     result["effects"] = Json::object_value(std::move(effects));
     result["gpio"] = Json::boolean_value(false);
-    result["hid"] = Json::boolean_value(true);
+    const std::vector<DeviceInfo> inputs = runtime_.input_devices();
+    const bool physical_input =
+        std::any_of(inputs.begin(), inputs.end(),
+                    [](const DeviceInfo& item) { return item.is_physical_input; });
+    result["hid"] = Json::boolean_value(physical_input);
     result["max_voices"] = Json::number(state.max_voices);
     result["midi"] = Json::boolean_value(false);
     result["persistent_storage"] = Json::boolean_value(true);
@@ -493,9 +498,29 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
     return ok_result();
   }
   if (method == "performance.control") {
-    allow_members(params, {"control", "value"});
+    allow_members(params, {"control", "value", "mode", "rate", "gate", "octaves", "random_seed"});
     const std::string control = string_value(required(params, "control"), "control", 32u);
     mol_command_t value = command(MOL_COMMAND_SUSTAIN);
+    if (control == "arpeggiator") {
+      value.command_type = MOL_COMMAND_SET_ARPEGGIATOR;
+      value.payload.arpeggiator.mode = static_cast<std::uint32_t>(
+          u64_value(required(params, "mode"), "mode", MOL_ARPEGGIATOR_MODE_COUNT - 1u));
+      value.payload.arpeggiator.rate = static_cast<std::uint32_t>(
+          u64_value(required(params, "rate"), "rate", MOL_ARPEGGIATOR_RATE_COUNT - 1u));
+      const Json* gate = molseq::optional_member(params, "gate");
+      value.payload.arpeggiator.gate =
+          static_cast<float>(gate == nullptr ? 0.5 : real_value(*gate, "gate", 0.05, 1.0));
+      const Json* octaves = molseq::optional_member(params, "octaves");
+      value.payload.arpeggiator.octaves =
+          static_cast<std::uint8_t>(octaves == nullptr ? 1u : u64_value(*octaves, "octaves", 4u));
+      if (value.payload.arpeggiator.octaves == 0u)
+        throw RpcError(kInvalidParams, "octaves must be 1..4");
+      const Json* seed = molseq::optional_member(params, "random_seed");
+      value.payload.arpeggiator.random_seed = static_cast<std::uint32_t>(
+          seed == nullptr ? UINT32_C(0x4d4f4c31) : u64_value(*seed, "random_seed", UINT32_MAX));
+      require_ok(runtime_.submit(value), "performance control");
+      return ok_result();
+    }
     const double scalar = real_value(required(params, "value"), "value", -24.0, 24.0);
     if (control == "sustain") {
       if (scalar < 0.0 || scalar > 1.0) throw RpcError(kInvalidParams, "sustain must be 0..1");
@@ -669,9 +694,13 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
               bluetooth ? "The operating system exposes a Bluetooth output."
                         : "No Bluetooth output is exposed by the operating system.",
               "Pair the speaker in system settings; the service does not implement desktop A2DP.");
-    add_check("hid-input", !runtime_.input_devices().empty(),
-              runtime_.input_devices().empty() ? "No accessible physical keyboard input found."
-                                               : "A physical keyboard adapter is available.",
+    const std::vector<DeviceInfo> inputs = runtime_.input_devices();
+    const bool physical_input =
+        std::any_of(inputs.begin(), inputs.end(),
+                    [](const DeviceInfo& item) { return item.is_physical_input; });
+    add_check("hid-input", physical_input,
+              physical_input ? "A physical keyboard adapter is available."
+                             : "No accessible physical keyboard input found.",
               "Grant input-monitoring permission or select an accessible keyboard.");
     add_check("service-ipc", true, "This request reached the local service IPC.",
               "Restart the user service if future requests fail.");

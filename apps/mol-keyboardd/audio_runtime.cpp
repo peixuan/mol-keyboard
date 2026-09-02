@@ -493,7 +493,7 @@ molcontrol::RuntimeMetrics AudioRuntime::metrics() const {
 
 std::vector<molcontrol::DeviceInfo> AudioRuntime::input_devices() {
   return {{"programmatic", "Programmatic and local IPC input", "service", true,
-           impl_->input_id == "programmatic", false}};
+           impl_->input_id == "programmatic", false, false}};
 }
 
 mol_result_t AudioRuntime::attach_input(const std::string& id) {
