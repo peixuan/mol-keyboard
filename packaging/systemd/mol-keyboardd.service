@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: Apache-2.0
+[Unit]
+Description=MoL Keyboard headless instrument service
+After=graphical-session.target sound.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/mol-keyboardd
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.local/state/mol-keyboard
+RestrictAddressFamilies=AF_UNIX
+
+[Install]
+WantedBy=default.target

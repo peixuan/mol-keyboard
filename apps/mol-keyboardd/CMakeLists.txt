@@ -28,6 +28,12 @@ set_target_properties(mol-keyboardd PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD_R
 mol_enable_warnings(mol-keyboardd)
 mol_enable_optional_instrumentation(mol-keyboardd)
 install(TARGETS mol-keyboardd RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(
+  FILES ${PROJECT_SOURCE_DIR}/packaging/systemd/mol-keyboardd.service
+        ${PROJECT_SOURCE_DIR}/packaging/launchd/cn.zhangpeixuan.molkeyboard.daemon.plist
+        ${PROJECT_SOURCE_DIR}/packaging/windows/install-user-startup.ps1
+        ${PROJECT_SOURCE_DIR}/packaging/windows/uninstall-user-startup.ps1
+  DESTINATION ${CMAKE_INSTALL_DATADIR}/mol-keyboard/service)
 
 if(MOL_BUILD_TESTS)
   add_executable(mol_daemon_runtime_tests test_audio_runtime.cpp)
