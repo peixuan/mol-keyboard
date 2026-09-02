@@ -40,6 +40,35 @@
         "Tiny core profile"
       ],
       "local_patches": []
+    },
+    {
+      "name": "TypeScript",
+      "version": "7.0.2",
+      "revision": "npm:7.0.2",
+      "source": "https://registry.npmjs.org/typescript/-/typescript-7.0.2.tgz",
+      "integrity": "sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA==",
+      "license": "Apache-2.0",
+      "license_file": "third_party/licenses/typescript-LICENSE.txt",
+      "license_file_sha256": "bbfdf8170620f21af6d8433426d271b97b1b2944497aafc8c02eab4e23d37414",
+      "notice_file": "third_party/licenses/typescript-NOTICE.txt",
+      "notice_file_sha256": "844efa3295f209686288f7502138706d97292813b0351f066b1f4a72e60c92e5",
+      "usage": "Strict Web application type checking",
+      "distributed": false,
+      "local_patches": []
+    },
+    {
+      "name": "Vite",
+      "version": "8.2.2",
+      "revision": "2bd066d87f5bafd315be9f40889d0a60b9e58e0b",
+      "source": "https://registry.npmjs.org/vite/-/vite-8.2.2.tgz",
+      "integrity": "sha512-cFKLV/PRgAUlIRm5WjMjJ86jrftzpqcgH+Us+DS8mI3CDNiH30Whrz8uHL3+MOLPAgqbMBAqWdAHAphOAM+z/Q==",
+      "license": "MIT",
+      "license_file": "third_party/licenses/vite-LICENSE.md",
+      "license_file_sha256": "0a46da3c64e1f5ea321ae9ae2ab6ed7430ab7631731da032d21dc63feb7630a9",
+      "audited_lock": "apps/web/package-lock.json",
+      "usage": "Web development server and production bundler",
+      "distributed": false,
+      "local_patches": []
     }
   ],
   "dependencies": [

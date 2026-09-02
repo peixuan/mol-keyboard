@@ -85,6 +85,28 @@
       "licenseDeclared": "Apache-2.0",
       "copyrightText": "NOASSERTION",
       "primaryPackagePurpose": "BUILD_TOOL"
+    },
+    {
+      "name": "TypeScript",
+      "SPDXID": "SPDXRef-Package-TypeScript",
+      "versionInfo": "7.0.2",
+      "downloadLocation": "https://registry.npmjs.org/typescript/-/typescript-7.0.2.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "Copyright (c) Microsoft Corporation",
+      "primaryPackagePurpose": "BUILD_TOOL"
+    },
+    {
+      "name": "Vite",
+      "SPDXID": "SPDXRef-Package-Vite",
+      "versionInfo": "8.2.2",
+      "downloadLocation": "https://registry.npmjs.org/vite/-/vite-8.2.2.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "Copyright (c) 2019-present, VoidZero Inc. and Vite contributors",
+      "primaryPackagePurpose": "BUILD_TOOL"
     }
   ],
   "relationships": [
@@ -115,6 +137,16 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-esp-idf",
+      "relationshipType": "BUILD_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-MoL-Keyboard"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-TypeScript",
+      "relationshipType": "BUILD_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-MoL-Keyboard"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vite",
       "relationshipType": "BUILD_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-MoL-Keyboard"
     }
