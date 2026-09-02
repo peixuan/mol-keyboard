@@ -45,6 +45,17 @@ test("AudioWorklet survives a busy main thread and blur releases every note", as
     .poll(async () => Number(await page.locator("[data-event-count]").textContent()))
     .toBeGreaterThan(eventsBeforeStall);
   await expect(page.locator("[data-dropped-count]")).toHaveText("0");
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect(page.locator("[data-status]")).toContainText("Audio suspended");
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await page.getByRole("button", { name: "Resume audio" }).click();
+  await expect(page.locator("[data-status]")).toContainText("Audio ready");
   expect(pageErrors).toEqual([]);
 });
 

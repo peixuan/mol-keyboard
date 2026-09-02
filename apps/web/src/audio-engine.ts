@@ -51,6 +51,7 @@ export class MolAudioEngine extends EventTarget {
     number,
     { readonly resolve: (accepted: boolean) => void; readonly timer: number }
   >();
+  private deviceListenerInstalled = false;
 
   get state(): AudioContextState | "idle" {
     return this.context?.state ?? "idle";
@@ -69,8 +70,24 @@ export class MolAudioEngine extends EventTarget {
   }
 
   start(): Promise<void> {
+    if (this.context !== undefined && this.context.state !== "closed") {
+      if (this.context.state === "suspended") {
+        return this.context.resume().then(() => {
+          this.dispatchEvent(new Event("statechange"));
+        });
+      }
+      return Promise.resolve();
+    }
     this.startPromise ??= this.initialize();
     return this.startPromise;
+  }
+
+  async suspend(): Promise<void> {
+    this.allNotesOff();
+    if (this.context?.state === "running") {
+      await this.context.suspend();
+      this.dispatchEvent(new Event("statechange"));
+    }
   }
 
   noteOn(note: number, velocity: number, gestureId: number): void {
@@ -213,6 +230,13 @@ export class MolAudioEngine extends EventTarget {
 
     const context = new AudioContext({ latencyHint: "interactive" });
     this.context = context;
+    context.addEventListener("statechange", () => this.dispatchEvent(new Event("statechange")));
+    if (!this.deviceListenerInstalled && navigator.mediaDevices !== undefined) {
+      navigator.mediaDevices.addEventListener("devicechange", () => {
+        this.dispatchEvent(new Event("devicechange"));
+      });
+      this.deviceListenerInstalled = true;
+    }
     try {
       const workletUrl = new URL("generated/mol_audio_worklet_core.js", document.baseURI);
       await context.audioWorklet.addModule(workletUrl.href);
@@ -234,7 +258,6 @@ export class MolAudioEngine extends EventTarget {
       node.connect(context.destination);
       await this.waitUntilReady(node.port);
       await context.resume();
-      this.dispatchEvent(new Event("statechange"));
     } catch (error: unknown) {
       await context.close();
       this.context = undefined;

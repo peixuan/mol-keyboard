@@ -294,7 +294,10 @@ class MolKeyboardApp extends HTMLElement {
     window.addEventListener("blur", () => this.releaseAll());
     window.addEventListener("pagehide", () => this.releaseAll());
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") this.releaseAll();
+      if (document.visibilityState === "hidden") {
+        this.releaseAll();
+        if (this.engine === this.standaloneEngine) void this.standaloneEngine.suspend();
+      }
     });
     for (const backend of [this.standaloneEngine, this.serviceEngine]) {
       backend.addEventListener("engineevents", (event) => {
@@ -303,6 +306,11 @@ class MolKeyboardApp extends HTMLElement {
         this.onEngineEvents(engineEvent.detail);
       });
       backend.addEventListener("statechange", () => this.onEngineStateChanged(backend));
+      backend.addEventListener("devicechange", () => {
+        if (backend === this.engine) {
+          this.setStatus("Audio output route changed · system default active", "ready");
+        }
+      });
     }
   }
 
@@ -333,6 +341,13 @@ class MolKeyboardApp extends HTMLElement {
       if (this.startButton !== undefined) this.startButton.disabled = false;
       const connectionStatus = this.querySelector<HTMLOutputElement>("[data-service-status]");
       if (connectionStatus !== null) connectionStatus.value = "Not connected";
+    } else if (backend.state === "suspended") {
+      this.setStatus("Audio suspended · press Resume audio", "loading");
+      if (this.startButton !== undefined) {
+        this.startButton.disabled = false;
+        const label = this.startButton.querySelector("span");
+        if (label !== null) label.textContent = this.language === "zh" ? "恢复音频" : "Resume audio";
+      }
     }
   }
 
@@ -906,6 +921,7 @@ class MolKeyboardApp extends HTMLElement {
     this.setStatus("Loading the WebAssembly audio core…", "loading");
     try {
       await this.ensureConfigured();
+      if (this.engine.state === "running") this.onAudioReady();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Audio initialization failed.";
       this.setStatus(message, "error");
