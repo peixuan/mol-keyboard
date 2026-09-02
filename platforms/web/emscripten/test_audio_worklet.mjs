@@ -6,9 +6,12 @@ let processorConstructor;
 class MockMessagePort {
   constructor() {
     this.onmessage = undefined;
+    this.messages = [];
   }
 
-  postMessage(_message) {}
+  postMessage(message) {
+    this.messages.push(message);
+  }
 }
 
 globalThis.AudioWorkletProcessor = class AudioWorkletProcessor {
@@ -32,8 +35,18 @@ if (processorConstructor === undefined) {
 
 const processor = new processorConstructor();
 processor.port.onmessage({
-  data: { type: "note-on", note: 60, velocity: 1.0, gestureId: 1 },
+  data: {
+    type: "events",
+    events: [
+      { type: "note-on", note: 60, velocity: 1.0, gestureId: 1 },
+      { type: "note-on", note: 200, velocity: 1.0, gestureId: 2 },
+    ],
+  },
 });
+const batchResult = processor.port.messages.at(-1);
+if (batchResult?.accepted !== 1 || batchResult?.rejected !== 1) {
+  throw new Error(`AudioWorklet batch validation failed: ${JSON.stringify(batchResult)}`);
+}
 
 const left = new Float32Array(128);
 const right = new Float32Array(128);
@@ -70,7 +83,7 @@ if (
   throw new Error(`AudioWorklet C4 analysis failed: frequency=${frequency}, peak=${peak}`);
 }
 
-processor.port.onmessage({ data: { type: "note-off", gestureId: 1 } });
+processor.port.onmessage({ data: { type: "all-notes-off" } });
 for (let block = 0; block < 1200; block += 1) {
   processor.process([], [[left, right]], {});
 }
