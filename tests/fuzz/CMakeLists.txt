@@ -39,6 +39,7 @@ endfunction()
 
 mol_add_fuzzer(fuzz_patch_parser fuzz_patch_parser.c)
 mol_add_fuzzer(fuzz_sequence_parser fuzz_sequence_parser.c)
+mol_add_fuzzer(fuzz_wire_parser fuzz_wire_parser.c)
 
 set(_mol_patch_corpus "${CMAKE_CURRENT_BINARY_DIR}/corpus/patch_parser_ci")
 set(_mol_patch_artifacts "${CMAKE_CURRENT_BINARY_DIR}/artifacts/patch_parser")
@@ -67,3 +68,11 @@ add_test(
     fuzz_sequence_parser -max_total_time=20 -max_len=65536 -timeout=5
     -artifact_prefix=${_mol_sequence_artifacts}/ ${_mol_sequence_corpus})
 set_tests_properties(fuzz_sequence_parser_smoke PROPERTIES TIMEOUT 45)
+
+set(_mol_wire_artifacts "${CMAKE_CURRENT_BINARY_DIR}/artifacts/wire_parser")
+file(MAKE_DIRECTORY "${_mol_wire_artifacts}")
+add_test(
+  NAME fuzz_wire_parser_smoke
+  COMMAND fuzz_wire_parser -max_total_time=20 -max_len=64 -timeout=5
+          -artifact_prefix=${_mol_wire_artifacts}/)
+set_tests_properties(fuzz_wire_parser_smoke PROPERTIES TIMEOUT 45)
