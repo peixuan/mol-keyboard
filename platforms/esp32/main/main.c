@@ -23,6 +23,7 @@
 #include "input_queue.h"
 #include "mol/mol.h"
 #include "sequence_fixture.h"
+#include "sequence_storage.h"
 
 #define MOL_ESP32_RENDER_FRAMES 128u
 #define MOL_ESP32_CHANNEL_COUNT 2u
@@ -330,6 +331,12 @@ void app_main(void) {
   } else if (settings_source == MOL_DEVICE_SETTINGS_FROM_NVS) {
     ESP_LOGI(kTag, "Settings loaded from NVS: generation=%" PRIu32, device_settings.generation);
   }
+  result = mol_sequence_storage_initialize();
+  if (result != MOL_OK) {
+    ESP_LOGW(kTag, "Sequence FAT storage unavailable; live audio remains enabled");
+  } else {
+    ESP_LOGI(kTag, "Sequence FAT storage mounted with transactional recovery");
+  }
   if (!mol_sequence_fixture_verify(&sequence_summary)) {
     ESP_LOGE(kTag, "Shared Mol Sequence fixture conformance failed");
     return;
@@ -415,11 +422,13 @@ void app_main(void) {
     mol_input_queue_stats_t input_stats;
     mol_gpio_matrix_stats_t gpio_stats;
     mol_device_storage_stats_t storage_stats;
+    mol_sequence_storage_stats_t sequence_storage_stats;
     vTaskDelay(pdMS_TO_TICKS(MOL_ESP32_DIAGNOSTIC_PERIOD_MS));
     audio_snapshot = audio_stats_snapshot();
     input_stats = mol_input_queue_stats();
     gpio_stats = mol_gpio_matrix_stats();
     storage_stats = mol_device_storage_stats();
+    sequence_storage_stats = mol_sequence_storage_stats();
     if (mol_input_take_config_mode_request()) {
       ESP_LOGI(kTag, "Configuration mode requested by physical hold gesture");
     }
@@ -431,6 +440,7 @@ void app_main(void) {
         " input_reject=%" PRIu32 " input_high=%" PRIu32 " gpio_scans=%" PRIu32
         " gpio_events=%" PRIu32 " gpio_ghost=%" PRIu32 " gpio_fail=%" PRIu32 " nvs_load=%" PRIu32
         " nvs_save=%" PRIu32 " nvs_missing=%" PRIu32 " nvs_corrupt=%" PRIu32 " nvs_io_fail=%" PRIu32
+        " seq_load=%" PRIu32 " seq_save=%" PRIu32 " seq_corrupt=%" PRIu32 " seq_io_fail=%" PRIu32
         " audio_stack_min=%u gpio_stack_min=%" PRIu32 " internal_heap_min=%u",
         audio_snapshot.rendered_frames, audio_snapshot.render_failures,
         audio_snapshot.write_failures, audio_snapshot.partial_writes,
@@ -440,8 +450,9 @@ void app_main(void) {
         input_stats.rejected, input_stats.high_water, gpio_stats.scans, gpio_stats.transitions,
         gpio_stats.ghost_scans, gpio_stats.delivery_failures, storage_stats.settings_loads,
         storage_stats.settings_saves, storage_stats.missing_records, storage_stats.corrupt_records,
-        storage_stats.io_failures, (unsigned int)uxTaskGetStackHighWaterMark(audio_task_handle),
-        gpio_stats.stack_high_water,
+        storage_stats.io_failures, sequence_storage_stats.loads, sequence_storage_stats.saves,
+        sequence_storage_stats.corrupt_files, sequence_storage_stats.io_failures,
+        (unsigned int)uxTaskGetStackHighWaterMark(audio_task_handle), gpio_stats.stack_high_water,
         (unsigned int)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL));
   }
 }

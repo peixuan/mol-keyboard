@@ -82,6 +82,21 @@ mol_enable_warnings(mol_esp32_settings_tests)
 mol_enable_optional_instrumentation(mol_esp32_settings_tests)
 add_test(NAME mol_esp32_settings_tests COMMAND mol_esp32_settings_tests)
 
+add_executable(
+  mol_esp32_sequence_store_tests unit/test_esp32_sequence_store.c
+                                 ${PROJECT_SOURCE_DIR}/platforms/esp32/main/sequence_store.c)
+target_include_directories(mol_esp32_sequence_store_tests
+                           PRIVATE ${PROJECT_SOURCE_DIR}/platforms/esp32/main)
+target_link_libraries(mol_esp32_sequence_store_tests PRIVATE mol::core)
+set_target_properties(mol_esp32_sequence_store_tests PROPERTIES C_EXTENSIONS OFF
+                                                         C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_esp32_sequence_store_tests)
+mol_enable_optional_instrumentation(mol_esp32_sequence_store_tests)
+if(MSVC)
+  target_compile_definitions(mol_esp32_sequence_store_tests PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+add_test(NAME mol_esp32_sequence_store_tests COMMAND mol_esp32_sequence_store_tests)
+
 add_test(
   NAME mol_harmony_project_audit
   COMMAND
