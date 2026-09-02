@@ -3,10 +3,13 @@
 
 #include <algorithm>
 #include <array>
+#include <cerrno>
+#include <charconv>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <initializer_list>
@@ -61,27 +64,36 @@ std::string string_value(const Json& value, const char* name, std::size_t maximu
 }
 
 std::uint64_t u64_value(const Json& value, const char* name, std::uint64_t maximum) {
-  try {
-    return molseq::json_u64(value, maximum);
-  } catch (const std::exception&) {
+  if (value.type != Json::Type::Number || value.text.empty())
     throw RpcError(kInvalidParams, std::string("invalid integer parameter: ") + name);
-  }
+  for (const char character : value.text)
+    if (character < '0' || character > '9')
+      throw RpcError(kInvalidParams, std::string("invalid integer parameter: ") + name);
+  std::uint64_t parsed = 0u;
+  const auto conversion =
+      std::from_chars(value.text.data(), value.text.data() + value.text.size(), parsed);
+  if (conversion.ec != std::errc{} || conversion.ptr != value.text.data() + value.text.size() ||
+      parsed > maximum)
+    throw RpcError(kInvalidParams, std::string("invalid integer parameter: ") + name);
+  return parsed;
 }
 
 double real_value(const Json& value, const char* name, double minimum, double maximum) {
-  try {
-    return molseq::json_double(value, minimum, maximum);
-  } catch (const std::exception&) {
+  if (value.type != Json::Type::Number || value.text.empty())
     throw RpcError(kInvalidParams, std::string("invalid numeric parameter: ") + name);
-  }
+  char* end = nullptr;
+  errno = 0;
+  const double parsed = std::strtod(value.text.c_str(), &end);
+  if (errno != 0 || end != value.text.data() + value.text.size() || !std::isfinite(parsed) ||
+      parsed < minimum || parsed > maximum)
+    throw RpcError(kInvalidParams, std::string("invalid numeric parameter: ") + name);
+  return parsed;
 }
 
 bool bool_value(const Json& value, const char* name) {
-  try {
-    return molseq::json_bool(value);
-  } catch (const std::exception&) {
+  if (value.type != Json::Type::Boolean)
     throw RpcError(kInvalidParams, std::string("invalid Boolean parameter: ") + name);
-  }
+  return value.boolean;
 }
 
 Json ok_result() {
@@ -209,11 +221,15 @@ mol_preset_id_t parse_preset(const Json& value) {
 
 std::filesystem::path safe_recording_path(const std::filesystem::path& directory,
                                           const std::string& name) {
-  const std::filesystem::path relative(name);
-  if (name.size() > 128u || relative.empty() || relative.is_absolute() ||
-      relative.filename() != relative || relative.extension() != ".molseq")
+  constexpr std::string_view suffix = ".molseq";
+  bool contains_control = false;
+  for (const unsigned char character : name)
+    if (character < 0x20u) contains_control = true;
+  if (name.size() <= suffix.size() || name.size() > 128u ||
+      name.find_first_of("/\\:") != std::string::npos || contains_control ||
+      name.compare(name.size() - suffix.size(), suffix.size(), suffix) != 0)
     throw RpcError(kInvalidParams, "recording name must be a .molseq file name");
-  return directory / relative;
+  return directory / std::filesystem::path(name);
 }
 
 Json make_default_config() {
@@ -434,13 +450,7 @@ ServiceBackend::ServiceBackend(ServiceRuntime& runtime, std::filesystem::path st
 void ServiceBackend::persist_config() const { save_config_file(config_path_, config_); }
 
 Json ServiceBackend::invoke(std::string_view method, const Json& params) {
-  try {
-    return invoke_checked(method, params);
-  } catch (const RpcError&) {
-    throw;
-  } catch (const std::exception& error) {
-    throw RpcError(kRuntimeError, error.what());
-  }
+  return invoke_checked(method, params);
 }
 
 Json ServiceBackend::invoke_checked(std::string_view method, const Json& params) {

@@ -455,7 +455,12 @@ SequenceDocument load_binary(const std::string& path) {
 }
 
 void save_binary(const std::string& path, const SequenceDocument& document) {
-  std::FILE* file = std::fopen(path.c_str(), "wb");
+  std::FILE* file = nullptr;
+#if defined(_WIN32)
+  if (fopen_s(&file, path.c_str(), "wb") != 0) file = nullptr;
+#else
+  file = std::fopen(path.c_str(), "wb");
+#endif
   if (file == nullptr) throw std::runtime_error("cannot open output: " + path);
   mol_sequence_writer_t writer{};
   writer.struct_size = static_cast<std::uint32_t>(sizeof(writer));

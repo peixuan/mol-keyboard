@@ -3,16 +3,36 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <vector>
+
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
 
 namespace molcontrol {
 
+#if defined(_WIN32)
+namespace {
+
+std::filesystem::path environment_path(const wchar_t* name) {
+  const DWORD required = GetEnvironmentVariableW(name, nullptr, 0u);
+  if (required == 0u) return {};
+  std::vector<wchar_t> value(required, L'\0');
+  const DWORD written = GetEnvironmentVariableW(name, value.data(), required);
+  if (written == 0u || written >= required) return {};
+  return std::filesystem::path(value.data());
+}
+
+}  // namespace
+#endif
+
 std::filesystem::path default_service_state_directory() {
 #if defined(_WIN32)
-  const char* local = std::getenv("LOCALAPPDATA");
-  if (local != nullptr && local[0] != '\0') return std::filesystem::path(local) / "MolKeyboard";
-  const char* profile = std::getenv("USERPROFILE");
-  if (profile != nullptr && profile[0] != '\0')
-    return std::filesystem::path(profile) / "AppData" / "Local" / "MolKeyboard";
+  const std::filesystem::path local = environment_path(L"LOCALAPPDATA");
+  if (!local.empty()) return local / "MolKeyboard";
+  const std::filesystem::path profile = environment_path(L"USERPROFILE");
+  if (!profile.empty()) return profile / "AppData" / "Local" / "MolKeyboard";
 #else
   const char* state_home = std::getenv("XDG_STATE_HOME");
   if (state_home != nullptr && state_home[0] == '/')
