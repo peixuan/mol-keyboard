@@ -8,7 +8,7 @@ typedef union consumer_storage {
   long double floating_alignment;
   void* pointer_alignment;
   uint64_t integer_alignment;
-  unsigned char bytes[4096];
+  unsigned char bytes[65536];
 } consumer_storage_t;
 
 int main(void) {

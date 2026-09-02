@@ -20,6 +20,9 @@ target_include_directories(
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
          $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 target_compile_features(mol_core PUBLIC c_std_11)
+if(UNIX AND NOT APPLE)
+  target_link_libraries(mol_core PRIVATE m)
+endif()
 set_target_properties(
   mol_core
   PROPERTIES C_EXTENSIONS OFF

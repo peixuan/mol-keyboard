@@ -6,9 +6,9 @@ M0 — Blank repository and engineering baseline.
 
 ## Last verified commit
 
-`8d62f8f` (`chore: establish MoL Keyboard project baseline`) is the last
-previous commit. The lifecycle implementation below was verified in the current
-worktree and will be committed atomically.
+`894c1a1` (`feat(core): add caller-owned engine lifecycle`) is the last verified
+commit. The M1 synthesis work below was verified in the current worktree and
+will be committed atomically.
 
 ## Completed requirements
 
@@ -18,11 +18,16 @@ worktree and will be committed atomically.
 - `mol_core` is ISO C11 and initializes entirely in aligned caller-owned memory.
 - Debug and release builds pass warnings-as-errors with MSVC 19.51.36248.
 - C and C++17 consumers link and run against the same public C ABI.
-- Interleaved and planar no-op rendering is allocation-free and advances frame time.
+- Interleaved and planar rendering is allocation-free and advances frame time.
+- The arena now contains fixed-capacity voices, scheduled commands, and events.
+- A polyBLEP saw oscillator, ADSR envelope, deterministic voice allocation, and
+  sample-accurate command heap produce real polyphonic audio.
+- Automated analysis measured rendered MIDI C4 within 1 Hz of 261.6256 Hz,
+  rejected NaN/Inf, verified release to silence, and exercised eight voices plus stealing.
 
 ## In-progress work
 
-- Offline WAV rendering and the first band-limited oscillator/ADSR sound path.
+- Offline WAV rendering of the verified native synthesis path.
 
 ## Blocked platform checks
 
@@ -52,5 +57,5 @@ ctest --preset dev-release
 
 ## Next highest-priority task
 
-Add an offline WAV sink and a real oscillator/ADSR/voice path, then verify a C4
-render by frequency and finite-sample analysis.
+Add `mol-render` with a deterministic PCM WAV sink and validate its file output,
+then compile the same synthesis source with Emscripten.

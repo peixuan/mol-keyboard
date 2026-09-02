@@ -3,7 +3,7 @@
 | Gate | State | Evidence |
 |---|---|---|
 | M0 engineering baseline | in progress | Windows x64 Debug/Release core and C/C++ consumers verified; Wasm and ESP-IDF pending |
-| M1 portable sound path | not started | Depends on M0 |
+| M1 portable sound path | in progress | Native polyBLEP/ADSR, sample scheduling, 8+ voices, C4 frequency, and finite output verified |
 | M2 music semantics | not started | Depends on M1 |
 | M3 instruments and DSP | not started | Depends on M2 |
 | M4 recording and tools | not started | Depends on M3 |

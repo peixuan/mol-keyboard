@@ -9,7 +9,7 @@ typedef union test_storage {
   long double floating_alignment;
   void* pointer_alignment;
   uint64_t integer_alignment;
-  unsigned char bytes[4096];
+  unsigned char bytes[65536];
 } test_storage_t;
 
 static int failures = 0;
@@ -97,7 +97,7 @@ static void test_planar_and_commands(void) {
   command.command_type = MOL_COMMAND_RESET_ENGINE;
   command.target_frame = MOL_FRAME_IMMEDIATE;
   EXPECT_TRUE(mol_engine_submit(engine, &command) == MOL_OK);
-  command.command_type = MOL_COMMAND_NOTE_ON;
+  command.command_type = MOL_COMMAND_SET_TEMPO;
   EXPECT_TRUE(mol_engine_submit(engine, &command) == MOL_ERROR_UNSUPPORTED);
   mol_engine_shutdown(engine);
 }

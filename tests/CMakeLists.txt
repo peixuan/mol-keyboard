@@ -7,6 +7,13 @@ mol_enable_warnings(mol_core_tests)
 mol_enable_optional_instrumentation(mol_core_tests)
 add_test(NAME mol_core_tests COMMAND mol_core_tests)
 
+add_executable(mol_audio_tests unit/test_audio.c)
+target_link_libraries(mol_audio_tests PRIVATE mol::core)
+set_target_properties(mol_audio_tests PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_audio_tests)
+mol_enable_optional_instrumentation(mol_audio_tests)
+add_test(NAME mol_audio_tests COMMAND mol_audio_tests)
+
 add_executable(mol_c_consumer consumers/c_consumer.c)
 target_link_libraries(mol_c_consumer PRIVATE mol::core)
 set_target_properties(mol_c_consumer PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
