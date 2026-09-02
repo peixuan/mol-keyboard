@@ -10,7 +10,7 @@
 | M5 desktop headless product | implementation complete; platform acceptance pending | Windows runtime and Linux/WSL lifecycle verified; physical Bluetooth/evdev and macOS remain explicit device/toolchain gates |
 | M6 Web/PWA | implementation complete; Safari acceptance pending | Production PWA, standalone and authenticated service modes, Chrome/Edge/Firefox AudioWorklet automation, mobile-layout automation, offline lifecycle, MessagePort fallback, and SAB path pass; current-stable Safari requires an Apple host |
 | M7 Android and iOS | implementation complete; platform acceptance pending | Android dual-ABI Debug/Release/lint builds pass and the packaged x86_64 app is runtime-verified through AAudio, foreground notification, background, screen-off, and idle shutdown. The complete iOS application and Xcode pipeline are source-reviewed; all Apple builds and physical mobile acceptance remain explicit gates |
-| M8 HarmonyOS | in progress | Native M1 OHAudio/Node-API entry exists; complete ArkUI application, storage, continuous-task policy, packaging, and real DevEco/device evidence remain |
+| M8 HarmonyOS | implementation complete; platform acceptance pending | Complete Stage/ArkUI application, strict Node-API/OHAudio path, actual low-latency status and fallback, AudioSession/AVSession/official continuous-task lifecycle, private storage, and audited HAP pipeline are source-checked; DevEco builds and physical-device acceptance remain explicit gates |
 | M9 ESP32 product | not started | Depends on portable core gates |
 | M10 v1.0.0 release | not started | All earlier gates required |
 

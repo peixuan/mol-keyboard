@@ -2,20 +2,21 @@
 
 ## Current milestone
 
-M8 HarmonyOS is active. The Android and iOS application implementations are
-complete; Android is dual-ABI build-verified and runtime-verified on an Android
-15 x86_64 emulator, while iOS remains source-reviewed because no Apple SDK is
-available on this host. Physical Bluetooth/evdev, macOS/Safari, and physical
-mobile acceptance remain environment-blocked. M0 through M4, the M5 desktop
-implementation, and the M6 Web/PWA implementation are complete.
+M9 ESP32 product work is active. The Android, iOS, and HarmonyOS application
+implementations are complete; Android is dual-ABI build-verified and
+runtime-verified on an Android 15 x86_64 emulator, while iOS and HarmonyOS
+remain source-reviewed because their platform SDKs are unavailable on this
+host. Physical Bluetooth/evdev, macOS/Safari, and physical mobile acceptance
+remain environment-blocked. M0 through M4, the M5 desktop implementation, and
+the M6 Web/PWA implementation are complete.
 
 ## Last verified commit
 
-`f15c588` (`feat(ios): add native audio application shell`) is the last locally
-validated product-code commit. Its shared Web changes and unaffected portable
-targets passed locally; the Apple-specific target itself is not called
-build-verified. The validation below was run on 2026-09-03. Documentation
-changes do not alter binaries.
+`ae80d9c` (`feat(harmony): add native ArkUI application`) is the last locally
+validated product-code commit. The HarmonyOS native source boundary, project
+audit, and unaffected portable targets passed locally; the HarmonyOS target
+itself is not called build-verified. The validation below was run on
+2026-09-03. Documentation changes do not alter binaries.
 
 ## Completed requirements
 
@@ -113,12 +114,18 @@ changes do not alter binaries.
   after route/interruption/media-service rebuilds and keeps background audio
   only for playback or a running metronome transport. Xcode simulator/device
   pipelines are checked in, but no Apple build is claimed on this host.
+- The HarmonyOS Stage application provides the complete ArkUI surface and exact
+  30-key foreground mapping, strict Node-API controls, OHAudio fast request with
+  normal fallback and effective latency reporting, AudioSession focus,
+  AVSession media commands, official audio-playback continuous tasks, private
+  atomic recording persistence, and route/interruption restoration. Its HAP
+  pipeline audits real package contents, but no DevEco build is claimed here.
 
 ## In-progress work
 
-- M8: complete the HarmonyOS application around the existing OHAudio and
-  Node-API entry, including ArkUI, strict control bridge, audio focus, official
-  continuous-task lifecycle, private storage, and HAP packaging.
+- M9: extend the existing build-verified ESP32/ESP32-S3 I2S baseline into the
+  complete device product, starting with the remaining portable GPIO/input,
+  persistence, configuration, capability, and hardware-test infrastructure.
 
 ## Blocked platform checks
 
@@ -232,8 +239,15 @@ results.
   their toolchain environments and are not all on the default `PATH`.
 - Cross-platform source checks are not promoted to device verification.
 
+The HarmonyOS application descriptors, project audit, and native source-check
+boundary pass locally. MSVC Debug passed 65/65 tests after adding the complete
+application and HAP audit. `platforms/harmony/build-app.sh release` fails closed
+with an actionable DevEco requirement on this host, as intended. Detailed
+evidence and pending physical acceptance are in
+`docs/mobile/M8_HARMONY_EVIDENCE.md`.
+
 ## Next highest-priority task
 
-Complete M8 as a real HarmonyOS HAP project around the existing source-checked
-OHAudio host. Keep DevEco/Harmony builds and all physical-device checks explicit
-until matching hardware and toolchains are available.
+Complete the locally actionable M9 ESP32 product requirements. Keep physical
+ESP32/ESP32-S3, A2DP radio, I2S signal, and 30-minute hardware claims explicit
+until matching boards and instruments are available.

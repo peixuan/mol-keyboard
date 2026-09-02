@@ -1,56 +1,101 @@
-# HarmonyOS Native Audio Entry
+# HarmonyOS audio application
 
-The HarmonyOS M1 entry follows the required ArkTS-to-Node-API-to-OHAudio path.
-`AudioRuntime.ets` owns an external native `AudioHost`; Node-API transfers only
-lifecycle calls, bounded note commands, and diagnostic snapshots. ArkTS never
-creates, copies, or renders PCM.
+The HarmonyOS application follows the required ArkTS-to-Node-API-to-OHAudio
+path. `AudioService.ets` owns an external native `AudioHost`; Node-API transfers
+only lifecycle calls, bounded control commands, sequence bytes, event batches,
+and diagnostic snapshots. ArkTS never creates, copies, or renders PCM.
 
-The native host requests a 48 kHz stereo float renderer with music usage and
-fast latency mode, then queries the effective sample rate, channel count,
-format, callback frame size, and latency mode before initializing the same
-caller-owned `mol_core` runtime used by the other platforms. The OHAudio write
-callback renders directly into the supplied buffer, accepts variable callback
-sizes, replaces non-finite values with silence, and performs no allocation,
-locking, logging, file access, Node-API call, or stream lifecycle operation.
+~~~text
+ArkUI controls and foreground KeyEvent input
+  -> AudioService (focus, AVSession, continuous task, private storage)
+  -> strict Node-API boundary
+  -> OHAudio write callback
+  -> shared fixed-memory ISO C11 engine
+~~~
 
-Output-device changes, forced interruptions, and renderer errors only publish
-atomic status and request a restart. ArkTS lifecycle code can observe
-`needsRestart` and call `recover()` on its control thread. Underflow, callback,
-render, route-change, interruption, error, and non-finite counters are exposed
-without crossing into ArkTS from the realtime callback.
+The native host first requests a 48 kHz stereo float renderer with music usage
+and `AUDIOSTREAM_LATENCY_MODE_FAST`. If fast stream creation fails it retries
+with normal latency rather than hiding the failure. It then queries and reports
+the effective sample rate, channel count, format, callback frame size, renderer
+state, and actual latency mode before initializing the same caller-owned
+`mol_core` runtime used by the other platforms.
 
-## Build entry
+The OHAudio write callback renders directly into the supplied buffer, accepts
+variable callback sizes, replaces non-finite values with silence, and performs
+no allocation, locking, logging, file access, Node-API call, or stream lifecycle
+operation. Output-device changes, forced interruptions, and renderer errors
+publish atomic status and request a control-thread rebuild. Persistent controls,
+the loaded sequence, transport, and eligible playback are restored after that
+rebuild.
 
-Add `platforms/harmony` to the native CMake project used by the HarmonyOS
-module. On an OHOS toolchain CMake creates `libmol_harmony_audio.so`, links it
-to `libace_napi.z.so` and `libohaudio.so`, and installs it under `lib`.
-The application module must package:
+## Application project
 
-- `arkts/AudioRuntime.ets`;
-- `arkts/types/libmol_harmony_audio/index.d.ts` as the native module typing;
-- the generated `libmol_harmony_audio.so` for each supported ABI.
+The Stage-model project is under `platforms/harmony/app`. It targets HarmonyOS
+API 12 and packages `libmol_harmony_audio.so` for `arm64-v8a` and `x86_64`. The
+default bundle identifier is `cn.zhangpeixuan.molkeyboard`; a product build may
+override it.
 
-The implementation uses the independent renderer interrupt and error callbacks
-introduced in API 18, so the application must compile and run with a compatible
-HarmonyOS API level. The default application bundle name is
-`cn.zhangpeixuan.molkeyboard` and remains configurable by the final HAP target.
+The ArkUI surface exposes the exact 30 note bindings, Space sustain, all 18
+presets, octave and transpose, eight scales, ten chord modes, seven arpeggiator
+modes, tempo/meter/metronome, portamento, recording, sequence playback, and
+diagnostics. Foreground hardware keys and touch use the same command model.
+Settings use Preferences. Recordings use private `filesDir` storage with a
+2 MiB bound and temp-file, `fsync`, rename replacement.
 
-When `MOL_VALIDATE_MOBILE_SOURCES=ON` on a non-cross-compiling host, CMake
+Audio focus is acquired with `AudioSessionManager`. An AVSession publishes
+play/pause state and accepts media commands. The official audio-playback
+continuous task is started only after a user action and only while sequence
+playback or metronome plus running transport needs sound. Idle backgrounding
+stops the stream, deactivates the audio session, and releases the AVSession.
+
+## Reproducible build
+
+Install DevEco Studio with a HarmonyOS API 12 or newer SDK and native toolchain,
+then run from the repository root:
+
+~~~bash
+platforms/harmony/build-app.sh debug
+platforms/harmony/build-app.sh release
+~~~
+
+Set `HVIGORW` to an actual DevEco `hvigorw` executable, or set `DEVECO_HOME`, if
+it is not discoverable. The script invokes the real Stage build and rejects a
+result unless a non-empty HAP contains the module profile, ArkTS bytecode or
+module content, and `libmol_harmony_audio.so` for a packaged ABI. It never
+substitutes a desktop CMake build for a HarmonyOS package.
+
+When `MOL_VALIDATE_MOBILE_SOURCES=ON` on a non-cross-compiling host, CMake also
 strictly compiles the native host and Node-API module against small
-declaration-only SDK subsets under `source_check/include`. Those files mirror
-the official signatures used here, provide no implementation, and are never
-included by an OHOS build.
+declaration-only SDK subsets under `source_check/include`. Those declarations
+mirror only the official signatures used here, provide no implementation, and
+are never included by an OHOS build.
 
-## Current verification boundary
+## Verification boundary
 
-The official OpenHarmony multimedia audio headers were inspected at commit
-`c2e9f5b`, and the entry passes MSVC Debug and Release source compilation with
-warnings as errors. No DevEco Studio/HarmonyOS SDK or physical HarmonyOS device
-is available on this machine, so this remains `source-checked`, not
-`build-verified` or `device-verified`.
+The full application project, native bridge, OHAudio host, ArkUI surface,
+official lifecycle integrations, persistence, and audited HAP pipeline are
+implemented. Windows MSVC compiles the C++ boundary with warnings as errors;
+the repository audit checks the Stage declarations, exact keyboard table,
+complete control surface, private persistence, continuous-task/AVSession/
+AudioSession calls, and absence of ArkTS PCM rendering.
 
-Actual fast-status reporting (rather than the configured latency mode), a
-normal-mode retry when fast stream creation fails, AudioSession focus
-integration, the official audio-playback continuous-task declaration, HAP
-packaging/signing, background playback, and physical route/interruption tests
-remain M8 work. The M1 entry does not claim those product-level capabilities.
+No DevEco Studio/HarmonyOS SDK or physical HarmonyOS device is available on the
+current host. Therefore the application is `implementation-complete` and
+`source-checked`, but is not `build-verified`, `runtime-verified`, or
+`device-verified`. Real HAP construction, installation, audible performance,
+background playback, interruptions, output-route changes, latency, and
+sustained playback remain mandatory M8 acceptance work. See
+`docs/mobile/M8_HARMONY_EVIDENCE.md`.
+
+## Platform references
+
+- OHAudio native APIs:
+  https://developer.huawei.com/consumer/en/doc/harmonyos-references-V13/native__audio__session__manager_8h-V13
+- Audio playback continuous tasks:
+  https://developer.huawei.com/consumer/en/doc/harmonyos-references-V5/js-apis-resourceschedule-backgroundtaskmanager-V5
+- AudioRenderer background playback guidance:
+  https://developer.huawei.com/consumer/cn/doc/doccenter-feature-dev/bpta-playing-pcm-audio-based-audiorenderer
+- ArkUI hardware-key events:
+  https://developer.huawei.com/consumer/en/doc/harmonyos-guides-V13/arkts-common-events-device-input-event-V13
+- Native HarmonyOS project integration:
+  https://developer.huawei.com/consumer/en/doc/harmonyos-guides-V5/build-with-ndk-ide-V5

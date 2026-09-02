@@ -31,5 +31,13 @@ manifest, and Xcode simulator/device pipeline. This Windows host has no Xcode,
 iOS Simulator, signing identity, or physical Apple device, so compilation,
 installation, audible output, background/lock-screen continuation,
 route/interruption behavior, hardware keyboard input, latency, and sustained
-playback are not claimed. HarmonyOS still has only its M1 platform entry; its
-complete M8 application is the next locally actionable implementation gate.
+playback are not claimed.
+
+The HarmonyOS Stage application implementation is also complete, including the
+full native ArkUI surface, strict Node-API/OHAudio runtime, fast-to-normal
+latency fallback and reporting, AudioSession focus, AVSession controls,
+audio-playback continuous-task policy, private sequence persistence, and HAP
+build audit. This host has no DevEco Studio, HarmonyOS SDK/toolchain, signing
+identity, or physical device. HAP construction, installation, sound, background
+and screen-off playback, route/focus/interruption recovery, latency, and
+sustained playback are therefore not claimed.
