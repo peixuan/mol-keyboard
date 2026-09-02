@@ -13,7 +13,27 @@ include(cmake/MolWarnings.cmake)
 include(cmake/MolSanitizers.cmake)
 
 add_library(mol_core src/c_api/mol_engine.c src/dsp/mol_dsp.c
-                     src/music/mol_music.c src/transport/mol_transport.c)
+                     src/music/mol_music.c src/patch/mol_patch.c
+                     src/patch/mol_builtin_patches.c
+                     src/patch/generated/mol_patch_grand_piano.c
+                     src/patch/generated/mol_patch_electric_piano.c
+                     src/patch/generated/mol_patch_harpsichord.c
+                     src/patch/generated/mol_patch_church_organ.c
+                     src/patch/generated/mol_patch_jazz_organ.c
+                     src/patch/generated/mol_patch_nylon_guitar.c
+                     src/patch/generated/mol_patch_steel_guitar.c
+                     src/patch/generated/mol_patch_violin.c
+                     src/patch/generated/mol_patch_cello.c
+                     src/patch/generated/mol_patch_flute.c
+                     src/patch/generated/mol_patch_clarinet.c
+                     src/patch/generated/mol_patch_synth_lead.c
+                     src/patch/generated/mol_patch_synth_pad.c
+                     src/patch/generated/mol_patch_synth_bass.c
+                     src/patch/generated/mol_patch_choir.c
+                     src/patch/generated/mol_patch_vibraphone.c
+                     src/patch/generated/mol_patch_harp.c
+                     src/patch/generated/mol_patch_music_box.c
+                     src/transport/mol_transport.c)
 add_library(mol::core ALIAS mol_core)
 
 target_include_directories(
@@ -93,6 +113,7 @@ if(MOL_BUILD_TESTS)
 endif()
 
 if(MOL_BUILD_TOOLS)
+  add_subdirectory(apps/mol-patchc)
   add_subdirectory(apps/mol-render)
 endif()
 

@@ -22,6 +22,22 @@ mol_enable_warnings(mol_dsp_tests)
 mol_enable_optional_instrumentation(mol_dsp_tests)
 add_test(NAME mol_dsp_tests COMMAND mol_dsp_tests)
 
+add_executable(mol_patch_tests unit/test_patch.c)
+target_link_libraries(mol_patch_tests PRIVATE mol::core)
+set_target_properties(mol_patch_tests PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_patch_tests)
+mol_enable_optional_instrumentation(mol_patch_tests)
+add_test(NAME mol_patch_tests COMMAND mol_patch_tests)
+if(MOL_BUILD_TOOLS AND NOT CMAKE_CROSSCOMPILING)
+  add_test(
+    NAME mol_patchc_builtin_compile
+    COMMAND
+      ${CMAKE_COMMAND} -DMOL_PATCHC=$<TARGET_FILE:mol-patchc>
+      -DMOL_PATCH_DIR=${PROJECT_SOURCE_DIR}/patches/builtin
+      -DMOL_OUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/compiled-patches -P
+      ${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_patch_compiler.cmake)
+endif()
+
 add_executable(mol_music_tests unit/test_music.c)
 target_link_libraries(mol_music_tests PRIVATE mol::core)
 set_target_properties(mol_music_tests PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)

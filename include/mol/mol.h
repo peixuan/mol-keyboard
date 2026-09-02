@@ -7,8 +7,9 @@
 #include "mol/engine.h"
 #include "mol/event.h"
 #include "mol/music.h"
+#include "mol/patch.h"
 #include "mol/result.h"
 #include "mol/transport.h"
 #include "mol/version.h"
 
-#endif  /* MOL_MOL_H_ */
+#endif /* MOL_MOL_H_ */

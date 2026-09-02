@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mol-keyboard.local/schema/molpatch-v1.schema.json",
+  "title": "MoL Keyboard procedural patch source v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format_version", "id", "name_zh", "name_en", "synthesis", "waveform",
+    "gain_millidb", "attack_ms", "decay_ms", "sustain_milli", "release_ms",
+    "filter_cutoff_hz", "filter_resonance_milli", "oscillator_mix_milli",
+    "detune_cents", "pulse_width_milli", "model_parameter_1_milli",
+    "model_parameter_2_milli", "vibrato_rate_millihz", "vibrato_depth_cents",
+    "velocity_curve_milli", "noise_mix_milli", "saturation_milli",
+    "chorus_send_milli", "delay_send_milli", "reverb_send_milli"
+  ],
+  "properties": {
+    "format_version": { "const": 1 },
+    "id": {
+      "enum": [
+        "grand-piano", "electric-piano", "harpsichord", "church-organ",
+        "jazz-organ", "nylon-guitar", "steel-guitar", "violin", "cello",
+        "flute", "clarinet", "synth-lead", "synth-pad", "synth-bass",
+        "choir", "vibraphone", "harp", "music-box"
+      ]
+    },
+    "name_zh": { "type": "string", "minLength": 1 },
+    "name_en": { "type": "string", "minLength": 1 },
+    "synthesis": {
+      "enum": ["subtractive", "fm2", "additive", "pluck", "modal", "formant"]
+    },
+    "waveform": { "enum": ["sine", "saw", "square", "pulse", "triangle", "noise"] },
+    "gain_millidb": { "type": "integer", "minimum": -24000, "maximum": 6000 },
+    "attack_ms": { "type": "integer", "minimum": 0, "maximum": 10000 },
+    "decay_ms": { "type": "integer", "minimum": 0, "maximum": 10000 },
+    "sustain_milli": { "type": "integer", "minimum": 0, "maximum": 1000 },
+    "release_ms": { "type": "integer", "minimum": 1, "maximum": 20000 },
+    "filter_cutoff_hz": { "type": "integer", "minimum": 20, "maximum": 20000 },
+    "filter_resonance_milli": { "type": "integer", "minimum": 0, "maximum": 990 },
+    "oscillator_mix_milli": { "type": "integer", "minimum": 0, "maximum": 1000 },
+    "detune_cents": { "type": "integer", "minimum": -1200, "maximum": 1200 },
+    "pulse_width_milli": { "type": "integer", "minimum": 50, "maximum": 950 },
+    "model_parameter_1_milli": { "type": "integer", "minimum": 0, "maximum": 20000 },
+    "model_parameter_2_milli": { "type": "integer", "minimum": 0, "maximum": 20000 },
+    "vibrato_rate_millihz": { "type": "integer", "minimum": 0, "maximum": 20000 },
+    "vibrato_depth_cents": { "type": "integer", "minimum": 0, "maximum": 200 },
+    "velocity_curve_milli": { "type": "integer", "minimum": 100, "maximum": 3000 },
+    "noise_mix_milli": { "type": "integer", "minimum": 0, "maximum": 1000 },
+    "saturation_milli": { "type": "integer", "minimum": 0, "maximum": 10000 },
+    "chorus_send_milli": { "type": "integer", "minimum": 0, "maximum": 1000 },
+    "delay_send_milli": { "type": "integer", "minimum": 0, "maximum": 1000 },
+    "reverb_send_milli": { "type": "integer", "minimum": 0, "maximum": 1000 }
+  }
+}
