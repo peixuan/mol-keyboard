@@ -50,6 +50,9 @@ if(MOL_APPLE_DEVELOPMENT_TEAM)
   set_target_properties(
     mol_ios_app
     PROPERTIES XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "${MOL_APPLE_DEVELOPMENT_TEAM}")
+else()
+  set_target_properties(
+    mol_ios_app PROPERTIES XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO")
 endif()
 mol_enable_warnings(mol_ios_app)
 

@@ -91,3 +91,25 @@ jobs:
             cd platforms/android
             ./gradlew :app:lintDebug --no-daemon --no-configuration-cache
           )
+
+  ios:
+    runs-on: macos-15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install pinned Emscripten SDK
+        shell: bash
+        run: |
+          git init "$RUNNER_TEMP/emsdk"
+          git -C "$RUNNER_TEMP/emsdk" remote add origin https://github.com/emscripten-core/emsdk.git
+          git -C "$RUNNER_TEMP/emsdk" fetch --depth 1 origin dfb9d1a46c3bb8f52e1e6324be23123b9d73c190
+          git -C "$RUNNER_TEMP/emsdk" checkout --detach FETCH_HEAD
+          "$RUNNER_TEMP/emsdk/emsdk" install 6.0.5
+          "$RUNNER_TEMP/emsdk/emsdk" activate 6.0.5
+          echo "EMSDK=$RUNNER_TEMP/emsdk" >> "$GITHUB_ENV"
+      - name: Build simulator and device applications
+        shell: bash
+        run: |
+          source "$EMSDK/emsdk_env.sh"
+          platforms/ios/build-app.sh Simulator
+          MOL_SKIP_WEB_BUILD=1 platforms/ios/build-app.sh Device

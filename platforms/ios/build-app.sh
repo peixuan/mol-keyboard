@@ -59,8 +59,10 @@ fi
   cmake --build --preset "$preset"
 )
 
-app_path="$repository_root/build/$preset/platforms/ios/MoLKeyboard.app"
+app_path="$(find "$repository_root/build/$preset" -type d -name MoLKeyboard.app -print -quit)"
+test -n "$app_path"
 test -x "$app_path/MoLKeyboard"
+test -f "$app_path/Assets.car"
 test -f "$app_path/PrivacyInfo.xcprivacy"
 test -f "$app_path/web/index.html"
 plutil -lint "$app_path/Info.plist" "$app_path/PrivacyInfo.xcprivacy"

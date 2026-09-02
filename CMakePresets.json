@@ -152,6 +152,7 @@
       "name": "ios-base",
       "hidden": true,
       "inherits": "base",
+      "generator": "Xcode",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_SYSTEM_NAME": "iOS",
@@ -191,8 +192,8 @@
     { "name": "wasm-release", "configurePreset": "wasm-release" },
     { "name": "android-arm64", "configurePreset": "android-arm64" },
     { "name": "android-x86_64", "configurePreset": "android-x86_64" },
-    { "name": "ios-simulator", "configurePreset": "ios-simulator" },
-    { "name": "ios-device", "configurePreset": "ios-device" }
+    { "name": "ios-simulator", "configurePreset": "ios-simulator", "configuration": "Release" },
+    { "name": "ios-device", "configurePreset": "ios-device", "configuration": "Release" }
   ],
   "testPresets": [
     { "name": "dev-debug", "configurePreset": "dev-debug", "output": { "outputOnFailure": true } },
