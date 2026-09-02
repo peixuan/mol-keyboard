@@ -143,6 +143,7 @@ endif()
 
 if(MOL_BUILD_TOOLS)
   add_subdirectory(apps/mol-patchc)
+  add_subdirectory(apps/mol-seq)
   add_subdirectory(apps/mol-render)
   add_subdirectory(tools/audio-analyze)
 endif()
