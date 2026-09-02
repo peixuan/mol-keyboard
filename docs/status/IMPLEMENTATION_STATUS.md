@@ -2,14 +2,15 @@
 
 ## Current milestone
 
-M5 desktop headless implementation is complete and runtime-verified on Windows
-and Linux/WSL. Physical Bluetooth/evdev acceptance and macOS build/runtime
-acceptance remain environment-blocked. M6 Web/PWA is the highest gate with
-locally actionable implementation work. M0 through M4 are complete.
+M6 Web/PWA implementation is complete and runtime-verified in current Chrome,
+Edge, Firefox, and mobile-emulated Chromium. Physical Bluetooth/evdev,
+macOS/Safari, and physical mobile acceptance remain environment-blocked. M7
+Android/iOS is the highest gate with locally actionable implementation work.
+M0 through M4 and the M5 desktop implementation are complete.
 
 ## Last verified commit
 
-`c87e1a1` (`fix(build): pass sanitized control tests on Windows`) is the last
+`601f0b7` (`fix(web): handle audio suspension and device changes`) is the last
 verified code commit. The validation below was run on 2026-09-03 after that
 commit. Documentation changes do not alter binaries.
 
@@ -83,16 +84,25 @@ commit. Documentation changes do not alter binaries.
   down with exit code 0. Linux/Clang ran the service lifecycle over a private
   Unix socket under WSL. Detailed evidence and unclaimed hardware boundaries
   are in `docs/service/M5_DESKTOP_EVIDENCE.md`.
+- The complete bilingual Web/PWA product provides Explore and Studio controls,
+  real AudioWorklet/Wasm synthesis, MessagePort and SharedArrayBuffer command
+  paths, keyboard/multitouch gestures, IndexedDB recordings, offline service
+  worker, and an authenticated loopback desktop-service controller. The browser
+  matrix passed 15 applicable cases with 21 explicit capability skips. Detailed
+  evidence and the unclaimed Safari boundary are in
+  `docs/web/M6_WEB_EVIDENCE.md`.
 
 ## In-progress work
 
-- M6: build the complete standards-based TypeScript/Web Components PWA around
-  the verified AudioWorklet Wasm core, beginning with standalone MessagePort
-  control and browser lifecycle safety.
+- M7: build complete Android and iOS applications around their existing native
+  audio entries, including packaged UI, foreground/background policy, physical
+  keyboard input, route/interruption handling, and privacy metadata.
 
 ## Blocked platform checks
 
 - Apple SDKs and DevEco/HarmonyOS SDKs are not available on this Windows host.
+- Playwright's Windows WebKit port does not expose AudioWorklet and is not actual
+  Safari. Current-stable Safari remains unverified until run on an Apple host.
 - No Bluetooth output was exposed for the Windows run. WSL exposes neither a
   physical evdev keyboard nor native Linux audio hardware. Those M5 acceptance
   paths and macOS compilation/runtime remain unverified.
@@ -137,6 +147,12 @@ Emscripten 6.0.5 and Node.js 22.16.0 passed 24/24 tests in Debug and LTO
 MinSizeRel. Both configurations match the Native event, sequence-fixture, and
 18-preset audio-metric goldens.
 
+The production Web bundle passed 9/9 Node tests. Playwright 1.62.1 ran 36
+browser project/test combinations: 15 applicable cases passed and 21 were
+explicitly skipped by capability. System Chrome 151.0.7922.175, system Edge
+152.0.4191.53, Firefox 153.0, Chromium 151.0.7922.34 mobile emulation, and
+WebKit 26.5 desktop/mobile rendering were covered. Actual Safari is not claimed.
+
 For sanitizer and Patch fuzz validation, activate the Visual Studio environment
 and place Clang 22 on `PATH`:
 
@@ -173,7 +189,7 @@ results.
 
 ## Next highest-priority task
 
-Implement M6 beginning with the complete standalone TypeScript/Web Components
-UI, MessagePort AudioWorklet control, gesture-safe keyboard/touch input, and
-offline PWA storage. Keep the blocked physical M5/macOS checks explicit until
-matching hardware and an Apple toolchain are available.
+Implement M7 Android/iOS applications, starting with reproducible Android
+arm64-v8a/x86_64 builds and a packaged local Web UI connected through a bounded
+versioned bridge. Keep Apple/Safari and other physical-device checks explicit
+until matching hardware and toolchains are available.

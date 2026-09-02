@@ -16,10 +16,10 @@ It does not contain code or assets from an earlier MoL Keyboard project.
 
 ## Current status / 当前状态
 
-The M0-M4 quality gates and M5 desktop headless implementation are complete;
-development is now implementing the M6 Web/PWA product around the
-freestanding-friendly ISO C11 core. Platform claims are recorded only after
-real builds or runtime checks. See
+The M0-M4 quality gates and the M5 desktop and M6 Web/PWA implementations are
+complete; development is now implementing the Android and iOS product shells
+around the freestanding-friendly ISO C11 core. Platform claims are recorded
+only after real builds or runtime checks. See
 [`docs/status/IMPLEMENTATION_STATUS.md`](docs/status/IMPLEMENTATION_STATUS.md)
 and [`docs/status/PLATFORM_MATRIX.md`](docs/status/PLATFORM_MATRIX.md) for current
 evidence.
@@ -96,14 +96,14 @@ build/dev-release/apps/molctl/molctl doctor
 
 `mol-keyboardd` uses local-only IPC and the operating system's audio devices;
 use `--null-backend` on machines without audio hardware. The same C core also
-executes as WebAssembly in a verified AudioWorklet and builds into
-ESP32/ESP32-S3 firmware with a configurable I2S host. The complete M6 PWA UI is
-the current work.
+executes in the complete offline-capable Web/PWA instrument and builds into
+ESP32/ESP32-S3 firmware with a configurable I2S host. From `apps/web`, run
+`npm ci` followed by `npm run build` or `npm run test:browser`.
 
 `mol-keyboardd` 与 `molctl` 已可在无界面模式下通过仅限本机的 IPC 完成演奏、音色切换、
 录音、回放和诊断；无音频设备的机器可使用 `--null-backend`。同一份 C 核心也已在
-WebAssembly AudioWorklet 中通过验证，并构建为带可配置 I2S 宿主的 ESP32/ESP32-S3
-固件。当前继续实现完整的 M6 PWA 界面。
+完整的离线 Web/PWA 乐器中通过验证，并构建为带可配置 I2S 宿主的 ESP32/ESP32-S3
+固件。当前继续实现 Android 与 iOS 产品外壳。
 
 ## Platform boundaries / 平台边界
 
