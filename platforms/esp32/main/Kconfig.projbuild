@@ -5,6 +5,26 @@ menu "MoL Keyboard audio host"
         range 32 128
         default 64
 
+    config MOL_DEVICE_CONTROL_QUEUE_LENGTH
+        int "Bounded configuration settings queue length"
+        range 2 16
+        default 4
+
+    config MOL_DEVICE_CONTROL_TASK_PRIORITY
+        int "Configuration and persistence task priority"
+        range 1 10
+        default 3
+
+    config MOL_DEVICE_CONTROL_TASK_CORE
+        int "Configuration and persistence task core affinity"
+        range 0 1
+        default 0
+
+    config MOL_DEVICE_CONTROL_TASK_STACK_SIZE
+        int "Static configuration and persistence task stack size"
+        range 3072 8192
+        default 4096
+
     config MOL_BLUETOOTH_HID_TASK_PRIORITY
         int "Bluetooth HID reconnect task priority"
         range 1 10

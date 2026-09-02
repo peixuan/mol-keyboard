@@ -11,6 +11,7 @@
 #if CONFIG_MOL_A2DP_ENABLE
 #include "a2dp_source.h"
 #endif
+#include "device_control.h"
 #include "device_settings.h"
 #include "device_storage.h"
 #include "driver/i2s_std.h"
@@ -321,10 +322,9 @@ void app_main(void) {
   size_t engine_bytes;
   float frequency = 0.0f;
   float peak = 0.0f;
-#if CONFIG_MOL_A2DP_ENABLE
   bool device_storage_ready = false;
+  bool sequence_storage_ready = false;
   bool bluetooth_ready = false;
-#endif
 
   ESP_LOGI(kTag, "Reset reason=%d", (int)esp_reset_reason());
   device_settings = mol_device_settings_default();
@@ -333,9 +333,7 @@ void app_main(void) {
   if (result != MOL_OK) {
     ESP_LOGW(kTag, "NVS initialization failed; volatile safe defaults selected");
   } else {
-#if CONFIG_MOL_A2DP_ENABLE
     device_storage_ready = true;
-#endif
     result = mol_device_storage_load_settings(&device_settings, &settings_source);
     if (result != MOL_OK) {
       device_settings = mol_device_settings_default();
@@ -354,6 +352,7 @@ void app_main(void) {
   if (result != MOL_OK) {
     ESP_LOGW(kTag, "Sequence FAT storage unavailable; live audio remains enabled");
   } else {
+    sequence_storage_ready = true;
     ESP_LOGI(kTag, "Sequence FAT storage mounted with transactional recovery");
   }
   if (!mol_sequence_fixture_verify(&sequence_summary)) {
@@ -421,14 +420,19 @@ void app_main(void) {
   ESP_ERROR_CHECK(audio_task_handle != NULL ? ESP_OK : ESP_ERR_NO_MEM);
 #if CONFIG_MOL_GPIO_MATRIX_ENABLE
   ESP_ERROR_CHECK(mol_gpio_matrix_start());
-  ESP_LOGI(kTag, "GPIO matrix active: 5x6, debounce=%d ms, ghost=%s, config key=%d hold=%d ms",
+  ESP_LOGI(kTag,
+           "GPIO matrix active: 5x6, debounce=%d ms, ghost=%s, config=%d/%d ms, "
+           "clear-pairing=%d+%d/%d ms, factory-reset=%d+%d/%d ms",
            CONFIG_MOL_GPIO_DEBOUNCE_MS,
 #if CONFIG_MOL_GPIO_GHOST_ALLOW
            "diode/allow",
 #else
            "suppress-ambiguous",
 #endif
-           CONFIG_MOL_GPIO_CONFIG_KEY, CONFIG_MOL_GPIO_CONFIG_HOLD_MS);
+           CONFIG_MOL_GPIO_CONFIG_KEY, CONFIG_MOL_GPIO_CONFIG_HOLD_MS, CONFIG_MOL_GPIO_CONFIG_KEY,
+           CONFIG_MOL_GPIO_CLEAR_PAIRING_KEY, CONFIG_MOL_GPIO_CLEAR_PAIRING_HOLD_MS,
+           CONFIG_MOL_GPIO_CONFIG_KEY, CONFIG_MOL_GPIO_FACTORY_RESET_KEY,
+           CONFIG_MOL_GPIO_FACTORY_RESET_HOLD_MS);
 #else
   ESP_LOGI(kTag, "GPIO matrix capability=unsupported (disabled by build configuration)");
 #endif
@@ -442,9 +446,7 @@ void app_main(void) {
   result = mol_bluetooth_hid_start(device_settings.paired_peer_address,
                                    device_settings.paired_peer_valid != 0u);
   if (result == ESP_OK) {
-#if CONFIG_MOL_A2DP_ENABLE
     bluetooth_ready = true;
-#endif
 #if CONFIG_IDF_TARGET_ESP32
     ESP_LOGI(kTag, "Bluetooth HID host active: BLE + Classic");
 #else
@@ -490,6 +492,14 @@ void app_main(void) {
 #else
   ESP_LOGI(kTag, "USB HID host capability=unsupported (not supported by this SoC)");
 #endif
+  result = mol_device_control_start(&device_settings, device_storage_ready, sequence_storage_ready,
+                                    bluetooth_ready);
+  if (result != ESP_OK) {
+    ESP_LOGE(kTag, "Device control task unavailable: %s", esp_err_to_name(result));
+    return;
+  }
+  ESP_LOGI(kTag, "Device control active: priority=%d core=%d; audio never waits on storage",
+           CONFIG_MOL_DEVICE_CONTROL_TASK_PRIORITY, CONFIG_MOL_DEVICE_CONTROL_TASK_CORE);
 
   for (;;) {
     mol_esp32_audio_snapshot_t audio_snapshot;
@@ -498,38 +508,15 @@ void app_main(void) {
     mol_device_storage_stats_t storage_stats;
     mol_sequence_storage_stats_t sequence_storage_stats;
     mol_bluetooth_hid_stats_t bluetooth_stats;
+    mol_device_control_stats_t control_stats;
     vTaskDelay(pdMS_TO_TICKS(MOL_ESP32_DIAGNOSTIC_PERIOD_MS));
-#if CONFIG_MOL_A2DP_ENABLE
-    {
-      uint8_t connected_sink[6];
-      if (mol_a2dp_source_take_new_peer(connected_sink)) {
-        device_settings.a2dp_sink_valid = 1u;
-        memcpy(device_settings.a2dp_sink_address, connected_sink, sizeof(connected_sink));
-        ++device_settings.generation;
-        if (device_storage_ready) {
-          const mol_result_t save_result = mol_device_storage_save_settings(&device_settings);
-          if (save_result == MOL_OK) {
-            ESP_LOGI(kTag, "Persisted A2DP sink: %02x:%02x:%02x:%02x:%02x:%02x generation=%" PRIu32,
-                     connected_sink[0], connected_sink[1], connected_sink[2], connected_sink[3],
-                     connected_sink[4], connected_sink[5], device_settings.generation);
-          } else {
-            ESP_LOGW(kTag, "Could not persist A2DP sink: %s", mol_result_string(save_result));
-          }
-        } else {
-          ESP_LOGW(kTag, "A2DP sink connected but NVS is unavailable; pairing is volatile");
-        }
-      }
-    }
-#endif
     audio_snapshot = audio_stats_snapshot();
     input_stats = mol_input_queue_stats();
     gpio_stats = mol_gpio_matrix_stats();
     storage_stats = mol_device_storage_stats();
     sequence_storage_stats = mol_sequence_storage_stats();
     bluetooth_stats = mol_bluetooth_hid_stats();
-    if (mol_input_take_config_mode_request()) {
-      ESP_LOGI(kTag, "Configuration mode requested by physical hold gesture");
-    }
+    control_stats = mol_device_control_stats();
     ESP_LOGI(
         kTag,
         "audio frames=%" PRIu32 " render_fail=%" PRIu32 " write_fail=%" PRIu32 " partial=%" PRIu32
@@ -559,6 +546,17 @@ void app_main(void) {
         bluetooth_stats.stack_high_water,
         (unsigned int)uxTaskGetStackHighWaterMark(audio_task_handle), gpio_stats.stack_high_water,
         (unsigned int)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL));
+    ESP_LOGI(kTag,
+             "control_config=%" PRIu32 " control_apply=%" PRIu32 " control_reject=%" PRIu32
+             " control_q_reject=%" PRIu32 " control_save=%" PRIu32 " control_io_fail=%" PRIu32
+             " control_peer=%" PRIu32 " control_unpair=%" PRIu32 " control_factory=%" PRIu32
+             " control_bond_remove=%" PRIu32 " control_stack_min=%" PRIu32,
+             control_stats.configuration_entries, control_stats.settings_applied,
+             control_stats.settings_rejected, control_stats.queue_rejections,
+             control_stats.settings_saves, control_stats.persistence_failures,
+             control_stats.peer_updates, control_stats.clear_pairing_operations,
+             control_stats.factory_reset_operations, control_stats.bond_removal_requests,
+             control_stats.stack_high_water);
 #if CONFIG_MOL_A2DP_ENABLE
     {
       const mol_a2dp_source_stats_t a2dp_stats = mol_a2dp_source_stats();

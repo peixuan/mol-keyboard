@@ -23,7 +23,7 @@ endif()
 
 idf_component_register(
   SRCS "main.c" "matrix_logic.c" "input_queue.c" "gpio_matrix.c" "device_settings.c"
-       "device_storage.c" "sequence_store.c" "sequence_storage.c" "hid_keyboard.c"
+       "device_storage.c" "device_control.c" "sequence_store.c" "sequence_storage.c" "hid_keyboard.c"
        "bluetooth_hid.c" ${MOL_USB_HID_SOURCES} ${MOL_A2DP_SOURCES}
        "${MOL_REPOSITORY_ROOT}/tests/conformance/sequence_fixture.c"
   PRIV_INCLUDE_DIRS "${MOL_REPOSITORY_ROOT}/tests/conformance"

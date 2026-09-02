@@ -56,6 +56,9 @@ bool mol_a2dp_source_is_peer(const uint8_t address[6]);
 /** Retrieves a newly connected sink address once for persistent storage. */
 bool mol_a2dp_source_take_new_peer(uint8_t address[6]);
 
+/** Clears configured discovery candidates after the physical clear-pairing gesture. */
+void mol_a2dp_source_forget_preferred(void);
+
 mol_a2dp_source_stats_t mol_a2dp_source_stats(void);
 
 #endif /* MOL_ESP32_A2DP_SOURCE_H_ */

@@ -67,6 +67,17 @@ mol_result_t mol_sequence_storage_save(const char* name, const mol_sequence_conf
   return result;
 }
 
+mol_result_t mol_sequence_storage_erase_all(void) {
+  if (wear_levelling_handle == WL_INVALID_HANDLE) {
+    return MOL_ERROR_INVALID_STATE;
+  }
+  if (esp_vfs_fat_spiflash_format_rw_wl(kMountPath, kPartitionLabel) != ESP_OK) {
+    atomic_fetch_add_explicit(&io_failures, 1u, memory_order_relaxed);
+    return MOL_ERROR_IO;
+  }
+  return MOL_OK;
+}
+
 mol_sequence_storage_stats_t mol_sequence_storage_stats(void) {
   mol_sequence_storage_stats_t stats;
   stats.loads = (uint32_t)atomic_load_explicit(&load_count, memory_order_relaxed);

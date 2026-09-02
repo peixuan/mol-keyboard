@@ -26,6 +26,7 @@ mol_result_t mol_device_storage_initialize(void);
 mol_result_t mol_device_storage_load_settings(mol_device_settings_t* settings,
                                               mol_device_settings_source_t* source);
 mol_result_t mol_device_storage_save_settings(const mol_device_settings_t* settings);
+mol_result_t mol_device_storage_erase_settings(void);
 mol_device_storage_stats_t mol_device_storage_stats(void);
 
 #endif /* MOL_ESP32_DEVICE_STORAGE_H_ */

@@ -665,6 +665,15 @@ bool mol_a2dp_source_take_new_peer(uint8_t address[6]) {
   return true;
 }
 
+void mol_a2dp_source_forget_preferred(void) {
+  atomic_store_explicit(&preferred_peer_valid, false, memory_order_release);
+  atomic_store_explicit(&candidate_valid, false, memory_order_release);
+  atomic_store_explicit(&new_peer_pending, false, memory_order_release);
+  memset(preferred_peer, 0, sizeof(preferred_peer));
+  memset(candidate_peer, 0, sizeof(candidate_peer));
+  memset(new_peer, 0, sizeof(new_peer));
+}
+
 mol_a2dp_source_stats_t mol_a2dp_source_stats(void) {
   mol_a2dp_source_stats_t snapshot;
 #define MOL_A2DP_STAT(field) \

@@ -120,6 +120,31 @@ mol_result_t mol_device_storage_save_settings(const mol_device_settings_t* setti
   return MOL_ERROR_IO;
 }
 
+mol_result_t mol_device_storage_erase_settings(void) {
+  nvs_handle_t handle;
+  esp_err_t result = nvs_open(kSettingsNamespace, NVS_READWRITE, &handle);
+  if (result == ESP_ERR_NVS_NOT_FOUND) {
+    return MOL_OK;
+  }
+  if (result != ESP_OK) {
+    atomic_fetch_add_explicit(&io_failures, 1u, memory_order_relaxed);
+    return MOL_ERROR_IO;
+  }
+  result = nvs_erase_key(handle, kSettingsKey);
+  if (result == ESP_ERR_NVS_NOT_FOUND) {
+    result = ESP_OK;
+  }
+  if (result == ESP_OK) {
+    result = nvs_commit(handle);
+  }
+  nvs_close(handle);
+  if (result != ESP_OK) {
+    atomic_fetch_add_explicit(&io_failures, 1u, memory_order_relaxed);
+    return MOL_ERROR_IO;
+  }
+  return MOL_OK;
+}
+
 mol_device_storage_stats_t mol_device_storage_stats(void) {
   mol_device_storage_stats_t stats;
   stats.settings_loads = (uint32_t)atomic_load_explicit(&settings_loads, memory_order_relaxed);

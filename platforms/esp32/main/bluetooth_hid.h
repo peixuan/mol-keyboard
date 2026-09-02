@@ -22,6 +22,15 @@ typedef struct mol_bluetooth_hid_stats {
 /** Starts the non-blocking BLE/Classic HID host and its reconnect scanner. */
 esp_err_t mol_bluetooth_hid_start(const uint8_t preferred_address[6], bool preferred_valid);
 
+/** Retrieves a newly connected keyboard address once for persistent storage. */
+bool mol_bluetooth_hid_take_new_peer(uint8_t address[6]);
+
+/** Clears the preferred address so discovery can accept another keyboard. */
+void mol_bluetooth_hid_forget_preferred(void);
+
+/** Requests removal of every BLE and Classic Bluetooth bond held by Bluedroid. */
+esp_err_t mol_bluetooth_hid_clear_bonds(uint32_t* removal_requests);
+
 mol_bluetooth_hid_stats_t mol_bluetooth_hid_stats(void);
 
 #endif /* MOL_ESP32_BLUETOOTH_HID_H_ */

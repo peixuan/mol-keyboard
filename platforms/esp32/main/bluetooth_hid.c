@@ -31,6 +31,7 @@
 
 #define MOL_HID_SOURCE_ID UINT32_C(0x424c0001)
 #define MOL_HID_SCAN_SECONDS 5u
+#define MOL_HID_MAX_BONDS 16u
 #define MOL_HID_BLE_PARAMS_READY BIT0
 #define MOL_HID_BLE_SCAN_DONE BIT1
 #define MOL_HID_CLASSIC_SCAN_DONE BIT2
@@ -55,8 +56,11 @@ static StackType_t scan_task_stack[CONFIG_MOL_BLUETOOTH_HID_TASK_STACK_SIZE];
 static TaskHandle_t scan_task_handle;
 static atomic_bool connected;
 static atomic_bool opening;
+static portMUX_TYPE peer_lock = portMUX_INITIALIZER_UNLOCKED;
 static bool preferred_peer_valid;
 static uint8_t preferred_peer[6];
+static bool new_peer_pending;
+static uint8_t new_peer[6];
 static mol_hid_keyboard_state_t keyboard_state;
 static mol_bluetooth_hid_atomic_stats_t stats;
 
@@ -70,7 +74,11 @@ static esp_ble_scan_params_t ble_scan_parameters = {
 };
 
 static bool peer_is_allowed(const uint8_t address[6]) {
-  return !preferred_peer_valid || memcmp(address, preferred_peer, sizeof(preferred_peer)) == 0;
+  bool allowed;
+  portENTER_CRITICAL(&peer_lock);
+  allowed = !preferred_peer_valid || memcmp(address, preferred_peer, sizeof(preferred_peer)) == 0;
+  portEXIT_CRITICAL(&peer_lock);
+  return allowed;
 }
 
 static bool advertisement_has_hid_service(const uint8_t* data, uint8_t data_length) {
@@ -125,6 +133,15 @@ static void hidh_event_handler(void* handler_args, esp_event_base_t base, int32_
         atomic_store_explicit(&connected, true, memory_order_release);
         atomic_fetch_add_explicit(&stats.connections, 1u, memory_order_relaxed);
         if (address != NULL) {
+          portENTER_CRITICAL(&peer_lock);
+          if (!preferred_peer_valid ||
+              memcmp(address, preferred_peer, sizeof(preferred_peer)) != 0) {
+            memcpy(preferred_peer, address, sizeof(preferred_peer));
+            preferred_peer_valid = true;
+            memcpy(new_peer, address, sizeof(new_peer));
+            new_peer_pending = true;
+          }
+          portEXIT_CRITICAL(&peer_lock);
           ESP_LOGI(kTag, "keyboard connected: %02x:%02x:%02x:%02x:%02x:%02x transport=%d",
                    address[0], address[1], address[2], address[3], address[4], address[5],
                    (int)esp_hidh_dev_transport_get(event->open.dev));
@@ -333,12 +350,16 @@ esp_err_t mol_bluetooth_hid_start(const uint8_t preferred_address[6], bool prefe
   if (preferred_valid && preferred_address == NULL) {
     return ESP_ERR_INVALID_ARG;
   }
+  portENTER_CRITICAL(&peer_lock);
   preferred_peer_valid = preferred_valid;
   if (preferred_valid) {
     memcpy(preferred_peer, preferred_address, sizeof(preferred_peer));
   } else {
     memset(preferred_peer, 0, sizeof(preferred_peer));
   }
+  new_peer_pending = false;
+  memset(new_peer, 0, sizeof(new_peer));
+  portEXIT_CRITICAL(&peer_lock);
   mol_hid_keyboard_init(&keyboard_state, MOL_HID_SOURCE_ID);
   scan_events = xEventGroupCreateStatic(&scan_events_control);
   if (scan_events == NULL) {
@@ -412,6 +433,95 @@ esp_err_t mol_bluetooth_hid_start(const uint8_t preferred_address[6], bool prefe
       CONFIG_MOL_BLUETOOTH_HID_TASK_PRIORITY, scan_task_stack, &scan_task_control,
       CONFIG_MOL_BLUETOOTH_HID_TASK_CORE);
   return scan_task_handle != NULL ? ESP_OK : ESP_ERR_NO_MEM;
+}
+
+bool mol_bluetooth_hid_take_new_peer(uint8_t address[6]) {
+  bool available;
+  if (address == NULL) {
+    return false;
+  }
+  portENTER_CRITICAL(&peer_lock);
+  available = new_peer_pending;
+  if (available) {
+    memcpy(address, new_peer, sizeof(new_peer));
+    new_peer_pending = false;
+  }
+  portEXIT_CRITICAL(&peer_lock);
+  return available;
+}
+
+void mol_bluetooth_hid_forget_preferred(void) {
+  portENTER_CRITICAL(&peer_lock);
+  preferred_peer_valid = false;
+  new_peer_pending = false;
+  memset(preferred_peer, 0, sizeof(preferred_peer));
+  memset(new_peer, 0, sizeof(new_peer));
+  portEXIT_CRITICAL(&peer_lock);
+  if (scan_events != NULL) {
+    xEventGroupSetBits(scan_events, MOL_HID_CONNECTION_CHANGED);
+  }
+}
+
+esp_err_t mol_bluetooth_hid_clear_bonds(uint32_t* removal_requests) {
+  esp_ble_bond_dev_t ble_devices[MOL_HID_MAX_BONDS];
+  int ble_count = esp_ble_get_bond_device_num();
+  uint32_t removed = 0u;
+  esp_err_t first_error = ESP_OK;
+  int index;
+  if (removal_requests == NULL) {
+    return ESP_ERR_INVALID_ARG;
+  }
+  *removal_requests = 0u;
+  if (ble_count < 0) {
+    first_error = ESP_FAIL;
+  } else if (ble_count > 0) {
+    if (ble_count > (int)MOL_HID_MAX_BONDS) {
+      ble_count = (int)MOL_HID_MAX_BONDS;
+    }
+    if (esp_ble_get_bond_device_list(&ble_count, ble_devices) != ESP_OK) {
+      first_error = ESP_FAIL;
+    } else {
+      for (index = 0; index < ble_count; ++index) {
+        const esp_err_t result = esp_ble_remove_bond_device(ble_devices[index].bd_addr);
+        if (result == ESP_OK) {
+          ++removed;
+        } else if (first_error == ESP_OK) {
+          first_error = result;
+        }
+      }
+    }
+  }
+#if CONFIG_IDF_TARGET_ESP32
+  {
+    esp_bd_addr_t classic_devices[MOL_HID_MAX_BONDS];
+    int classic_count = esp_bt_gap_get_bond_device_num();
+    if (classic_count < 0) {
+      if (first_error == ESP_OK) {
+        first_error = ESP_FAIL;
+      }
+    } else if (classic_count > 0) {
+      if (classic_count > (int)MOL_HID_MAX_BONDS) {
+        classic_count = (int)MOL_HID_MAX_BONDS;
+      }
+      if (esp_bt_gap_get_bond_device_list(&classic_count, classic_devices) != ESP_OK) {
+        if (first_error == ESP_OK) {
+          first_error = ESP_FAIL;
+        }
+      } else {
+        for (index = 0; index < classic_count; ++index) {
+          const esp_err_t result = esp_bt_gap_remove_bond_device(classic_devices[index]);
+          if (result == ESP_OK) {
+            ++removed;
+          } else if (first_error == ESP_OK) {
+            first_error = result;
+          }
+        }
+      }
+    }
+  }
+#endif
+  *removal_requests = removed;
+  return first_error;
 }
 
 mol_bluetooth_hid_stats_t mol_bluetooth_hid_stats(void) {
