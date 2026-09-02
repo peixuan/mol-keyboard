@@ -88,6 +88,60 @@
         "browser binaries stored outside Git"
       ],
       "local_patches": []
+    },
+    {
+      "name": "Gradle",
+      "version": "8.11.1",
+      "revision": "sha256:f397b287023acdba1e9f6fc5ea72d22dd63669d59ed4a289a29b1a76eee151c6",
+      "source": "https://github.com/gradle/gradle",
+      "archive": "https://services.gradle.org/distributions/gradle-8.11.1-bin.zip",
+      "archive_sha256": "f397b287023acdba1e9f6fc5ea72d22dd63669d59ed4a289a29b1a76eee151c6",
+      "wrapper_jar_sha256": "2db75c40782f5e8ba1fc278a5574bab070adccb2d21ca5a6e5ed840888448046",
+      "license": "Apache-2.0",
+      "license_file": "LICENSE",
+      "license_file_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "usage": "Checksum-verified Android build wrapper",
+      "distributed": true,
+      "local_patches": []
+    },
+    {
+      "name": "Android Gradle Plugin",
+      "version": "8.10.1",
+      "revision": "maven:8.10.1",
+      "source": "https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/8.10.1/gradle-8.10.1.jar",
+      "artifact_sha256": "a0fe22ce029c548335a75913f7ad517c827c567b8abb84047102034255ae1173",
+      "license": "Apache-2.0",
+      "license_file": "LICENSE",
+      "license_file_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "usage": "Android application build plugin",
+      "distributed": false,
+      "local_patches": []
+    },
+    {
+      "name": "Kotlin",
+      "version": "2.1.20",
+      "revision": "maven:2.1.20",
+      "source": "https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/2.1.20/kotlin-stdlib-2.1.20.jar",
+      "artifact_sha256": "1bcc74e8ce84e2c25eaafde10f1248349cce3062b6e36978cbeec610db1e930a",
+      "license": "Apache-2.0",
+      "license_file": "LICENSE",
+      "license_file_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "usage": "Android shell language and packaged standard library",
+      "distributed": true,
+      "local_patches": []
+    },
+    {
+      "name": "JetBrains Java Annotations",
+      "version": "13.0",
+      "revision": "maven:13.0",
+      "source": "https://repo1.maven.org/maven2/org/jetbrains/annotations/13.0/annotations-13.0.jar",
+      "artifact_sha256": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478",
+      "license": "Apache-2.0",
+      "license_file": "LICENSE",
+      "license_file_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "usage": "Transitive Kotlin Android runtime annotations",
+      "distributed": true,
+      "local_patches": []
     }
   ],
   "dependencies": [

@@ -17,12 +17,20 @@ set(_vite_license "${MOL_SOURCE_DIR}/third_party/licenses/vite-LICENSE.md")
 set(_playwright_license
     "${MOL_SOURCE_DIR}/third_party/licenses/playwright-LICENSE.txt")
 set(_web_lock "${MOL_SOURCE_DIR}/apps/web/package-lock.json")
+set(_apache_license "${MOL_SOURCE_DIR}/LICENSE")
+set(_android_build "${MOL_SOURCE_DIR}/platforms/android/build.gradle.kts")
+set(_android_wrapper
+    "${MOL_SOURCE_DIR}/platforms/android/gradle/wrapper/gradle-wrapper.jar")
+set(_android_wrapper_properties
+    "${MOL_SOURCE_DIR}/platforms/android/gradle/wrapper/gradle-wrapper.properties")
 set(_sbom "${MOL_SOURCE_DIR}/sbom/mol-keyboard.spdx.json")
 foreach(_required_file "${_manifest}" "${_miniaudio_license}"
                        "${_oboe_license}" "${_typescript_license}"
                        "${_typescript_notice}" "${_vite_license}"
                        "${_playwright_license}"
-                       "${_web_lock}" "${_sbom}")
+                       "${_web_lock}" "${_apache_license}"
+                       "${_android_build}" "${_android_wrapper}"
+                       "${_android_wrapper_properties}" "${_sbom}")
   if(NOT EXISTS "${_required_file}")
     message(FATAL_ERROR "Missing dependency audit file: ${_required_file}")
   endif()
@@ -53,6 +61,29 @@ string(JSON _playwright_name GET "${_manifest_json}" components 5 name)
 string(JSON _playwright_version GET "${_manifest_json}" components 5 version)
 string(JSON _playwright_license_hash GET "${_manifest_json}" components 5
        license_file_sha256)
+string(JSON _gradle_name GET "${_manifest_json}" components 6 name)
+string(JSON _gradle_version GET "${_manifest_json}" components 6 version)
+string(JSON _gradle_archive_hash GET "${_manifest_json}" components 6
+       archive_sha256)
+string(JSON _gradle_wrapper_hash GET "${_manifest_json}" components 6
+       wrapper_jar_sha256)
+string(JSON _agp_name GET "${_manifest_json}" components 7 name)
+string(JSON _agp_version GET "${_manifest_json}" components 7 version)
+string(JSON _agp_artifact_hash GET "${_manifest_json}" components 7
+       artifact_sha256)
+string(JSON _kotlin_name GET "${_manifest_json}" components 8 name)
+string(JSON _kotlin_version GET "${_manifest_json}" components 8 version)
+string(JSON _kotlin_artifact_hash GET "${_manifest_json}" components 8
+       artifact_sha256)
+string(JSON _annotations_name GET "${_manifest_json}" components 9 name)
+string(JSON _annotations_version GET "${_manifest_json}" components 9 version)
+string(JSON _annotations_artifact_hash GET "${_manifest_json}" components 9
+       artifact_sha256)
+foreach(_android_component_index RANGE 6 9)
+  string(JSON _android_license_hash_${_android_component_index} GET
+         "${_manifest_json}" components ${_android_component_index}
+         license_file_sha256)
+endforeach()
 string(JSON _name GET "${_manifest_json}" dependencies 0 name)
 string(JSON _version GET "${_manifest_json}" dependencies 0 version)
 string(JSON _commit GET "${_manifest_json}" dependencies 0 commit)
@@ -66,7 +97,7 @@ string(JSON _oboe_archive_hash GET "${_manifest_json}" dependencies 1 archive_sh
 string(JSON _oboe_license_hash GET "${_manifest_json}" dependencies 1 license_file_sha256)
 string(JSON _oboe_patch_count LENGTH "${_manifest_json}" dependencies 1 local_modifications)
 
-if(NOT _schema EQUAL 1 OR NOT _component_count EQUAL 6 OR
+if(NOT _schema EQUAL 1 OR NOT _component_count EQUAL 10 OR
    NOT _dependency_count EQUAL 2 OR NOT _ci_name STREQUAL "actions/checkout" OR
    NOT _ci_revision STREQUAL "de0fac2e4500dabe0009e67214ff5f5447ce83dd" OR
    NOT _emsdk_name STREQUAL "Emscripten SDK" OR
@@ -81,6 +112,24 @@ if(NOT _schema EQUAL 1 OR NOT _component_count EQUAL 6 OR
    NOT _vite_revision STREQUAL "2bd066d87f5bafd315be9f40889d0a60b9e58e0b" OR
    NOT _playwright_name STREQUAL "Playwright" OR
    NOT _playwright_version STREQUAL "1.62.1" OR
+   NOT _gradle_name STREQUAL "Gradle" OR
+   NOT _gradle_version STREQUAL "8.11.1" OR
+   NOT _gradle_archive_hash STREQUAL
+       "f397b287023acdba1e9f6fc5ea72d22dd63669d59ed4a289a29b1a76eee151c6" OR
+   NOT _gradle_wrapper_hash STREQUAL
+       "2db75c40782f5e8ba1fc278a5574bab070adccb2d21ca5a6e5ed840888448046" OR
+   NOT _agp_name STREQUAL "Android Gradle Plugin" OR
+   NOT _agp_version STREQUAL "8.10.1" OR
+   NOT _agp_artifact_hash STREQUAL
+       "a0fe22ce029c548335a75913f7ad517c827c567b8abb84047102034255ae1173" OR
+   NOT _kotlin_name STREQUAL "Kotlin" OR
+   NOT _kotlin_version STREQUAL "2.1.20" OR
+   NOT _kotlin_artifact_hash STREQUAL
+       "1bcc74e8ce84e2c25eaafde10f1248349cce3062b6e36978cbeec610db1e930a" OR
+   NOT _annotations_name STREQUAL "JetBrains Java Annotations" OR
+   NOT _annotations_version STREQUAL "13.0" OR
+   NOT _annotations_artifact_hash STREQUAL
+       "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478" OR
    NOT _name STREQUAL "miniaudio" OR NOT _version STREQUAL "0.11.25" OR
    NOT _commit STREQUAL "9634bedb5b5a2ca38c1ee7108a9358a4e233f14d" OR
    NOT _archive_hash STREQUAL
@@ -119,6 +168,38 @@ if(NOT _actual_playwright_license_hash STREQUAL _playwright_license_hash)
   message(FATAL_ERROR
           "The Playwright license snapshot hash does not match the lock")
 endif()
+file(SHA256 "${_apache_license}" _actual_apache_license_hash)
+foreach(_android_component_index RANGE 6 9)
+  if(NOT _actual_apache_license_hash STREQUAL
+     _android_license_hash_${_android_component_index})
+    message(FATAL_ERROR
+            "An Android dependency license hash does not match the lock")
+  endif()
+endforeach()
+file(SHA256 "${_android_wrapper}" _actual_gradle_wrapper_hash)
+if(NOT _actual_gradle_wrapper_hash STREQUAL _gradle_wrapper_hash)
+  message(FATAL_ERROR "The Gradle wrapper JAR hash does not match the lock")
+endif()
+file(READ "${_android_wrapper_properties}" _android_wrapper_text)
+foreach(_wrapper_record
+        "gradle-8.11.1-bin.zip"
+        "distributionSha256Sum=f397b287023acdba1e9f6fc5ea72d22dd63669d59ed4a289a29b1a76eee151c6"
+        "validateDistributionUrl=true")
+  string(FIND "${_android_wrapper_text}" "${_wrapper_record}" _wrapper_position)
+  if(_wrapper_position EQUAL -1)
+    message(FATAL_ERROR "The Gradle wrapper properties are not checksum locked")
+  endif()
+endforeach()
+file(READ "${_android_build}" _android_build_text)
+foreach(_android_plugin_record
+        "com.android.application\") version \"8.10.1"
+        "org.jetbrains.kotlin.android\") version \"2.1.20")
+  string(FIND "${_android_build_text}" "${_android_plugin_record}"
+         _android_plugin_position)
+  if(_android_plugin_position EQUAL -1)
+    message(FATAL_ERROR "The Android build plugins do not match the lock")
+  endif()
+endforeach()
 
 file(READ "${_web_lock}" _web_lock_json)
 string(JSON _web_lock_version GET "${_web_lock_json}" lockfileVersion)
@@ -165,12 +246,20 @@ string(JSON _oboe_package_name GET "${_sbom_json}" packages 3 name)
 string(JSON _typescript_package_name GET "${_sbom_json}" packages 6 name)
 string(JSON _vite_package_name GET "${_sbom_json}" packages 7 name)
 string(JSON _playwright_package_name GET "${_sbom_json}" packages 8 name)
-if(NOT _spdx_version STREQUAL "SPDX-2.3" OR NOT _package_count EQUAL 9 OR
+string(JSON _gradle_package_name GET "${_sbom_json}" packages 9 name)
+string(JSON _agp_package_name GET "${_sbom_json}" packages 10 name)
+string(JSON _kotlin_package_name GET "${_sbom_json}" packages 11 name)
+string(JSON _annotations_package_name GET "${_sbom_json}" packages 12 name)
+if(NOT _spdx_version STREQUAL "SPDX-2.3" OR NOT _package_count EQUAL 13 OR
    NOT _dependency_name STREQUAL "miniaudio" OR
    NOT _oboe_package_name STREQUAL "Oboe" OR
    NOT _typescript_package_name STREQUAL "TypeScript" OR
    NOT _vite_package_name STREQUAL "Vite" OR
-   NOT _playwright_package_name STREQUAL "Playwright")
+   NOT _playwright_package_name STREQUAL "Playwright" OR
+   NOT _gradle_package_name STREQUAL "Gradle" OR
+   NOT _agp_package_name STREQUAL "Android Gradle Plugin" OR
+   NOT _kotlin_package_name STREQUAL "Kotlin Standard Library" OR
+   NOT _annotations_package_name STREQUAL "JetBrains Java Annotations")
   message(FATAL_ERROR "The SPDX SBOM is incomplete")
 endif()
 

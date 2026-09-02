@@ -26,3 +26,14 @@ dependencies; downloaded browser binaries remain outside Git and are not part
 of application distributions. Playwright is licensed under Apache License 2.0.
 The complete upstream license and Microsoft notice are preserved at
 `third_party/licenses/playwright-LICENSE.txt`. No local patches are applied.
+
+## Android build and Kotlin runtime
+
+The Android project uses the Gradle 8.11.1 wrapper and Android Gradle Plugin
+8.10.1 as build-time tools. The wrapper distribution and checked-in wrapper JAR
+are checksum locked. The packaged application uses Kotlin Standard Library
+2.1.20 and its transitive JetBrains Java Annotations 13.0 dependency. These
+components are licensed under Apache License 2.0; the complete license text is
+the repository's `LICENSE`. Artifact checksums and source locations are
+recorded in `third_party/manifest.lock.json` and the SPDX SBOM. No local
+patches are applied.

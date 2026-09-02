@@ -118,6 +118,74 @@
       "licenseDeclared": "Apache-2.0",
       "copyrightText": "Portions Copyright (c) Microsoft Corporation",
       "primaryPackagePurpose": "BUILD_TOOL"
+    },
+    {
+      "name": "Gradle",
+      "SPDXID": "SPDXRef-Package-Gradle",
+      "versionInfo": "8.11.1",
+      "downloadLocation": "https://services.gradle.org/distributions/gradle-8.11.1-bin.zip",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f397b287023acdba1e9f6fc5ea72d22dd63669d59ed4a289a29b1a76eee151c6"
+        }
+      ],
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "Copyright 2007-2025 the original author or authors",
+      "primaryPackagePurpose": "BUILD_TOOL"
+    },
+    {
+      "name": "Android Gradle Plugin",
+      "SPDXID": "SPDXRef-Package-Android-Gradle-Plugin",
+      "versionInfo": "8.10.1",
+      "downloadLocation": "https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/8.10.1/gradle-8.10.1.jar",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a0fe22ce029c548335a75913f7ad517c827c567b8abb84047102034255ae1173"
+        }
+      ],
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "Copyright The Android Open Source Project",
+      "primaryPackagePurpose": "BUILD_TOOL"
+    },
+    {
+      "name": "Kotlin Standard Library",
+      "SPDXID": "SPDXRef-Package-Kotlin",
+      "versionInfo": "2.1.20",
+      "downloadLocation": "https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/2.1.20/kotlin-stdlib-2.1.20.jar",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "1bcc74e8ce84e2c25eaafde10f1248349cce3062b6e36978cbeec610db1e930a"
+        }
+      ],
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "Copyright 2010-2025 JetBrains s.r.o. and Kotlin Programming Language contributors",
+      "primaryPackagePurpose": "LIBRARY"
+    },
+    {
+      "name": "JetBrains Java Annotations",
+      "SPDXID": "SPDXRef-Package-JetBrains-Annotations",
+      "versionInfo": "13.0",
+      "downloadLocation": "https://repo1.maven.org/maven2/org/jetbrains/annotations/13.0/annotations-13.0.jar",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478"
+        }
+      ],
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "Copyright 2000-2013 JetBrains s.r.o.",
+      "primaryPackagePurpose": "LIBRARY"
     }
   ],
   "relationships": [
@@ -165,6 +233,26 @@
       "spdxElementId": "SPDXRef-Package-Playwright",
       "relationshipType": "BUILD_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-MoL-Keyboard"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Gradle",
+      "relationshipType": "BUILD_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-MoL-Keyboard"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Android-Gradle-Plugin",
+      "relationshipType": "BUILD_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-MoL-Keyboard"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-MoL-Keyboard",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Kotlin"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-MoL-Keyboard",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-JetBrains-Annotations"
     }
   ]
 }
