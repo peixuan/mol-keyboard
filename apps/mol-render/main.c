@@ -1,6 +1,4 @@
 /* SPDX-License-Identifier: Apache-2.0 */
-#include "mol/mol.h"
-
 #include <errno.h>
 #include <math.h>
 #include <stddef.h>
@@ -8,6 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "mol/mol.h"
 
 #define MOL_RENDER_BLOCK_FRAMES 256u
 #define MOL_RENDER_MAX_DURATION_SECONDS 60.0
@@ -22,6 +22,8 @@ typedef union mol_render_engine_storage {
 typedef struct mol_render_options {
   const char* output_path;
   double duration_seconds;
+  double gate_seconds;
+  int has_gate;
   uint32_t sample_rate;
   uint32_t channel_count;
   mol_preset_id_t preset;
@@ -112,7 +114,8 @@ static int mol_parse_preset(const char* text, mol_preset_id_t* preset) {
 static void mol_print_usage(const char* executable) {
   (void)printf(
       "Usage: %s [--output PATH] [--duration SECONDS] [--sample-rate RATE]\n"
-      "          [--channels 1|2] [--preset ID|NAME] [--note 0..127] [--velocity 0..1]\n",
+      "          [--gate SECONDS] [--channels 1|2] [--preset ID|NAME]\n"
+      "          [--note 0..127] [--velocity 0..1]\n",
       executable);
 }
 
@@ -120,6 +123,8 @@ static int mol_parse_options(int argc, char** argv, mol_render_options_t* option
   int index;
   options->output_path = "mol-output.wav";
   options->duration_seconds = 2.0;
+  options->gate_seconds = 0.0;
+  options->has_gate = 0;
   options->sample_rate = 48000u;
   options->channel_count = 2u;
   options->preset = MOL_PRESET_GRAND_PIANO;
@@ -146,6 +151,11 @@ static int mol_parse_options(int argc, char** argv, mol_render_options_t* option
       if (!mol_parse_u32(argv[index], &options->sample_rate)) {
         return -1;
       }
+    } else if (strcmp(name, "--gate") == 0) {
+      if (!mol_parse_double(argv[index], &options->gate_seconds)) {
+        return -1;
+      }
+      options->has_gate = 1;
     } else if (strcmp(name, "--channels") == 0) {
       if (!mol_parse_u32(argv[index], &options->channel_count)) {
         return -1;
@@ -175,7 +185,9 @@ static int mol_parse_options(int argc, char** argv, mol_render_options_t* option
       options->duration_seconds > MOL_RENDER_MAX_DURATION_SECONDS ||
       (options->sample_rate != 32000u && options->sample_rate != 44100u &&
        options->sample_rate != 48000u) ||
-      (options->channel_count != 1u && options->channel_count != 2u)) {
+      (options->channel_count != 1u && options->channel_count != 2u) ||
+      (options->has_gate &&
+       (options->gate_seconds <= 0.0 || options->gate_seconds >= options->duration_seconds))) {
     return -1;
   }
   return 1;
@@ -238,6 +250,9 @@ static int mol_render_file(const mol_render_options_t* options) {
   mol_command_t note_off;
   mol_command_t preset;
   uint64_t total_frames = (uint64_t)(options->duration_seconds * options->sample_rate + 0.5);
+  uint64_t gate_frames = options->has_gate
+                             ? (uint64_t)(options->gate_seconds * options->sample_rate + 0.5)
+                             : (total_frames * 7u) / 10u;
   uint64_t data_bytes_64 = total_frames * options->channel_count * 2u;
   uint64_t rendered_frames = 0u;
   float samples[MOL_RENDER_BLOCK_FRAMES * 2u];
@@ -270,8 +285,7 @@ static int mol_render_file(const mol_render_options_t* options) {
   preset.payload.preset.preset = options->preset;
   preset.payload.preset.hard_switch = 1u;
   note_on = mol_make_note_command(MOL_COMMAND_NOTE_ON, 0u, options->note, options->velocity);
-  note_off = mol_make_note_command(MOL_COMMAND_NOTE_OFF,
-                                   (mol_frame_index_t)((total_frames * 7u) / 10u),
+  note_off = mol_make_note_command(MOL_COMMAND_NOTE_OFF, (mol_frame_index_t)gate_frames,
                                    options->note, options->velocity);
   if (mol_engine_submit(engine, &preset) != MOL_OK ||
       mol_engine_submit(engine, &note_on) != MOL_OK ||
@@ -297,12 +311,11 @@ static int mol_render_file(const mol_render_options_t* options) {
 
   while (rendered_frames < total_frames) {
     uint64_t remaining = total_frames - rendered_frames;
-    uint32_t block_frames = remaining > MOL_RENDER_BLOCK_FRAMES
-                                ? MOL_RENDER_BLOCK_FRAMES
-                                : (uint32_t)remaining;
+    uint32_t block_frames =
+        remaining > MOL_RENDER_BLOCK_FRAMES ? MOL_RENDER_BLOCK_FRAMES : (uint32_t)remaining;
     uint32_t sample_count = block_frames * options->channel_count;
-    result = mol_engine_render_interleaved_f32(engine, samples, block_frames,
-                                                options->channel_count);
+    result =
+        mol_engine_render_interleaved_f32(engine, samples, block_frames, options->channel_count);
     if (result != MOL_OK || !mol_convert_and_write(file, samples, sample_count, &stats)) {
       (void)fprintf(stderr, "Audio rendering or WAV writing failed\n");
       (void)fclose(file);
@@ -320,6 +333,7 @@ static int mol_render_file(const mol_render_options_t* options) {
   (void)printf("output=%s\n", options->output_path);
   (void)printf("preset=%s\n", mol_preset_stable_id(options->preset));
   (void)printf("duration_seconds=%.6f\n", (double)total_frames / options->sample_rate);
+  (void)printf("gate_seconds=%.6f\n", (double)gate_frames / options->sample_rate);
   (void)printf("peak=%.8f\n", stats.peak);
   (void)printf("rms=%.8f\n", sqrt(stats.square_sum / (double)stats.sample_count));
   (void)printf("clipped_samples=%llu\n", (unsigned long long)stats.clipped_count);

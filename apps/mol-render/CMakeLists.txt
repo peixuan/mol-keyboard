@@ -16,7 +16,7 @@ if(MOL_BUILD_TESTS)
   set(_mol_test_wav "${CMAKE_CURRENT_BINARY_DIR}/test-c4.wav")
   add_test(
     NAME mol_render_wav
-    COMMAND mol-render --output "${_mol_test_wav}" --duration 1 --note 60 --channels 2)
+    COMMAND mol-render --output "${_mol_test_wav}" --duration 1 --gate 0.25 --note 60 --channels 2)
   add_test(
     NAME mol_render_wav_verify
     COMMAND ${CMAKE_COMMAND} -DWAV_PATH=${_mol_test_wav}

@@ -191,10 +191,42 @@ static void test_release_voice_is_stolen_first(void) {
   mol_engine_shutdown(engine);
 }
 
+static void test_rapidly_switch_all_presets(void) {
+  mol_engine_t* engine = initialize(8u);
+  float output[64];
+  float previous = 0.0f;
+  mol_gesture_id_t gesture = 900u;
+
+  for (uint32_t preset = 0u; preset < MOL_PRESET_COUNT; ++preset) {
+    mol_command_t select = preset_command(preset, 1u);
+    mol_command_t note = note_command(MOL_COMMAND_NOTE_ON, gesture++, (uint8_t)(48u + preset));
+    EXPECT_TRUE(mol_engine_submit(engine, &select) == MOL_OK);
+    EXPECT_TRUE(mol_engine_submit(engine, &note) == MOL_OK);
+    EXPECT_TRUE(mol_engine_render_interleaved_f32(engine, output, 64u, 1u) == MOL_OK);
+    for (uint32_t index = 0u; index < 64u; ++index) {
+      EXPECT_TRUE(isfinite(output[index]));
+      EXPECT_TRUE(fabsf(output[index] - previous) < 0.25f);
+      previous = output[index];
+    }
+  }
+  {
+    mol_command_t final_switch = preset_command(MOL_PRESET_GRAND_PIANO, 1u);
+    EXPECT_TRUE(mol_engine_submit(engine, &final_switch) == MOL_OK);
+    EXPECT_TRUE(mol_engine_render_interleaved_f32(engine, output, 64u, 1u) == MOL_OK);
+    for (uint32_t index = 0u; index < 64u; ++index) {
+      EXPECT_TRUE(isfinite(output[index]));
+      EXPECT_TRUE(fabsf(output[index] - previous) < 0.25f);
+      previous = output[index];
+    }
+  }
+  mol_engine_shutdown(engine);
+}
+
 int main(void) {
   test_all_presets_across_range();
   test_natural_and_hard_switch();
   test_release_voice_is_stolen_first();
+  test_rapidly_switch_all_presets();
   if (failures != 0) {
     (void)fprintf(stderr, "%d test expectations failed\n", failures);
     return 1;
