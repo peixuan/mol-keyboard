@@ -16,7 +16,7 @@ typedef union mol_render_engine_storage {
   long double floating_alignment;
   void* pointer_alignment;
   uint64_t integer_alignment;
-  unsigned char bytes[262144];
+  unsigned char bytes[1048576];
 } mol_render_engine_storage_t;
 
 typedef struct mol_render_options {
@@ -206,7 +206,7 @@ static int mol_convert_and_write(FILE* file, const float* samples, uint32_t coun
 }
 
 static int mol_render_file(const mol_render_options_t* options) {
-  mol_render_engine_storage_t storage;
+  static mol_render_engine_storage_t storage;
   mol_engine_config_t config = mol_engine_config_default();
   mol_engine_t* engine = NULL;
   mol_render_stats_t stats = {0};

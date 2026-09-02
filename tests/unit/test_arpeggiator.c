@@ -11,7 +11,7 @@ typedef union arpeggiator_test_storage {
   long double floating_alignment;
   void* pointer_alignment;
   uint64_t integer_alignment;
-  unsigned char bytes[262144];
+  unsigned char bytes[1048576];
 } arpeggiator_test_storage_t;
 
 typedef struct started_note {

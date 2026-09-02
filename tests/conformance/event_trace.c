@@ -12,7 +12,7 @@ typedef union trace_storage {
   long double floating_alignment;
   void* pointer_alignment;
   uint64_t integer_alignment;
-  unsigned char bytes[262144];
+  unsigned char bytes[1048576];
 } trace_storage_t;
 
 static trace_storage_t storage;

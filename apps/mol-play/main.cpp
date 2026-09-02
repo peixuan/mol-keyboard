@@ -21,7 +21,7 @@ constexpr std::uint32_t kChannelCount = 2;
 constexpr std::uint32_t kMaxVoices = 8;
 constexpr std::uint32_t kCommandCapacity = 32;
 constexpr std::uint32_t kEventCapacity = 32;
-constexpr std::size_t kEngineMemoryBytes = 65536;
+constexpr std::size_t kEngineMemoryBytes = 1048576;
 constexpr ma_uint32 kRequestedPeriodFrames = 128;
 constexpr ma_uint32 kRequestedPeriods = 3;
 constexpr double kMinimumDurationSeconds = 1.0;
@@ -277,7 +277,7 @@ mol_command_t make_note_on(const Options& options) {
 }
 
 int play(const Options& options, ma_context* context) {
-  PlaybackState state{};
+  static PlaybackState state{};
   ma_device_id selected_id{};
   ma_device_config device_config = ma_device_config_init(ma_device_type_playback);
   ma_device device{};
