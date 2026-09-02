@@ -12,7 +12,7 @@ configure_file(
 
 idf_component_register(
   SRCS "main.c" "matrix_logic.c" "input_queue.c" "gpio_matrix.c" "device_settings.c"
-       "device_storage.c" "sequence_store.c" "sequence_storage.c"
+       "device_storage.c" "sequence_store.c" "sequence_storage.c" "hid_keyboard.c"
        "${MOL_REPOSITORY_ROOT}/tests/conformance/sequence_fixture.c"
   PRIV_INCLUDE_DIRS "${MOL_REPOSITORY_ROOT}/tests/conformance"
                     "${CMAKE_CURRENT_BINARY_DIR}/generated"

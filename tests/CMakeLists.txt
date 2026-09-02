@@ -97,6 +97,18 @@ if(MSVC)
 endif()
 add_test(NAME mol_esp32_sequence_store_tests COMMAND mol_esp32_sequence_store_tests)
 
+add_executable(
+  mol_esp32_hid_keyboard_tests unit/test_esp32_hid_keyboard.c
+                               ${PROJECT_SOURCE_DIR}/platforms/esp32/main/hid_keyboard.c)
+target_include_directories(mol_esp32_hid_keyboard_tests
+                           PRIVATE ${PROJECT_SOURCE_DIR}/platforms/esp32/main)
+target_link_libraries(mol_esp32_hid_keyboard_tests PRIVATE mol::core)
+set_target_properties(mol_esp32_hid_keyboard_tests PROPERTIES C_EXTENSIONS OFF
+                                                         C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_esp32_hid_keyboard_tests)
+mol_enable_optional_instrumentation(mol_esp32_hid_keyboard_tests)
+add_test(NAME mol_esp32_hid_keyboard_tests COMMAND mol_esp32_hid_keyboard_tests)
+
 add_test(
   NAME mol_harmony_project_audit
   COMMAND
