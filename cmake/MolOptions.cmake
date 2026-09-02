@@ -1,6 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
 include_guard(GLOBAL)
 
+set(MOL_ANDROID_APPLICATION_ID "cn.zhangpeixuan.molkeyboard" CACHE STRING
+    "Default Android application ID")
+set(MOL_APPLE_BUNDLE_IDENTIFIER "cn.zhangpeixuan.molkeyboard" CACHE STRING
+    "Default Apple bundle identifier")
+set(MOL_HARMONY_BUNDLE_NAME "cn.zhangpeixuan.molkeyboard" CACHE STRING
+    "Default HarmonyOS bundle name")
+
 option(MOL_BUILD_TESTS "Build automated tests" ON)
 option(MOL_BUILD_TOOLS "Build command-line tools" ON)
 option(MOL_BUILD_DESKTOP_AUDIO "Build the miniaudio desktop playback host" ON)

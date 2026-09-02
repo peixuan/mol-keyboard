@@ -114,3 +114,7 @@ elseif(MOL_VALIDATE_MOBILE_SOURCES AND NOT CMAKE_CROSSCOMPILING)
   mol_add_oboe_headers()
   add_subdirectory(platforms/android)
 endif()
+
+if(APPLE)
+  add_subdirectory(platforms/apple)
+endif()
