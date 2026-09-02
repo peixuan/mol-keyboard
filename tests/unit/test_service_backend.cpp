@@ -224,7 +224,10 @@ int main() {
     dispatch(dispatcher, "config.get");
     dispatch(dispatcher, "config.set", "{\"key\":\"log_level\",\"value\":\"debug\"}");
     dispatch(dispatcher, "diagnostics.selfTest");
-    dispatch(dispatcher, "diagnostics.doctor");
+    const molseq::Json doctor = dispatch(dispatcher, "diagnostics.doctor");
+    if (!molseq::json_bool(molseq::require_member(doctor, "ok")) ||
+        molseq::require_member(doctor, "checks").array.size() < 14u)
+      return 1;
     dispatch(dispatcher, "diagnostics.benchmark", "{\"frames\":1024}");
     dispatch(dispatcher, "system.shutdown");
 

@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -238,6 +239,29 @@ Json make_default_config() {
   config["schema_version"] = Json::number(1);
   config["web_ui"] = Json::boolean_value(false);
   return Json::object_value(std::move(config));
+}
+
+bool directory_is_writable(const std::filesystem::path& directory) {
+  const std::filesystem::path probe =
+      directory / (".doctor-write-" +
+                   std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+  std::ofstream stream(probe, std::ios::binary | std::ios::trunc);
+  const char marker = 'M';
+  const bool written = stream && stream.write(&marker, 1);
+  stream.close();
+  std::error_code ignored;
+  std::filesystem::remove(probe, ignored);
+  return written && !ignored;
+}
+
+bool builtin_patches_are_valid() {
+  for (mol_preset_id_t preset = 0u; preset < MOL_PRESET_COUNT; ++preset) {
+    mol_patch_t patch{};
+    patch.struct_size = static_cast<std::uint32_t>(sizeof(patch));
+    if (mol_builtin_patch_load(preset, &patch) != MOL_OK || mol_patch_validate(&patch) != MOL_OK)
+      return false;
+  }
+  return true;
 }
 
 void validate_config(const Json& config) {
@@ -845,12 +869,7 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
   }
   if (method == "diagnostics.selfTest") {
     allow_members(params, {});
-    bool patches_ok = true;
-    for (mol_preset_id_t preset = 0u; preset < MOL_PRESET_COUNT; ++preset) {
-      mol_patch_t patch{};
-      patch.struct_size = static_cast<std::uint32_t>(sizeof(patch));
-      patches_ok = patches_ok && mol_builtin_patch_load(preset, &patch) == MOL_OK;
-    }
+    const bool patches_ok = builtin_patches_are_valid();
     std::string detail;
     const bool runtime_ok = runtime_.runtime_self_test(detail);
     Json::Object result;
@@ -865,6 +884,8 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
     Json::Array checks;
     const AudioStatus audio = runtime_.audio_status();
     const RuntimeMetrics metrics = runtime_.metrics();
+    const bool patches_ok = builtin_patches_are_valid();
+    const bool storage_writable = directory_is_writable(recordings_directory_);
     auto add_check = [&checks](const char* id, bool ok, const std::string& message,
                                const std::string& action) {
       Json::Object check;
@@ -877,11 +898,18 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
     add_check("core-abi", mol_get_api_version() == MOL_API_VERSION,
               "Core API and service ABI are compatible.", "Reinstall matching binaries.");
     add_check("audio-device", audio.available,
-              audio.available ? "Audio output is initialized." : "No hardware output is active.",
+              audio.available ? "Audio output is initialized as " + audio.backend + "/" +
+                                    audio.device_name + " at " + std::to_string(audio.sample_rate) +
+                                    " Hz, " + std::to_string(audio.channel_count) + " channels."
+                              : "No hardware output is active.",
               "Select a system output or start with --null-backend.");
-    add_check("low-latency", audio.low_latency_requested,
-              audio.low_latency_requested ? "Low-latency mode was requested."
-                                          : "Low-latency mode is not active.",
+    const bool latency_ok = audio.low_latency_requested && audio.estimated_latency_ms > 0.0 &&
+                            audio.estimated_latency_ms <= 20.0;
+    add_check("low-latency", latency_ok,
+              "Estimated device buffering latency is " +
+                  std::to_string(audio.estimated_latency_ms) + " ms; requested period is " +
+                  std::to_string(audio.period_frames) + " frames x " +
+                  std::to_string(audio.periods) + ".",
               "Use a supported native audio backend and reduce the device period.");
     const std::vector<DeviceInfo> outputs = runtime_.output_devices();
     const bool bluetooth = std::any_of(outputs.begin(), outputs.end(),
@@ -898,10 +926,20 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
               physical_input ? "A physical keyboard adapter is available."
                              : "No accessible physical keyboard input found.",
               "Grant input-monitoring permission or select an accessible keyboard.");
+    add_check("midi-input", false, "Desktop MIDI input is not enabled in this service build.",
+              "Use the physical keyboard or local IPC input; install a MIDI-enabled build when "
+              "available.");
     add_check("service-ipc", true, "This request reached the local service IPC.",
               "Restart the user service if future requests fail.");
-    add_check("storage", std::filesystem::exists(recordings_directory_),
-              "The private recordings directory is available.",
+    add_check("configuration", true, "Configuration schema version 1 was parsed and validated.",
+              "Run config.get to inspect effective settings.");
+    add_check("sound-pack", patches_ok,
+              patches_ok ? "All 18 built-in patches decode and validate."
+                         : "One or more built-in patches are invalid.",
+              "Reinstall mol-keyboardd from a verified package.");
+    add_check("storage", storage_writable,
+              storage_writable ? "The private recordings directory passed a write probe."
+                               : "The private recordings directory is not writable.",
               "Check ordinary-user write permission on the service state directory.");
     add_check("realtime-health", metrics.underruns == 0u && metrics.dropped_commands == 0u,
               "Realtime counters were inspected.",
@@ -910,9 +948,24 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
               "Serve the Web build over HTTPS with COOP/COEP for SharedArrayBuffer.");
     add_check("esp32-capability", true, "Desktop build has no ESP32 chip capability claim.",
               "Run the firmware doctor on the target for chip-specific checks.");
+#if defined(_WIN32)
+    const std::string limitation =
+        "Raw Input requires an interactive user session; Bluetooth audio is provided by WASAPI.";
+#elif defined(__APPLE__)
+    const std::string limitation =
+        "IOHID input may require Input Monitoring permission; Bluetooth audio is provided by "
+        "Core Audio.";
+#else
+    const std::string limitation =
+        "evdev input requires read access to /dev/input/event*; Bluetooth audio is provided by "
+        "the selected Linux audio server.";
+#endif
+    add_check("platform-limitations", true, limitation,
+              "Review the desktop service platform guide before background deployment.");
     Json::Object result;
     result["checks"] = Json::array_value(std::move(checks));
-    result["ok"] = Json::boolean_value(audio.available);
+    result["ok"] = Json::boolean_value(audio.available && patches_ok && storage_writable &&
+                                       metrics.underruns == 0u && metrics.dropped_commands == 0u);
     return Json::object_value(std::move(result));
   }
   if (method == "diagnostics.benchmark") {
