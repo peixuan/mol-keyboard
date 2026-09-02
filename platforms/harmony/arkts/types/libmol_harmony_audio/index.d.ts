@@ -16,6 +16,8 @@ export interface NativeAudioStatus {
   lastError: number;
   active: boolean;
   needsRestart: boolean;
+  fastPathActive: boolean;
+  latencyFallbackUsed: boolean;
 }
 
 export const create: () => NativeAudioHandle;
@@ -33,6 +35,23 @@ export const noteOff: (
   note: number,
   gestureId: number,
 ) => number;
+export const submitControl: (
+  handle: NativeAudioHandle,
+  commandType: number,
+  gestureId: number,
+  integer0: number,
+  integer1: number,
+  integer2: number,
+  integer3: number,
+  scalar0: number,
+  scalar1: number,
+) => number;
+export const pollEvents: (handle: NativeAudioHandle) => number[];
+export const exportRecording: (handle: NativeAudioHandle) => ArrayBuffer | number;
+export const loadRecording: (
+  handle: NativeAudioHandle,
+  recording: ArrayBuffer,
+) => number;
 export const status: (handle: NativeAudioHandle) => NativeAudioStatus;
 
 declare const nativeAudio: {
@@ -42,6 +61,10 @@ declare const nativeAudio: {
   recover: typeof recover;
   noteOn: typeof noteOn;
   noteOff: typeof noteOff;
+  submitControl: typeof submitControl;
+  pollEvents: typeof pollEvents;
+  exportRecording: typeof exportRecording;
+  loadRecording: typeof loadRecording;
   status: typeof status;
 };
 

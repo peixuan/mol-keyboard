@@ -58,6 +58,12 @@ napi_status napi_set_named_property(napi_env env, napi_value object, const char*
 napi_status napi_create_external(napi_env env, void* data, napi_finalize finalizeCb,
                                  void* finalizeHint, napi_value* result);
 napi_status napi_create_object(napi_env env, napi_value* result);
+napi_status napi_create_array_with_length(napi_env env, size_t length, napi_value* result);
+napi_status napi_set_element(napi_env env, napi_value object, uint32_t index, napi_value value);
+napi_status napi_create_arraybuffer(napi_env env, size_t byteLength, void** data,
+                                    napi_value* result);
+napi_status napi_get_arraybuffer_info(napi_env env, napi_value arraybuffer, void** data,
+                                      size_t* byteLength);
 napi_status napi_define_properties(napi_env env, napi_value object, size_t propertyCount,
                                    const napi_property_descriptor* properties);
 void napi_module_register(napi_module* module);
