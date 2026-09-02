@@ -22,6 +22,14 @@ an Android 15 x86_64 emulator, including AAudio rendering, legal foreground
 state, background/screen-off continuation, and idle shutdown. No physical
 Android device was available, so arm64 playback, hardware keyboard, actual
 Bluetooth or wired route changes, focus interruption, latency, and sustained
-playback remain unverified. Apple still has only its native M1 audio entry, and
-HarmonyOS has only its M1 platform entry; their complete applications,
-toolchain builds, and physical-device tests are the next gates.
+playback remain unverified.
+
+The iOS application implementation is complete, including the packaged shared
+UI, Promise-based WKWebView bridge, AudioUnit lifecycle restoration, hardware
+key interception, private sequence persistence, offline content policy, privacy
+manifest, and Xcode simulator/device pipeline. This Windows host has no Xcode,
+iOS Simulator, signing identity, or physical Apple device, so compilation,
+installation, audible output, background/lock-screen continuation,
+route/interruption behavior, hardware keyboard input, latency, and sustained
+playback are not claimed. HarmonyOS still has only its M1 platform entry; its
+complete M8 application is the next locally actionable implementation gate.

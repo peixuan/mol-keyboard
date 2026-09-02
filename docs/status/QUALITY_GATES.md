@@ -9,8 +9,8 @@
 | M4 recording and tools | passed | Bounded streaming Mol Sequence v1, deterministic processed-event recording/playback, JSON/MIDI/editing tools, three-format offline WAV renderer, corruption/round-trip tests, parser/writer fuzzing, and one shared Native/Wasm/ESP32 sequence fixture pass |
 | M5 desktop headless product | implementation complete; platform acceptance pending | Windows runtime and Linux/WSL lifecycle verified; physical Bluetooth/evdev and macOS remain explicit device/toolchain gates |
 | M6 Web/PWA | implementation complete; Safari acceptance pending | Production PWA, standalone and authenticated service modes, Chrome/Edge/Firefox AudioWorklet automation, mobile-layout automation, offline lifecycle, MessagePort fallback, and SAB path pass; current-stable Safari requires an Apple host |
-| M7 Android and iOS | Android implementation complete; iOS in progress | Android dual-ABI Debug/Release/lint builds pass and the packaged x86_64 app is runtime-verified through AAudio, foreground notification, background, screen-off, and idle shutdown; physical Android and all iOS acceptance remain explicit gates |
-| M8 HarmonyOS | not started | Depends on portable core gates |
+| M7 Android and iOS | implementation complete; platform acceptance pending | Android dual-ABI Debug/Release/lint builds pass and the packaged x86_64 app is runtime-verified through AAudio, foreground notification, background, screen-off, and idle shutdown. The complete iOS application and Xcode pipeline are source-reviewed; all Apple builds and physical mobile acceptance remain explicit gates |
+| M8 HarmonyOS | in progress | Native M1 OHAudio/Node-API entry exists; complete ArkUI application, storage, continuous-task policy, packaging, and real DevEco/device evidence remain |
 | M9 ESP32 product | not started | Depends on portable core gates |
 | M10 v1.0.0 release | not started | All earlier gates required |
 

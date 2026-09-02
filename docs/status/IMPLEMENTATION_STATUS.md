@@ -2,19 +2,20 @@
 
 ## Current milestone
 
-M7 Android/iOS is active. The Android application is implementation-complete,
-dual-ABI build-verified, and runtime-verified on an Android 15 x86_64 emulator.
-iOS is now the highest locally actionable implementation gate. Physical
-Bluetooth/evdev, macOS/Safari, and physical mobile acceptance remain
-environment-blocked. M0 through M4, the M5 desktop implementation, and the M6
-Web/PWA implementation are complete.
+M8 HarmonyOS is active. The Android and iOS application implementations are
+complete; Android is dual-ABI build-verified and runtime-verified on an Android
+15 x86_64 emulator, while iOS remains source-reviewed because no Apple SDK is
+available on this host. Physical Bluetooth/evdev, macOS/Safari, and physical
+mobile acceptance remain environment-blocked. M0 through M4, the M5 desktop
+implementation, and the M6 Web/PWA implementation are complete.
 
 ## Last verified commit
 
-`ed73cb3` (`test(android): verify native audio lifecycle on emulator`) is the
-last verified product-code commit. The validation below was run on 2026-09-03
-after the subsequent dependency and CI commits. Documentation changes do not
-alter binaries.
+`f15c588` (`feat(ios): add native audio application shell`) is the last locally
+validated product-code commit. Its shared Web changes and unaffected portable
+targets passed locally; the Apple-specific target itself is not called
+build-verified. The validation below was run on 2026-09-03. Documentation
+changes do not alter binaries.
 
 ## Completed requirements
 
@@ -104,12 +105,20 @@ alter binaries.
   162 in background to 263 with the screen off, then the idle background stream
   and foreground state stopped. Detailed evidence and physical-device
   boundaries are in `docs/mobile/M7_ANDROID_EVIDENCE.md`.
+- The iOS source now packages the same production UI with an offline-only
+  WKURLSchemeHandler, Promise reply bridge, exact request schema, allow-listed
+  commands, bounded event/recording transfer, foreground UIKit HID mapping,
+  private atomic `.molseq` persistence, privacy manifest, localized metadata,
+  and app icon. Its Objective-C++ controller restores persistent engine state
+  after route/interruption/media-service rebuilds and keeps background audio
+  only for playback or a running metronome transport. Xcode simulator/device
+  pipelines are checked in, but no Apple build is claimed on this host.
 
 ## In-progress work
 
-- M7: build the complete iOS application around the existing AudioUnit entry,
-  including packaged UI, AVAudioSession lifecycle, background policy, hardware
-  keyboard input, route/interruption handling, storage, and privacy metadata.
+- M8: complete the HarmonyOS application around the existing OHAudio and
+  Node-API entry, including ArkUI, strict control bridge, audio focus, official
+  continuous-task lifecycle, private storage, and HAP packaging.
 
 ## Blocked platform checks
 
@@ -161,7 +170,7 @@ Emscripten 6.0.5 and Node.js 22.16.0 passed 24/24 tests in Debug and LTO
 MinSizeRel. Both configurations match the Native event, sequence-fixture, and
 18-preset audio-metric goldens.
 
-The production Web bundle passed 11/11 Node tests. Playwright 1.62.1 ran 36
+The production Web bundle passed 12/12 Node tests. Playwright 1.62.1 ran 36
 browser project/test combinations: 15 applicable cases passed and 21 were
 explicitly skipped by capability. System Chrome 151.0.7922.175, system Edge
 152.0.4191.53, Firefox 153.0, Chromium 151.0.7922.34 mobile emulation, and
@@ -181,7 +190,7 @@ Push-Location platforms/android
 Pop-Location
 ```
 
-The reproducible Debug pipeline passed 24/24 Wasm tests, 11/11 Web tests,
+The reproducible Debug pipeline passed 24/24 Wasm tests, 12/12 Web tests,
 TypeScript strict checking, the production UI build, and the dual-ABI Android
 build. Debug, unsigned Release, device-test APKs, R8/lintVital, and full Debug
 lint all passed. The official Android 15/API 35 x86_64 emulator returned AAudio
@@ -225,7 +234,6 @@ results.
 
 ## Next highest-priority task
 
-Implement the M7 iOS application around the build-reviewed AudioUnit host and
-package the shared local UI through WKWebView. Keep Apple/Safari and all
-physical-device checks explicit until matching hardware and toolchains are
-available.
+Complete M8 as a real HarmonyOS HAP project around the existing source-checked
+OHAudio host. Keep DevEco/Harmony builds and all physical-device checks explicit
+until matching hardware and toolchains are available.

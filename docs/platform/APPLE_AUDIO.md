@@ -13,30 +13,31 @@ control thread.
 
 On iOS the host observes interruption, route-change, and media-services-reset
 notifications. Interruption and route recovery are dispatched to the main
-control thread. A media-services reset tears down the old audio object and sets
-a status flag; playback is not restarted until user-controlled lifecycle code
-starts it again. Playback-category routing is left to the system for wired,
-Bluetooth A2DP, and AirPlay outputs.
+control thread. Successful route/interruption recovery notifies the application
+controller, which reloads the bounded sequence and persistent controls. A media
+services reset tears down invalid objects and lets that controller restart only
+when prior user intent and foreground or active background playback still allow
+it. Playback-category routing is left to the system for wired, Bluetooth A2DP,
+and AirPlay outputs.
 
 ## Build entry
 
-The existing device and simulator presets add `platforms/apple` automatically:
+The device and simulator scripts first reproduce the Wasm/Web bundle, generate
+an Xcode project, build the native application, verify packaged resources, and
+lint the final privacy and application property lists:
 
 ```text
-cmake --preset ios-simulator
-cmake --build --preset ios-simulator
-
-cmake --preset ios-device
-cmake --build --preset ios-device
+platforms/ios/build-app.sh Simulator
+platforms/ios/build-app.sh Device
 ```
 
-Link `mol_apple_audio` into the Swift or Objective-C application target and
-call `startWithError`, `noteOn`, `noteOff`, and `stop` from serialized lifecycle
-code. The future application target must enable the Audio background mode and
-use the configurable default bundle identifier `cn.zhangpeixuan.molkeyboard`.
+`mol_ios_app` links `mol_apple_audio` into an Objective-C++ UIKit application.
+Its default bundle identifier is `cn.zhangpeixuan.molkeyboard`; override it with
+`MOL_APPLE_BUNDLE_IDENTIFIER`. Set `MOL_APPLE_DEVELOPMENT_TEAM` for automatic
+Xcode signing, or set `MOL_APPLE_SIGNING_IDENTITY` to sign the completed device
+bundle explicitly.
 
 No Apple SDK or Apple host is available on the current Windows machine, so this
-entry is source-reviewed only. It is not marked `build-verified` or
-`device-verified`; simulator/device compilation, signing, background-mode
-packaging, lock-screen playback, and physical route/interruption tests remain
-required.
+application remains source-reviewed rather than `build-verified` or
+`device-verified`. See `docs/mobile/M7_IOS_EVIDENCE.md` for the exact completed
+implementation and pending Apple acceptance checks.
