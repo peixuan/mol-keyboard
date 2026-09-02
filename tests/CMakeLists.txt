@@ -42,6 +42,13 @@ mol_enable_warnings(mol_arpeggiator_tests)
 mol_enable_optional_instrumentation(mol_arpeggiator_tests)
 add_test(NAME mol_arpeggiator_tests COMMAND mol_arpeggiator_tests)
 
+add_executable(mol_portamento_tests unit/test_portamento.c)
+target_link_libraries(mol_portamento_tests PRIVATE mol::core)
+set_target_properties(mol_portamento_tests PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_portamento_tests)
+mol_enable_optional_instrumentation(mol_portamento_tests)
+add_test(NAME mol_portamento_tests COMMAND mol_portamento_tests)
+
 add_executable(mol_platform_audio_runtime_tests unit/test_platform_audio_runtime.c)
 target_link_libraries(mol_platform_audio_runtime_tests PRIVATE mol::platform_audio_runtime)
 set_target_properties(mol_platform_audio_runtime_tests PROPERTIES C_EXTENSIONS OFF

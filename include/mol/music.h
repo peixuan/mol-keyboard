@@ -69,6 +69,14 @@ enum {
   MOL_ARPEGGIATOR_RATE_COUNT = 6u
 };
 
+typedef uint32_t mol_portamento_mode_t;
+enum {
+  MOL_PORTAMENTO_OFF = 0u,
+  MOL_PORTAMENTO_LEGATO_ONLY = 1u,
+  MOL_PORTAMENTO_ALWAYS = 2u,
+  MOL_PORTAMENTO_MODE_COUNT = 3u
+};
+
 /** Returns the exact number of steps per quarter note for an arpeggiator rate. */
 uint32_t mol_arpeggiator_steps_per_quarter(mol_arpeggiator_rate_t rate);
 

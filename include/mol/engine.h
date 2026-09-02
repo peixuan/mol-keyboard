@@ -55,6 +55,8 @@ typedef struct mol_engine_state {
   float arpeggiator_gate;
   uint32_t arpeggiator_random_seed;
   uint8_t arpeggiator_octaves;
+  uint32_t portamento_mode;
+  float portamento_time_ms;
 } mol_engine_state_t;
 
 /** Returns a portable default Standard-profile configuration. */
