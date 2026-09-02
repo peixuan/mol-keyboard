@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">MoL Keyboard</title>
+  <rect width="512" height="512" fill="#f1c84c"/>
+  <rect x="40" y="40" width="432" height="432" fill="#fffaf0" stroke="#17213b" stroke-width="24"/>
+  <path d="M112 380V132h58l86 132 86-132h58v248h-64V238l-80 118-80-118v142z" fill="#17213b"/>
+  <path d="M52 460h408" stroke="#ff7458" stroke-width="24"/>
+</svg>

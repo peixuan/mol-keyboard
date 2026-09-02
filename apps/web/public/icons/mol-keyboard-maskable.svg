@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">MoL Keyboard maskable icon</title>
+  <rect width="512" height="512" fill="#17213b"/>
+  <circle cx="256" cy="256" r="184" fill="#f1c84c"/>
+  <path d="M142 350V162h46l68 100 68-100h46v188h-52V244l-62 88-62-88v106z" fill="#17213b"/>
+  <path d="M132 370h248" stroke="#ff7458" stroke-width="20"/>
+</svg>

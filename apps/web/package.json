@@ -7,7 +7,7 @@
     "build": "npm run typecheck && node scripts/stage-worklet.mjs && vite build",
     "dev": "node scripts/stage-worklet.mjs && vite --host 127.0.0.1",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test": "node --check public/sw.js && node --experimental-strip-types --test tests/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

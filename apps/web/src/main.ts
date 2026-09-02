@@ -9,6 +9,7 @@ import {
   saveRecording,
   saveSettings,
 } from "./persistence";
+import { registerPwa } from "./pwa";
 import {
   BINDING_BY_CODE,
   BINDING_BY_NOTE,
@@ -921,3 +922,4 @@ class MolKeyboardApp extends HTMLElement {
 }
 
 customElements.define("mol-keyboard-app", MolKeyboardApp);
+void registerPwa();

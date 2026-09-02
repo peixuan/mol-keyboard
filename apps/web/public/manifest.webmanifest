@@ -1,0 +1,37 @@
+{
+  "id": "./",
+  "name": "MoL Keyboard",
+  "short_name": "MoL",
+  "description": "A local-first polyphonic WebAssembly instrument.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4eedf",
+  "theme_color": "#17213b",
+  "categories": ["music", "entertainment"],
+  "icons": [
+    {
+      "src": "./icons/mol-keyboard.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/mol-keyboard-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Play keyboard",
+      "short_name": "Play",
+      "url": "./#instrument",
+      "icons": [{ "src": "./icons/mol-keyboard.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
+  ]
+}
