@@ -25,6 +25,37 @@ menu "MoL Keyboard audio host"
         range 3072 8192
         default 4096
 
+    config MOL_A2DP_ENABLE
+        bool "Enable original ESP32 A2DP Source output"
+        depends on IDF_TARGET_ESP32 && BT_A2DP_ENABLE
+        default y
+
+    if MOL_A2DP_ENABLE
+
+    config MOL_A2DP_PCM_BUFFER_BYTES
+        int "Static A2DP PCM16 stereo stream buffer bytes"
+        range 4096 16384
+        default 8192
+        help
+            Must be a multiple of four. The audio task never waits when this buffer is full.
+
+    config MOL_A2DP_CONTROL_TASK_PRIORITY
+        int "A2DP connection and media-control task priority"
+        range 1 10
+        default 4
+
+    config MOL_A2DP_CONTROL_TASK_CORE
+        int "A2DP control task core affinity"
+        range 0 1
+        default 0
+
+    config MOL_A2DP_CONTROL_TASK_STACK_SIZE
+        int "Static A2DP control task stack size"
+        range 2048 8192
+        default 3072
+
+    endif
+
     config MOL_USB_HID_ENABLE
         bool "Enable the ESP32-S3 USB HID keyboard host"
         depends on IDF_TARGET_ESP32S3

@@ -8,6 +8,9 @@
 #include <string.h>
 
 #include "bluetooth_hid.h"
+#if CONFIG_MOL_A2DP_ENABLE
+#include "a2dp_source.h"
+#endif
 #include "device_settings.h"
 #include "device_storage.h"
 #include "driver/i2s_std.h"
@@ -284,6 +287,9 @@ static void audio_render_task(void* context) {
       }
     }
 
+#if CONFIG_MOL_A2DP_ENABLE
+    mol_a2dp_source_submit_pcm(pcm_buffer, sizeof(pcm_buffer));
+#endif
     write_result = i2s_channel_write(i2s_tx_channel, pcm_buffer, sizeof(pcm_buffer), &bytes_written,
                                      MOL_ESP32_WRITE_TIMEOUT_MS);
     if (write_result != ESP_OK) {
@@ -315,6 +321,10 @@ void app_main(void) {
   size_t engine_bytes;
   float frequency = 0.0f;
   float peak = 0.0f;
+#if CONFIG_MOL_A2DP_ENABLE
+  bool device_storage_ready = false;
+  bool bluetooth_ready = false;
+#endif
 
   ESP_LOGI(kTag, "Reset reason=%d", (int)esp_reset_reason());
   device_settings = mol_device_settings_default();
@@ -323,6 +333,9 @@ void app_main(void) {
   if (result != MOL_OK) {
     ESP_LOGW(kTag, "NVS initialization failed; volatile safe defaults selected");
   } else {
+#if CONFIG_MOL_A2DP_ENABLE
+    device_storage_ready = true;
+#endif
     result = mol_device_storage_load_settings(&device_settings, &settings_source);
     if (result != MOL_OK) {
       device_settings = mol_device_settings_default();
@@ -429,6 +442,9 @@ void app_main(void) {
   result = mol_bluetooth_hid_start(device_settings.paired_peer_address,
                                    device_settings.paired_peer_valid != 0u);
   if (result == ESP_OK) {
+#if CONFIG_MOL_A2DP_ENABLE
+    bluetooth_ready = true;
+#endif
 #if CONFIG_IDF_TARGET_ESP32
     ESP_LOGI(kTag, "Bluetooth HID host active: BLE + Classic");
 #else
@@ -438,6 +454,27 @@ void app_main(void) {
     ESP_LOGW(kTag, "Bluetooth HID host unavailable: %s; live audio remains enabled",
              esp_err_to_name(result));
   }
+#if CONFIG_MOL_A2DP_ENABLE
+  if (bluetooth_ready) {
+    result = mol_a2dp_source_start(device_settings.a2dp_sink_address,
+                                   device_settings.a2dp_sink_valid != 0u,
+                                   device_settings.output_mode == MOL_DEVICE_OUTPUT_A2DP);
+    if (result == ESP_OK) {
+      ESP_LOGI(kTag, "A2DP Source capability=available mode=%s codec=SBC sample_rate=%d Hz",
+               device_settings.output_mode == MOL_DEVICE_OUTPUT_A2DP ? "selected" : "inactive",
+               CONFIG_MOL_I2S_SAMPLE_RATE);
+    } else {
+      ESP_LOGW(kTag, "A2DP Source unavailable: %s; I2S fallback remains active",
+               esp_err_to_name(result));
+    }
+  } else {
+    ESP_LOGW(kTag, "A2DP Source unavailable because the shared Bluetooth host did not start");
+  }
+#elif CONFIG_IDF_TARGET_ESP32
+  ESP_LOGI(kTag, "A2DP Source capability=unsupported (disabled by build configuration)");
+#else
+  ESP_LOGI(kTag, "A2DP Source capability=unsupported (Classic Bluetooth absent on this SoC)");
+#endif
 #if CONFIG_MOL_USB_HID_ENABLE
   result = mol_usb_hid_start();
   if (result == ESP_OK) {
@@ -462,6 +499,28 @@ void app_main(void) {
     mol_sequence_storage_stats_t sequence_storage_stats;
     mol_bluetooth_hid_stats_t bluetooth_stats;
     vTaskDelay(pdMS_TO_TICKS(MOL_ESP32_DIAGNOSTIC_PERIOD_MS));
+#if CONFIG_MOL_A2DP_ENABLE
+    {
+      uint8_t connected_sink[6];
+      if (mol_a2dp_source_take_new_peer(connected_sink)) {
+        device_settings.a2dp_sink_valid = 1u;
+        memcpy(device_settings.a2dp_sink_address, connected_sink, sizeof(connected_sink));
+        ++device_settings.generation;
+        if (device_storage_ready) {
+          const mol_result_t save_result = mol_device_storage_save_settings(&device_settings);
+          if (save_result == MOL_OK) {
+            ESP_LOGI(kTag, "Persisted A2DP sink: %02x:%02x:%02x:%02x:%02x:%02x generation=%" PRIu32,
+                     connected_sink[0], connected_sink[1], connected_sink[2], connected_sink[3],
+                     connected_sink[4], connected_sink[5], device_settings.generation);
+          } else {
+            ESP_LOGW(kTag, "Could not persist A2DP sink: %s", mol_result_string(save_result));
+          }
+        } else {
+          ESP_LOGW(kTag, "A2DP sink connected but NVS is unavailable; pairing is volatile");
+        }
+      }
+    }
+#endif
     audio_snapshot = audio_stats_snapshot();
     input_stats = mol_input_queue_stats();
     gpio_stats = mol_gpio_matrix_stats();
@@ -500,6 +559,29 @@ void app_main(void) {
         bluetooth_stats.stack_high_water,
         (unsigned int)uxTaskGetStackHighWaterMark(audio_task_handle), gpio_stats.stack_high_water,
         (unsigned int)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL));
+#if CONFIG_MOL_A2DP_ENABLE
+    {
+      const mol_a2dp_source_stats_t a2dp_stats = mol_a2dp_source_stats();
+      ESP_LOGI(kTag,
+               "a2dp_found=%" PRIu32 " a2dp_attempt=%" PRIu32 " a2dp_connect=%" PRIu32
+               " a2dp_disconnect=%" PRIu32 " a2dp_conn_fail=%" PRIu32 " a2dp_codec_reject=%" PRIu32
+               " a2dp_start=%" PRIu32 " a2dp_ctrl_fail=%" PRIu32 " a2dp_pcm_bytes=%" PRIu32
+               " a2dp_pcm_drop=%" PRIu32 " a2dp_callbacks=%" PRIu32 " a2dp_underrun=%" PRIu32
+               " a2dp_silence_bytes=%" PRIu32 " a2dp_buffer=%" PRIu32 "/%" PRIu32
+               " avrc_connect=%" PRIu32 " avrc_caps=%" PRIu32 " avrc_events=%" PRIu32
+               " a2dp_auth_fail=%" PRIu32 " a2dp_sink_delay_100us=%" PRIu32
+               " a2dp_stack_min=%" PRIu32,
+               a2dp_stats.discovered_sinks, a2dp_stats.connection_attempts, a2dp_stats.connections,
+               a2dp_stats.disconnects, a2dp_stats.connection_failures, a2dp_stats.codec_rejections,
+               a2dp_stats.media_start_requests, a2dp_stats.media_control_failures,
+               a2dp_stats.pcm_submitted_bytes, a2dp_stats.pcm_dropped_bytes,
+               a2dp_stats.pcm_callbacks, a2dp_stats.pcm_underruns, a2dp_stats.pcm_silence_bytes,
+               a2dp_stats.pcm_buffer_bytes, a2dp_stats.pcm_buffer_high_water,
+               a2dp_stats.avrc_connections, a2dp_stats.avrc_capability_responses,
+               a2dp_stats.avrc_events, a2dp_stats.authentication_failures,
+               a2dp_stats.sink_delay_tenths_ms, a2dp_stats.control_stack_high_water);
+    }
+#endif
 #if CONFIG_MOL_USB_HID_ENABLE
     {
       const mol_usb_hid_stats_t usb_stats = mol_usb_hid_stats();

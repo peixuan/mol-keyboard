@@ -12,15 +12,19 @@ configure_file(
 
 set(MOL_USB_HID_SOURCES)
 set(MOL_USB_HID_REQUIRES)
+set(MOL_A2DP_SOURCES)
 if(CONFIG_IDF_TARGET_ESP32S3)
   list(APPEND MOL_USB_HID_SOURCES "usb_hid.c")
   list(APPEND MOL_USB_HID_REQUIRES espressif__usb espressif__usb_host_hid)
+endif()
+if(CONFIG_MOL_A2DP_ENABLE)
+  list(APPEND MOL_A2DP_SOURCES "a2dp_source.c")
 endif()
 
 idf_component_register(
   SRCS "main.c" "matrix_logic.c" "input_queue.c" "gpio_matrix.c" "device_settings.c"
        "device_storage.c" "sequence_store.c" "sequence_storage.c" "hid_keyboard.c"
-       "bluetooth_hid.c" ${MOL_USB_HID_SOURCES}
+       "bluetooth_hid.c" ${MOL_USB_HID_SOURCES} ${MOL_A2DP_SOURCES}
        "${MOL_REPOSITORY_ROOT}/tests/conformance/sequence_fixture.c"
   PRIV_INCLUDE_DIRS "${MOL_REPOSITORY_ROOT}/tests/conformance"
                     "${CMAKE_CURRENT_BINARY_DIR}/generated"

@@ -21,6 +21,10 @@
 #include "input_queue.h"
 #include "sdkconfig.h"
 
+#if CONFIG_MOL_A2DP_ENABLE
+#include "a2dp_source.h"
+#endif
+
 #if CONFIG_IDF_TARGET_ESP32
 #include "esp_gap_bt_api.h"
 #endif
@@ -212,6 +216,10 @@ static bool classic_result_is_keyboard(const esp_bt_gap_cb_param_t* parameter) {
 
 static void classic_gap_event_handler(esp_bt_gap_cb_event_t event,
                                       esp_bt_gap_cb_param_t* parameter) {
+  bool pairing_handled = false;
+#if CONFIG_MOL_A2DP_ENABLE
+  pairing_handled = mol_a2dp_source_handle_gap_event(event, parameter);
+#endif
   if (event == ESP_BT_GAP_DISC_RES_EVT && classic_result_is_keyboard(parameter)) {
     open_device(parameter->disc_res.bda, ESP_HID_TRANSPORT_BT, 0u);
     if (atomic_load_explicit(&opening, memory_order_acquire)) {
@@ -220,9 +228,9 @@ static void classic_gap_event_handler(esp_bt_gap_cb_event_t event,
   } else if (event == ESP_BT_GAP_DISC_STATE_CHANGED_EVT &&
              parameter->disc_st_chg.state == ESP_BT_GAP_DISCOVERY_STOPPED) {
     xEventGroupSetBits(scan_events, MOL_HID_CLASSIC_SCAN_DONE);
-  } else if (event == ESP_BT_GAP_CFM_REQ_EVT) {
+  } else if (event == ESP_BT_GAP_CFM_REQ_EVT && !pairing_handled) {
     (void)esp_bt_gap_ssp_confirm_reply(parameter->cfm_req.bda, true);
-  } else if (event == ESP_BT_GAP_PIN_REQ_EVT) {
+  } else if (event == ESP_BT_GAP_PIN_REQ_EVT && !pairing_handled) {
     esp_bt_pin_code_t pin = {0u};
     uint32_t pin_value = UINT32_C(100000) + esp_random() % UINT32_C(900000);
     size_t index;
@@ -239,29 +247,41 @@ static void classic_gap_event_handler(esp_bt_gap_cb_event_t event,
 static void scan_task(void* context) {
   (void)context;
   for (;;) {
-    if (atomic_load_explicit(&connected, memory_order_acquire) ||
-        atomic_load_explicit(&opening, memory_order_acquire)) {
+    bool hid_needs_scan = !atomic_load_explicit(&connected, memory_order_acquire) &&
+                          !atomic_load_explicit(&opening, memory_order_acquire);
+#if CONFIG_MOL_A2DP_ENABLE
+    bool a2dp_needs_scan = mol_a2dp_source_needs_discovery();
+#else
+    bool a2dp_needs_scan = false;
+#endif
+    if (!hid_needs_scan && !a2dp_needs_scan) {
       (void)xEventGroupWaitBits(scan_events, MOL_HID_CONNECTION_CHANGED, pdTRUE, pdFALSE,
                                 pdMS_TO_TICKS(1000u));
       continue;
     }
 
-    xEventGroupClearBits(scan_events, MOL_HID_BLE_PARAMS_READY | MOL_HID_BLE_SCAN_DONE);
-    if (esp_ble_gap_set_scan_params(&ble_scan_parameters) == ESP_OK &&
-        (xEventGroupWaitBits(scan_events, MOL_HID_BLE_PARAMS_READY, pdTRUE, pdTRUE,
-                             pdMS_TO_TICKS(2000u)) &
-         MOL_HID_BLE_PARAMS_READY) != 0u &&
-        esp_ble_gap_start_scanning(MOL_HID_SCAN_SECONDS) == ESP_OK) {
-      atomic_fetch_add_explicit(&stats.ble_scans, 1u, memory_order_relaxed);
-      (void)xEventGroupWaitBits(scan_events, MOL_HID_BLE_SCAN_DONE, pdTRUE, pdTRUE,
-                                pdMS_TO_TICKS((MOL_HID_SCAN_SECONDS + 2u) * 1000u));
-    } else {
-      atomic_fetch_add_explicit(&stats.delivery_failures, 1u, memory_order_relaxed);
+    if (hid_needs_scan) {
+      xEventGroupClearBits(scan_events, MOL_HID_BLE_PARAMS_READY | MOL_HID_BLE_SCAN_DONE);
+      if (esp_ble_gap_set_scan_params(&ble_scan_parameters) == ESP_OK &&
+          (xEventGroupWaitBits(scan_events, MOL_HID_BLE_PARAMS_READY, pdTRUE, pdTRUE,
+                               pdMS_TO_TICKS(2000u)) &
+           MOL_HID_BLE_PARAMS_READY) != 0u &&
+          esp_ble_gap_start_scanning(MOL_HID_SCAN_SECONDS) == ESP_OK) {
+        atomic_fetch_add_explicit(&stats.ble_scans, 1u, memory_order_relaxed);
+        (void)xEventGroupWaitBits(scan_events, MOL_HID_BLE_SCAN_DONE, pdTRUE, pdTRUE,
+                                  pdMS_TO_TICKS((MOL_HID_SCAN_SECONDS + 2u) * 1000u));
+      } else {
+        atomic_fetch_add_explicit(&stats.delivery_failures, 1u, memory_order_relaxed);
+      }
     }
 
 #if CONFIG_IDF_TARGET_ESP32
-    if (!atomic_load_explicit(&connected, memory_order_acquire) &&
-        !atomic_load_explicit(&opening, memory_order_acquire)) {
+    hid_needs_scan = !atomic_load_explicit(&connected, memory_order_acquire) &&
+                     !atomic_load_explicit(&opening, memory_order_acquire);
+#if CONFIG_MOL_A2DP_ENABLE
+    a2dp_needs_scan = mol_a2dp_source_needs_discovery();
+#endif
+    if (hid_needs_scan || a2dp_needs_scan) {
       xEventGroupClearBits(scan_events, MOL_HID_CLASSIC_SCAN_DONE);
       if (esp_bt_gap_start_discovery(ESP_BT_INQ_MODE_GENERAL_INQUIRY, 4u, 0u) == ESP_OK) {
         atomic_fetch_add_explicit(&stats.classic_scans, 1u, memory_order_relaxed);
@@ -353,6 +373,19 @@ esp_err_t mol_bluetooth_hid_start(const uint8_t preferred_address[6], bool prefe
     return result;
   }
 #if CONFIG_IDF_TARGET_ESP32
+  {
+    esp_bt_io_cap_t io_capability = ESP_BT_IO_CAP_NONE;
+    esp_bt_pin_code_t unused_pin = {0u};
+    result =
+        esp_bt_gap_set_security_param(ESP_BT_SP_IOCAP_MODE, &io_capability, sizeof(io_capability));
+    if (result != ESP_OK) {
+      return result;
+    }
+    result = esp_bt_gap_set_pin(ESP_BT_PIN_TYPE_VARIABLE, 0u, unused_pin);
+    if (result != ESP_OK) {
+      return result;
+    }
+  }
   result = esp_bt_gap_register_callback(classic_gap_event_handler);
   if (result != ESP_OK) {
     return result;
