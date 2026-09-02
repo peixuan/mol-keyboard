@@ -49,6 +49,26 @@ mol_enable_warnings(mol_portamento_tests)
 mol_enable_optional_instrumentation(mol_portamento_tests)
 add_test(NAME mol_portamento_tests COMMAND mol_portamento_tests)
 
+add_executable(mol_event_trace conformance/event_trace.c)
+target_link_libraries(mol_event_trace PRIVATE mol::core)
+set_target_properties(mol_event_trace PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_event_trace)
+mol_enable_optional_instrumentation(mol_event_trace)
+add_test(
+  NAME mol_event_trace_conformance
+  COMMAND
+    ${CMAKE_COMMAND} -DMOL_EXECUTABLE=$<TARGET_FILE:mol_event_trace>
+    -DMOL_EMULATOR=${CMAKE_CROSSCOMPILING_EMULATOR}
+    -DMOL_EXPECTED=${CMAKE_CURRENT_SOURCE_DIR}/golden/m2_event_trace.txt -P
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_event_trace.cmake)
+
+add_executable(mol_property_tests property/test_properties.c)
+target_link_libraries(mol_property_tests PRIVATE mol::core)
+set_target_properties(mol_property_tests PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_property_tests)
+mol_enable_optional_instrumentation(mol_property_tests)
+add_test(NAME mol_property_tests COMMAND mol_property_tests)
+
 add_executable(mol_platform_audio_runtime_tests unit/test_platform_audio_runtime.c)
 target_link_libraries(mol_platform_audio_runtime_tests PRIVATE mol::platform_audio_runtime)
 set_target_properties(mol_platform_audio_runtime_tests PROPERTIES C_EXTENSIONS OFF
