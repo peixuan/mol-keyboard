@@ -107,3 +107,22 @@ function(mol_add_oboe)
   target_link_libraries(mol_oboe INTERFACE oboe)
   set_property(TARGET oboe PROPERTY FOLDER third_party)
 endfunction()
+
+function(mol_add_oboe_headers)
+  if(TARGET mol_oboe_headers)
+    return()
+  endif()
+
+  FetchContent_Declare(
+    oboe_headers
+    URL "https://github.com/google/oboe/archive/refs/tags/${MOL_OBOE_VERSION}.tar.gz"
+    URL_HASH "SHA256=${MOL_OBOE_ARCHIVE_SHA256}"
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    SOURCE_SUBDIR mol-keyboard-headers-only)
+  FetchContent_MakeAvailable(oboe_headers)
+
+  add_library(mol_oboe_headers INTERFACE)
+  add_library(mol::oboe_headers ALIAS mol_oboe_headers)
+  target_include_directories(mol_oboe_headers SYSTEM INTERFACE
+                             "${oboe_headers_SOURCE_DIR}/include")
+endfunction()
