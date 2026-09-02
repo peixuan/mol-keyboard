@@ -15,6 +15,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -167,6 +168,8 @@ class AudioRuntime::Impl {
   void stop();
   bool initialize_context(bool null_backend, std::string& error);
   bool initialize_device(const std::string& device_id, std::string& error);
+  void start_maintenance();
+  void maintenance_loop();
   void shutdown_device(bool shutdown_engine = true);
   void drain_commands() noexcept;
   mol_result_t synchronize(mol_engine_state_t* state, const molseq::SequenceDocument* load,
@@ -190,6 +193,9 @@ class AudioRuntime::Impl {
   std::string input_id;
   std::atomic<bool> shutdown_requested{false};
   std::atomic<bool> stopping{false};
+  std::atomic<bool> recovery_requested{false};
+  std::atomic<bool> maintenance_stop{false};
+  std::thread maintenance_thread;
   std::atomic<std::uint64_t> callbacks{0u};
   std::atomic<std::uint64_t> rendered_frames{0u};
   std::atomic<std::uint64_t> render_failures{0u};
@@ -316,6 +322,7 @@ bool AudioRuntime::Impl::start(bool use_null_backend, const std::string& device_
   }
   shutdown_requested.store(false, std::memory_order_release);
   stopping.store(false, std::memory_order_release);
+  recovery_requested.store(false, std::memory_order_release);
   if (!initialize_context(use_null_backend, error)) return false;
   if (initialize_device(device_id, error)) return true;
   ma_context_uninit(&context);
@@ -353,7 +360,42 @@ void AudioRuntime::Impl::shutdown_device(bool shutdown_engine) {
   status.available = false;
 }
 
+void AudioRuntime::Impl::start_maintenance() {
+  maintenance_stop.store(false, std::memory_order_release);
+  maintenance_thread = std::thread(&Impl::maintenance_loop, this);
+}
+
+void AudioRuntime::Impl::maintenance_loop() {
+  while (!maintenance_stop.load(std::memory_order_acquire)) {
+    if (!recovery_requested.exchange(false, std::memory_order_acq_rel)) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      continue;
+    }
+    bool recovered = false;
+    {
+      std::lock_guard<std::mutex> lock(control_mutex);
+      if (context_initialized && !stopping.load(std::memory_order_acquire)) {
+        const std::string previous_id = status.device_id;
+        shutdown_device(false);
+        stopping.store(false, std::memory_order_release);
+        std::string error;
+        recovered = initialize_device(previous_id, error);
+        if (!recovered && previous_id != "default") {
+          stopping.store(false, std::memory_order_release);
+          recovered = initialize_device("default", error);
+        }
+      }
+    }
+    if (!recovered && !maintenance_stop.load(std::memory_order_acquire)) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(400));
+      recovery_requested.store(true, std::memory_order_release);
+    }
+  }
+}
+
 void AudioRuntime::Impl::stop() {
+  maintenance_stop.store(true, std::memory_order_release);
+  if (maintenance_thread.joinable()) maintenance_thread.join();
   if (physical_input != nullptr) physical_input->detach();
   input_id.clear();
   std::lock_guard<std::mutex> lock(control_mutex);
@@ -457,8 +499,10 @@ void AudioRuntime::Impl::notification_callback(
   if (notification->type == ma_device_notification_type_rerouted)
     impl->device_reroutes.fetch_add(1u, std::memory_order_relaxed);
   if (notification->type == ma_device_notification_type_stopped &&
-      !impl->stopping.load(std::memory_order_acquire))
+      !impl->stopping.load(std::memory_order_acquire)) {
     impl->underruns.fetch_add(1u, std::memory_order_relaxed);
+    impl->recovery_requested.store(true, std::memory_order_release);
+  }
 }
 
 AudioRuntime::AudioRuntime() : impl_(std::make_unique<Impl>()) {}
@@ -466,7 +510,9 @@ AudioRuntime::AudioRuntime() : impl_(std::make_unique<Impl>()) {}
 AudioRuntime::~AudioRuntime() { stop(); }
 
 bool AudioRuntime::start(bool null_backend, const std::string& device_id, std::string& error) {
-  return impl_->start(null_backend, device_id, error);
+  const bool started = impl_->start(null_backend, device_id, error);
+  if (started) impl_->start_maintenance();
+  return started;
 }
 
 void AudioRuntime::stop() { impl_->stop(); }

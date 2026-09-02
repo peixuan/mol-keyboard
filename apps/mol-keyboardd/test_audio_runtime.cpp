@@ -78,6 +78,19 @@ int main() {
   }
   const molcontrol::AudioStatus audio = runtime.audio_status();
   if (!audio.available || !audio.null_sink || audio.backend != "Null") return 1;
+  mol_command_t preset = command(MOL_COMMAND_SET_PRESET);
+  preset.payload.preset.preset = MOL_PRESET_VIOLIN;
+  if (runtime.submit(preset) != MOL_OK) return 1;
+  std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  state.struct_size = static_cast<std::uint32_t>(sizeof(state));
+  if (runtime.snapshot(state) != MOL_OK || state.preset != MOL_PRESET_VIOLIN ||
+      runtime.select_output("default") != MOL_OK)
+    return 1;
+  state.struct_size = static_cast<std::uint32_t>(sizeof(state));
+  if (runtime.snapshot(state) != MOL_OK || state.preset != MOL_PRESET_VIOLIN) {
+    std::fprintf(stderr, "Output restart did not preserve engine state\n");
+    return 1;
+  }
   const std::vector<molcontrol::DeviceInfo> inputs = runtime.input_devices();
   for (const molcontrol::DeviceInfo& input : inputs) {
     if (!input.is_physical_input) continue;
