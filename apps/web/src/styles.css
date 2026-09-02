@@ -337,6 +337,83 @@ h1 em {
   color: var(--cream);
 }
 
+.connection-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(320px, 1.2fr);
+  gap: clamp(28px, 5vw, 72px);
+  padding: 34px clamp(20px, 4vw, 64px);
+  border-bottom: 2px solid var(--ink);
+  background: var(--blue);
+  color: var(--cream);
+}
+
+.connection-panel[hidden] {
+  display: none;
+}
+
+.connection-panel h2 {
+  margin: 5px 0 12px;
+  font-size: clamp(34px, 5vw, 58px);
+}
+
+.connection-panel p {
+  max-width: 620px;
+  margin: 0;
+  line-height: 1.55;
+}
+
+.connection-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.connection-fields label {
+  display: grid;
+  gap: 7px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.connection-fields input {
+  min-width: 0;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 2px solid var(--cream);
+  border-radius: 0;
+  background: var(--ink);
+  color: var(--cream);
+  font: 700 13px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.connection-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.connection-actions button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 2px solid var(--cream);
+  border-radius: 0;
+  background: var(--cream);
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 850;
+}
+
+.connection-actions button + button {
+  background: transparent;
+  color: var(--cream);
+}
+
+.connection-fields output {
+  align-self: center;
+  font: 750 12px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
 .instrument-heading {
   display: flex;
   gap: 24px;
@@ -755,6 +832,10 @@ footer p {
     margin-left: 0;
   }
 
+  .connection-panel {
+    grid-template-columns: 1fr;
+  }
+
   .control-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -791,6 +872,10 @@ footer p {
   .mode-switch,
   .mode-switch button {
     flex: 1;
+  }
+
+  .connection-fields {
+    grid-template-columns: 1fr;
   }
 
   .control-heading,

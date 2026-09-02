@@ -1,4 +1,5 @@
 import "./styles.css";
+import type { AudioBackend } from "./audio-backend";
 import { type EngineEvent, MolAudioEngine } from "./audio-engine";
 import { ARPEGGIATORS, CHORDS, PRESETS, SCALES, optionsMarkup } from "./catalog";
 import {
@@ -10,6 +11,7 @@ import {
   saveSettings,
 } from "./persistence";
 import { registerPwa } from "./pwa";
+import { ServiceAudioEngine } from "./service-engine";
 import {
   BINDING_BY_CODE,
   BINDING_BY_NOTE,
@@ -82,6 +84,30 @@ template.innerHTML = `
         </select>
       </label>
     </nav>
+
+    <section class="connection-panel" data-service-connection hidden aria-labelledby="service-title">
+      <div>
+        <p class="eyebrow">Local authenticated control</p>
+        <h2 id="service-title" data-en="Desktop service" data-zh="桌面服务">Desktop service</h2>
+        <p data-en="Start mol-keyboardd with WebSocket control, then enter its printed endpoint and one-time session token. The token is never stored."
+           data-zh="以 WebSocket 控制方式启动 mol-keyboardd，然后输入它输出的端点与一次性会话令牌。令牌绝不会被保存。">
+          Start mol-keyboardd with WebSocket control, then enter its printed endpoint and one-time session token. The token is never stored.
+        </p>
+      </div>
+      <div class="connection-fields">
+        <label><span data-en="Endpoint" data-zh="端点">Endpoint</span>
+          <input data-service-endpoint type="url" value="ws://127.0.0.1:8766/control" spellcheck="false" autocomplete="off" />
+        </label>
+        <label><span data-en="Session token" data-zh="会话令牌">Session token</span>
+          <input data-service-token type="password" maxlength="128" autocomplete="off" />
+        </label>
+        <div class="connection-actions">
+          <button type="button" data-service-connect data-en="Connect" data-zh="连接">Connect</button>
+          <button type="button" data-service-disconnect data-en="Disconnect" data-zh="断开">Disconnect</button>
+        </div>
+        <output data-service-status role="status" aria-live="polite">Not connected</output>
+      </div>
+    </section>
 
     <section class="instrument" id="instrument" aria-labelledby="instrument-title">
       <div class="instrument-heading">
@@ -206,7 +232,9 @@ template.innerHTML = `
 `;
 
 class MolKeyboardApp extends HTMLElement {
-  private readonly engine = new MolAudioEngine();
+  private readonly standaloneEngine = new MolAudioEngine();
+  private readonly serviceEngine = new ServiceAudioEngine();
+  private engine: AudioBackend = this.standaloneEngine;
   private readonly activeKeys = new Map<string, ActiveGesture>();
   private readonly activePointers = new Map<number, ActiveGesture>();
   private readonly activeAccessible = new Map<number, ActiveGesture>();
@@ -246,7 +274,8 @@ class MolKeyboardApp extends HTMLElement {
 
   disconnectedCallback(): void {
     this.releaseAll();
-    void this.engine.close();
+    void this.standaloneEngine.close();
+    void this.serviceEngine.close();
   }
 
   private bindEvents(): void {
@@ -267,16 +296,23 @@ class MolKeyboardApp extends HTMLElement {
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "hidden") this.releaseAll();
     });
-    this.engine.addEventListener("engineevents", (event) => {
-      const engineEvent = event as CustomEvent<readonly EngineEvent[]>;
-      this.onEngineEvents(engineEvent.detail);
-    });
-    this.engine.addEventListener("statechange", () => this.onAudioReady());
+    for (const backend of [this.standaloneEngine, this.serviceEngine]) {
+      backend.addEventListener("engineevents", (event) => {
+        if (backend !== this.engine) return;
+        const engineEvent = event as CustomEvent<readonly EngineEvent[]>;
+        this.onEngineEvents(engineEvent.detail);
+      });
+      backend.addEventListener("statechange", () => this.onEngineStateChanged(backend));
+    }
   }
 
   private onAudioReady(): void {
     const sampleRate = this.engine.sampleRate;
-    const rateLabel = sampleRate === undefined ? "worklet" : `${Math.round(sampleRate / 100) / 10} kHz worklet`;
+    const backendLabel = this.engine === this.serviceEngine ? "desktop service" : "worklet";
+    const rateLabel =
+      sampleRate === undefined
+        ? backendLabel
+        : `${Math.round(sampleRate / 100) / 10} kHz ${backendLabel}`;
     this.setStatus(`Audio ready · ${rateLabel}`, "ready");
     if (this.startButton !== undefined) {
       this.startButton.disabled = true;
@@ -284,6 +320,20 @@ class MolKeyboardApp extends HTMLElement {
       if (label !== null) label.textContent = this.language === "zh" ? "音频已就绪" : "Audio ready";
     }
     this.updateRuntimeFacts();
+  }
+
+  private onEngineStateChanged(backend: AudioBackend): void {
+    if (backend !== this.engine) return;
+    if (backend.state === "running") {
+      this.onAudioReady();
+      return;
+    }
+    if (backend === this.serviceEngine) {
+      this.setStatus("Desktop service disconnected", "error");
+      if (this.startButton !== undefined) this.startButton.disabled = false;
+      const connectionStatus = this.querySelector<HTMLOutputElement>("[data-service-status]");
+      if (connectionStatus !== null) connectionStatus.value = "Not connected";
+    }
   }
 
   private bindControls(): void {
@@ -300,17 +350,14 @@ class MolKeyboardApp extends HTMLElement {
     });
     this.querySelector<HTMLSelectElement>("[data-backend]")?.addEventListener("change", (event) => {
       const value = (event.currentTarget as HTMLSelectElement).value;
-      if (value !== "standalone") {
-        this.setStatus(
-          value === "service"
-            ? "Desktop service controller selected · connection required"
-            : "ESP32 controller selected · connection required",
-          "loading",
-        );
-      } else {
-        this.setStatus("Standalone Web audio selected", "ready");
-      }
+      void this.selectBackend(value);
       this.scheduleSettingsSave();
+    });
+    this.querySelector("[data-service-connect]")?.addEventListener("click", () => {
+      void this.connectService();
+    });
+    this.querySelector("[data-service-disconnect]")?.addEventListener("click", () => {
+      void this.disconnectService();
     });
 
     this.bindSelect("preset", (value) => this.engine.setPreset(value));
@@ -380,6 +427,75 @@ class MolKeyboardApp extends HTMLElement {
     this.control(control)?.addEventListener("change", () => {
       this.runControl(control, submit(this.controlNumber(control)));
     });
+  }
+
+  private async selectBackend(value: string): Promise<void> {
+    this.releaseAll();
+    this.configurationPromise = undefined;
+    this.actualVoices.clear();
+    const panel = this.querySelector<HTMLElement>("[data-service-connection]");
+    if (value === "service") {
+      this.engine = this.serviceEngine;
+      if (panel !== null) panel.hidden = false;
+      this.setStatus(
+        this.serviceEngine.connected
+          ? "Desktop service connected"
+          : "Desktop service controller selected · connection required",
+        this.serviceEngine.connected ? "ready" : "loading",
+      );
+      if (this.startButton !== undefined) this.startButton.disabled = !this.serviceEngine.connected;
+    } else if (value === "standalone") {
+      this.engine = this.standaloneEngine;
+      if (panel !== null) panel.hidden = true;
+      await this.serviceEngine.close();
+      this.setStatus("Standalone Web audio selected", "ready");
+      if (this.startButton !== undefined) this.startButton.disabled = false;
+    } else {
+      this.engine = this.serviceEngine;
+      if (panel !== null) panel.hidden = true;
+      await this.serviceEngine.close();
+      this.setStatus("ESP32 controller transport is not connected", "loading");
+      if (this.startButton !== undefined) this.startButton.disabled = true;
+    }
+    await this.refreshRecordings();
+    this.updateRuntimeFacts();
+    this.drawKeyboard();
+  }
+
+  private async connectService(): Promise<void> {
+    const endpoint = this.querySelector<HTMLInputElement>("[data-service-endpoint]");
+    const token = this.querySelector<HTMLInputElement>("[data-service-token]");
+    const status = this.querySelector<HTMLOutputElement>("[data-service-status]");
+    const connect = this.querySelector<HTMLButtonElement>("[data-service-connect]");
+    if (endpoint === null || token === null) return;
+    if (connect !== null) connect.disabled = true;
+    if (status !== null) status.value = "Connecting…";
+    this.setStatus("Connecting to the desktop service…", "loading");
+    try {
+      await this.serviceEngine.connect(endpoint.value.trim(), token.value.trim());
+      token.value = "";
+      this.engine = this.serviceEngine;
+      this.configurationPromise = this.applyCurrentSettings();
+      await this.configurationPromise;
+      if (status !== null) status.value = "Connected · authenticated loopback";
+      await this.refreshRecordings();
+      this.onAudioReady();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Could not connect to the service";
+      if (status !== null) status.value = message;
+      this.setStatus(message, "error");
+      if (this.startButton !== undefined) this.startButton.disabled = true;
+    } finally {
+      if (connect !== null) connect.disabled = false;
+    }
+  }
+
+  private async disconnectService(): Promise<void> {
+    this.releaseAll();
+    await this.serviceEngine.close();
+    this.configurationPromise = undefined;
+    const status = this.querySelector<HTMLOutputElement>("[data-service-status]");
+    if (status !== null) status.value = "Not connected";
   }
 
   private bindRange(
@@ -461,6 +577,12 @@ class MolKeyboardApp extends HTMLElement {
       if (!stoppedRecording) return;
       await recordingStopped;
       const bytes = await this.engine.exportRecording();
+      if (this.engine === this.serviceEngine) {
+        const storage = this.querySelector<HTMLOutputElement>("[data-recording-storage]");
+        if (storage !== null) storage.value = "Desktop service · local .molseq";
+        await this.refreshRecordings(this.serviceEngine.lastRemoteRecording);
+        return;
+      }
       if (bytes === undefined) throw new Error("The engine could not export the recorded sequence");
       const label = this.language === "zh" ? "浏览器录音" : "Browser take";
       const metadata = await saveRecording(bytes, `${label} ${new Date().toLocaleTimeString()}`);
@@ -502,8 +624,10 @@ class MolKeyboardApp extends HTMLElement {
     if (select === null || select.value === "") return;
     try {
       await this.ensureConfigured();
-      const bytes = await loadStoredRecording(select.value);
-      const accepted = await this.engine.loadRecording(bytes);
+      const accepted =
+        this.engine === this.serviceEngine
+          ? await this.serviceEngine.loadRemoteRecording(select.value)
+          : await this.engine.loadRecording(await loadStoredRecording(select.value));
       if (!accepted) throw new Error("The audio engine rejected the saved sequence");
       this.setRecordingState("recorded");
     } catch (error: unknown) {
@@ -515,6 +639,16 @@ class MolKeyboardApp extends HTMLElement {
     const select = this.querySelector<HTMLSelectElement>("[data-recording-list]");
     if (select === null) return;
     try {
+      if (this.engine === this.serviceEngine) {
+        select.replaceChildren(new Option("—", ""));
+        if (this.serviceEngine.connected) {
+          for (const name of await this.serviceEngine.listRemoteRecordings()) {
+            select.add(new Option(name, name));
+          }
+          if (selectedId !== undefined) select.value = selectedId;
+        }
+        return;
+      }
       const recordings = await listRecordings();
       select.replaceChildren(new Option("—", ""));
       for (const recording of recordings) {
@@ -554,6 +688,7 @@ class MolKeyboardApp extends HTMLElement {
     if (metronome !== null) metronome.checked = settings.metronome;
     const backend = this.querySelector<HTMLSelectElement>("[data-backend]");
     if (backend !== null) backend.value = settings.backend;
+    await this.selectBackend(settings.backend);
     this.setMode(settings.mode === "studio");
     this.applyLanguage(settings.language);
     for (const control of ["volume", "chorus", "delay", "reverb", "gate", "portamento-time"]) {
@@ -676,7 +811,11 @@ class MolKeyboardApp extends HTMLElement {
     const fastPath = this.querySelector<HTMLElement>("[data-fast-path]");
     if (fastPath !== null) {
       fastPath.textContent =
-        this.engine.state === "idle"
+        this.engine.commandTransport === "websocket-jsonrpc"
+          ? this.serviceEngine.connected
+            ? "Authenticated loopback WebSocket"
+            : "WebSocket disconnected"
+          : this.engine.state === "idle"
           ? isolated
             ? "SharedArrayBuffer available"
             : "MessagePort baseline"
