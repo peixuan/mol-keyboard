@@ -55,3 +55,39 @@ jobs:
           cmake --preset wasm-release
           cmake --build --preset wasm-release
           ctest --preset wasm-release
+
+  android:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install exact Android SDK packages
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "ndk;28.2.13676358" \
+            "cmake;3.31.6"
+      - name: Install pinned Emscripten SDK
+        shell: bash
+        run: |
+          git init "$RUNNER_TEMP/emsdk"
+          git -C "$RUNNER_TEMP/emsdk" remote add origin https://github.com/emscripten-core/emsdk.git
+          git -C "$RUNNER_TEMP/emsdk" fetch --depth 1 origin dfb9d1a46c3bb8f52e1e6324be23123b9d73c190
+          git -C "$RUNNER_TEMP/emsdk" checkout --detach FETCH_HEAD
+          "$RUNNER_TEMP/emsdk/emsdk" install 6.0.5
+          "$RUNNER_TEMP/emsdk/emsdk" activate 6.0.5
+          echo "EMSDK=$RUNNER_TEMP/emsdk" >> "$GITHUB_ENV"
+      - name: Build Android application and device test
+        shell: bash
+        run: |
+          source "$EMSDK/emsdk_env.sh"
+          platforms/android/build-app.sh Debug
+          MOL_SKIP_WEB_BUILD=1 platforms/android/build-app.sh DebugAndroidTest
+          MOL_SKIP_WEB_BUILD=1 platforms/android/build-app.sh Release
+          (
+            cd platforms/android
+            ./gradlew :app:lintDebug --no-daemon --no-configuration-cache
+          )
