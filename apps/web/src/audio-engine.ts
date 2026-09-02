@@ -1,3 +1,5 @@
+import { SharedCommandRing } from "./shared-ring";
+
 export interface NoteEvent {
   readonly type: "note-on" | "note-off";
   readonly note?: number;
@@ -8,6 +10,7 @@ export interface NoteEvent {
 interface ReadyMessage {
   readonly type: "ready";
   readonly ready: boolean;
+  readonly fastPath?: boolean;
 }
 
 export interface EngineEvent {
@@ -33,6 +36,8 @@ export class MolAudioEngine extends EventTarget {
   private startPromise: Promise<void> | undefined;
   private readonly queue: NoteEvent[] = [];
   private flushScheduled = false;
+  private sharedRing: SharedCommandRing | undefined;
+  private fastPath = false;
   private nextRequestId = 1;
   private readonly pendingControls = new Map<
     number,
@@ -55,21 +60,34 @@ export class MolAudioEngine extends EventTarget {
     return this.context?.sampleRate;
   }
 
+  get commandTransport(): "shared-array-buffer" | "message-port" {
+    return this.fastPath ? "shared-array-buffer" : "message-port";
+  }
+
+  get droppedCommandCount(): number {
+    return this.sharedRing?.droppedCount ?? 0;
+  }
+
   start(): Promise<void> {
     this.startPromise ??= this.initialize();
     return this.startPromise;
   }
 
   noteOn(note: number, velocity: number, gestureId: number): void {
+    if (this.sharedRing?.noteOn(note, velocity, gestureId) === true) return;
+    if (this.sharedRing !== undefined) return;
     this.enqueue({ type: "note-on", note, velocity, gestureId });
   }
 
   noteOff(gestureId: number): void {
+    if (this.sharedRing?.noteOff(gestureId) === true) return;
+    if (this.sharedRing !== undefined) return;
     this.enqueue({ type: "note-off", gestureId });
   }
 
   allNotesOff(): void {
     this.queue.length = 0;
+    this.sharedRing?.allNotesOff();
     this.node?.port.postMessage({ type: "all-notes-off" });
   }
 
@@ -169,6 +187,8 @@ export class MolAudioEngine extends EventTarget {
     }
     this.context = undefined;
     this.startPromise = undefined;
+    this.sharedRing = undefined;
+    this.fastPath = false;
     for (const pending of this.pendingControls.values()) {
       window.clearTimeout(pending.timer);
       pending.resolve(false);
@@ -196,10 +216,18 @@ export class MolAudioEngine extends EventTarget {
     try {
       const workletUrl = new URL("generated/mol_audio_worklet_core.js", document.baseURI);
       await context.audioWorklet.addModule(workletUrl.href);
+      this.sharedRing = SharedCommandRing.create();
       const node = new AudioWorkletNode(context, "mol-keyboard", {
         numberOfInputs: 0,
         numberOfOutputs: 1,
         outputChannelCount: [2],
+        processorOptions:
+          this.sharedRing === undefined
+            ? undefined
+            : {
+                commandBuffer: this.sharedRing.buffer,
+                commandCapacity: this.sharedRing.capacity,
+              },
       });
       this.node = node;
       node.port.addEventListener("message", (event: MessageEvent<unknown>) => this.onMessage(event.data));
@@ -308,6 +336,7 @@ export class MolAudioEngine extends EventTarget {
         window.clearTimeout(timer);
         port.removeEventListener("message", onMessage);
         if (message.ready === true) {
+          this.fastPath = message.fastPath === true && this.sharedRing !== undefined;
           resolve();
         } else {
           reject(new Error("The WebAssembly audio engine could not initialize."));

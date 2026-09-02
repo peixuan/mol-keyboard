@@ -145,6 +145,29 @@ if (loaded?.requestId !== 11 || loaded?.accepted !== true) {
   throw new Error("AudioWorklet recording reload failed");
 }
 
+const sharedCapacity = 4;
+const sharedBuffer = new SharedArrayBuffer((4 + sharedCapacity * 4) * 4);
+const sharedWords = new Int32Array(sharedBuffer);
+const sharedFloats = new Float32Array(sharedBuffer);
+const sharedProcessor = new processorConstructor({
+  processorOptions: { commandBuffer: sharedBuffer, commandCapacity: sharedCapacity },
+});
+const sharedOffset = 4;
+sharedWords[sharedOffset] = 1;
+sharedWords[sharedOffset + 1] = 64;
+sharedFloats[sharedOffset + 2] = 0.8;
+sharedWords[sharedOffset + 3] = 44;
+Atomics.store(sharedWords, 0, 1);
+sharedProcessor.process([], [[left, right]], {});
+const sharedEvents = sharedProcessor.port.messages.find((message) => message.type === "engine-events");
+if (
+  sharedProcessor.port.messages[0]?.fastPath !== true ||
+  Atomics.load(sharedWords, 1) !== 1 ||
+  sharedEvents?.words[3] !== 64
+) {
+  throw new Error("AudioWorklet SharedArrayBuffer fast path failed");
+}
+
 process.stdout.write(
-  `AudioWorklet C4 frequency=${frequency.toFixed(4)}Hz release=ok recording=${exported.bytes.length}B\n`,
+  `AudioWorklet C4 frequency=${frequency.toFixed(4)}Hz release=ok recording=${exported.bytes.length}B shared=ok\n`,
 );

@@ -64,6 +64,13 @@ const MOL_CHANNEL_COUNT = 2;
 const MOL_MAX_VOICES = 32;
 const MOL_MAX_MESSAGE_EVENTS = 64;
 const MOL_EVENT_WORDS = 4;
+const MOL_SHARED_HEADER_WORDS = 4;
+const MOL_SHARED_EVENT_WORDS = 4;
+const MOL_SHARED_WRITE_INDEX = 0;
+const MOL_SHARED_READ_INDEX = 1;
+const MOL_SHARED_NOTE_ON = 1;
+const MOL_SHARED_NOTE_OFF = 2;
+const MOL_SHARED_ALL_NOTES_OFF = 3;
 
 const COMMAND = Object.freeze({
   sustain: 5,
@@ -113,11 +120,31 @@ class MolAudioProcessor extends AudioWorkletProcessor {
       count: 0,
       words: new Uint32Array(MOL_MAX_MESSAGE_EVENTS * MOL_EVENT_WORDS),
     };
+    this.sharedWords = undefined;
+    this.sharedFloats = undefined;
+    this.sharedCapacity = 0;
+    const commandBuffer = options?.processorOptions?.commandBuffer;
+    const commandCapacity = options?.processorOptions?.commandCapacity;
+    if (
+      typeof SharedArrayBuffer !== "undefined" &&
+      commandBuffer instanceof SharedArrayBuffer &&
+      integerInRange(commandCapacity, 2, 4096) &&
+      commandBuffer.byteLength ===
+        (MOL_SHARED_HEADER_WORDS + commandCapacity * MOL_SHARED_EVENT_WORDS) * 4
+    ) {
+      this.sharedWords = new Int32Array(commandBuffer);
+      this.sharedFloats = new Float32Array(commandBuffer);
+      this.sharedCapacity = commandCapacity;
+    }
     const initialNote = options?.processorOptions?.initialNote;
     if (this.ready && initialNote !== undefined) {
       noteOn(initialNote, 1.0, 1);
     }
-    this.port.postMessage({ type: "ready", ready: this.ready });
+    this.port.postMessage({
+      type: "ready",
+      ready: this.ready,
+      fastPath: this.sharedWords !== undefined,
+    });
     this.port.onmessage = (event) => {
       const message = event.data;
       if (!this.ready || message === null || typeof message !== "object") {
@@ -319,7 +346,43 @@ class MolAudioProcessor extends AudioWorkletProcessor {
     this.port.postMessage(this.engineEventMessage);
   }
 
+  drainSharedCommands() {
+    if (this.sharedWords === undefined || this.sharedFloats === undefined) return;
+    let readIndex = Atomics.load(this.sharedWords, MOL_SHARED_READ_INDEX);
+    const writeIndex = Atomics.load(this.sharedWords, MOL_SHARED_WRITE_INDEX);
+    while (readIndex !== writeIndex) {
+      const offset = MOL_SHARED_HEADER_WORDS + readIndex * MOL_SHARED_EVENT_WORDS;
+      const type = this.sharedWords[offset];
+      const note = this.sharedWords[offset + 1];
+      const velocity = this.sharedFloats[offset + 2];
+      const gestureId = this.sharedWords[offset + 3] >>> 0;
+      if (
+        type === MOL_SHARED_NOTE_ON &&
+        validNote(note) &&
+        validVelocity(velocity) &&
+        validGestureId(gestureId) &&
+        !this.activeGestures.has(gestureId) &&
+        noteOn(note, velocity, gestureId) === 0
+      ) {
+        this.activeGestures.add(gestureId);
+      } else if (
+        type === MOL_SHARED_NOTE_OFF &&
+        validGestureId(gestureId) &&
+        this.activeGestures.has(gestureId) &&
+        noteOff(gestureId) === 0
+      ) {
+        this.activeGestures.delete(gestureId);
+      } else if (type === MOL_SHARED_ALL_NOTES_OFF) {
+        for (const activeGesture of this.activeGestures) noteOff(activeGesture);
+        this.activeGestures.clear();
+      }
+      readIndex = (readIndex + 1) % this.sharedCapacity;
+      Atomics.store(this.sharedWords, MOL_SHARED_READ_INDEX, readIndex);
+    }
+  }
+
   process(_inputs, outputs) {
+    this.drainSharedCommands();
     const output = outputs[0];
     if (output === undefined || output.length === 0) {
       return true;

@@ -192,6 +192,7 @@ template.innerHTML = `
             <div><dt data-en="Fast path" data-zh="快速路径">Fast path</dt><dd data-fast-path>MessagePort baseline</dd></div>
             <div><dt data-en="Persistence" data-zh="持久化">Persistence</dt><dd data-storage-state>Checking…</dd></div>
             <div><dt data-en="Core events" data-zh="核心事件">Core events</dt><dd data-event-count>0</dd></div>
+            <div><dt data-en="Dropped commands" data-zh="丢弃命令">Dropped commands</dt><dd data-dropped-count>0</dd></div>
           </dl>
         </div>
       </div>
@@ -282,6 +283,7 @@ class MolKeyboardApp extends HTMLElement {
       const label = this.startButton.querySelector("span");
       if (label !== null) label.textContent = this.language === "zh" ? "音频已就绪" : "Audio ready";
     }
+    this.updateRuntimeFacts();
   }
 
   private bindControls(): void {
@@ -673,7 +675,14 @@ class MolKeyboardApp extends HTMLElement {
     const isolated = window.crossOriginIsolated && typeof SharedArrayBuffer !== "undefined";
     const fastPath = this.querySelector<HTMLElement>("[data-fast-path]");
     if (fastPath !== null) {
-      fastPath.textContent = isolated ? "SharedArrayBuffer available" : "MessagePort baseline";
+      fastPath.textContent =
+        this.engine.state === "idle"
+          ? isolated
+            ? "SharedArrayBuffer available"
+            : "MessagePort baseline"
+          : this.engine.commandTransport === "shared-array-buffer"
+            ? "SharedArrayBuffer SPSC"
+            : "MessagePort baseline";
     }
     const storage = this.querySelector<HTMLElement>("[data-storage-state]");
     if (storage !== null) {
@@ -700,6 +709,8 @@ class MolKeyboardApp extends HTMLElement {
     if (voiceReadout !== null) voiceReadout.textContent = String(this.actualVoices.size);
     const eventReadout = this.querySelector<HTMLElement>("[data-event-count]");
     if (eventReadout !== null) eventReadout.textContent = String(this.coreEventCount);
+    const droppedReadout = this.querySelector<HTMLElement>("[data-dropped-count]");
+    if (droppedReadout !== null) droppedReadout.textContent = String(this.engine.droppedCommandCount);
     if (this.actualVoices.size > 0) this.setStatus("Audio ready · playing", "ready");
     this.drawKeyboard();
   }
