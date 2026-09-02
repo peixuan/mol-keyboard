@@ -4,13 +4,6 @@ if(NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
   message(FATAL_ERROR "Fuzz targets require Clang and libFuzzer")
 endif()
 
-add_executable(fuzz_patch_parser fuzz_patch_parser.c)
-target_link_libraries(fuzz_patch_parser PRIVATE mol::core)
-target_compile_options(fuzz_patch_parser PRIVATE -fsanitize=fuzzer)
-target_link_options(fuzz_patch_parser PRIVATE -fsanitize=fuzzer)
-set_target_properties(fuzz_patch_parser PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
-mol_enable_warnings(fuzz_patch_parser)
-mol_enable_optional_instrumentation(fuzz_patch_parser)
 if(WIN32)
   execute_process(
     COMMAND ${CMAKE_C_COMPILER} -print-resource-dir
@@ -23,12 +16,29 @@ if(WIN32)
   if(NOT _mol_asan_runtime_count EQUAL 1)
     message(FATAL_ERROR "Expected one Clang ASan runtime, found ${_mol_asan_runtime_count}")
   endif()
-  add_custom_command(
-    TARGET fuzz_patch_parser
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${_mol_asan_runtime}
-            $<TARGET_FILE_DIR:fuzz_patch_parser>)
 endif()
+
+function(mol_add_fuzzer target source)
+  add_executable(${target} ${source})
+  target_link_libraries(${target} PRIVATE mol::core)
+  target_compile_options(${target} PRIVATE -fsanitize=fuzzer)
+  target_link_options(${target} PRIVATE -fsanitize=fuzzer)
+  set_target_properties(${target} PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+  mol_enable_warnings(${target})
+  mol_enable_optional_instrumentation(${target})
+  if(WIN32)
+    add_custom_command(
+      TARGET ${target}
+      POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${_mol_asan_runtime}
+              $<TARGET_FILE_DIR:${target}>
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${_mol_asan_runtime}
+              ${CMAKE_CURRENT_BINARY_DIR}/..)
+  endif()
+endfunction()
+
+mol_add_fuzzer(fuzz_patch_parser fuzz_patch_parser.c)
+mol_add_fuzzer(fuzz_sequence_parser fuzz_sequence_parser.c)
 
 set(_mol_patch_corpus "${CMAKE_CURRENT_BINARY_DIR}/corpus/patch_parser_ci")
 set(_mol_patch_artifacts "${CMAKE_CURRENT_BINARY_DIR}/artifacts/patch_parser")
@@ -44,3 +54,16 @@ add_test(
     fuzz_patch_parser -max_total_time=20 -max_len=16384
     -artifact_prefix=${_mol_patch_artifacts}/ ${_mol_patch_corpus})
 set_tests_properties(fuzz_patch_parser_smoke PROPERTIES TIMEOUT 45)
+
+set(_mol_sequence_corpus "${CMAKE_CURRENT_BINARY_DIR}/corpus/sequence_parser_ci")
+set(_mol_sequence_artifacts "${CMAKE_CURRENT_BINARY_DIR}/artifacts/sequence_parser")
+file(MAKE_DIRECTORY "${_mol_sequence_corpus}" "${_mol_sequence_artifacts}")
+configure_file(${PROJECT_SOURCE_DIR}/examples/sequences/scale-study.molseq
+               ${_mol_sequence_corpus}/scale-study.molseq COPYONLY)
+
+add_test(
+  NAME fuzz_sequence_parser_smoke
+  COMMAND
+    fuzz_sequence_parser -max_total_time=20 -max_len=65536 -timeout=5
+    -artifact_prefix=${_mol_sequence_artifacts}/ ${_mol_sequence_corpus})
+set_tests_properties(fuzz_sequence_parser_smoke PROPERTIES TIMEOUT 45)
