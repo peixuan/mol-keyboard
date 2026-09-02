@@ -10,8 +10,22 @@ interface ReadyMessage {
   readonly ready: boolean;
 }
 
+export interface EngineEvent {
+  readonly type: number;
+  readonly gestureId: number;
+  readonly frame: number;
+  readonly note: number;
+  readonly detail: number;
+}
+
+interface ControlPayload {
+  readonly control: string;
+  readonly [key: string]: string | number | boolean;
+}
+
 const MAX_BATCH_SIZE = 64;
 const READY_TIMEOUT_MS = 8_000;
+const CONTROL_TIMEOUT_MS = 2_000;
 
 export class MolAudioEngine extends EventTarget {
   private context: AudioContext | undefined;
@@ -19,6 +33,11 @@ export class MolAudioEngine extends EventTarget {
   private startPromise: Promise<void> | undefined;
   private readonly queue: NoteEvent[] = [];
   private flushScheduled = false;
+  private nextRequestId = 1;
+  private readonly pendingControls = new Map<
+    number,
+    { readonly resolve: (accepted: boolean) => void; readonly timer: number }
+  >();
 
   get state(): AudioContextState | "idle" {
     return this.context?.state ?? "idle";
@@ -46,6 +65,62 @@ export class MolAudioEngine extends EventTarget {
     this.node?.port.postMessage({ type: "all-notes-off" });
   }
 
+  setMasterGain(value: number): Promise<boolean> {
+    return this.sendControl({ control: "master-gain", value });
+  }
+
+  setSustain(value: number): Promise<boolean> {
+    return this.sendControl({ control: "sustain", value });
+  }
+
+  setOctave(value: number): Promise<boolean> {
+    return this.sendControl({ control: "octave", value });
+  }
+
+  setTranspose(value: number): Promise<boolean> {
+    return this.sendControl({ control: "transpose", value });
+  }
+
+  setPreset(value: number, hardSwitch = false): Promise<boolean> {
+    return this.sendControl({ control: "preset", value, hardSwitch });
+  }
+
+  setParameter(parameter: number, value: number): Promise<boolean> {
+    return this.sendControl({ control: "parameter", parameter, value });
+  }
+
+  setScale(scale: number, tonic: number, mapping: number): Promise<boolean> {
+    return this.sendControl({ control: "scale", scale, tonic, mapping });
+  }
+
+  setChord(value: number): Promise<boolean> {
+    return this.sendControl({ control: "chord", value });
+  }
+
+  setArpeggiator(mode: number, rate: number, gate: number, octaves: number, seed: number): Promise<boolean> {
+    return this.sendControl({ control: "arpeggiator", mode, rate, gate, octaves, seed });
+  }
+
+  setTempo(value: number): Promise<boolean> {
+    return this.sendControl({ control: "tempo", value });
+  }
+
+  setTimeSignature(numerator: number, denominator: number): Promise<boolean> {
+    return this.sendControl({ control: "time-signature", numerator, denominator });
+  }
+
+  setMetronome(enabled: boolean, level: number): Promise<boolean> {
+    return this.sendControl({ control: "metronome", enabled, level });
+  }
+
+  setPortamento(mode: number, timeMs: number): Promise<boolean> {
+    return this.sendControl({ control: "portamento", mode, timeMs });
+  }
+
+  action(action: string): Promise<boolean> {
+    return this.sendControl({ control: "action", action });
+  }
+
   async close(): Promise<void> {
     this.allNotesOff();
     this.node?.disconnect();
@@ -55,6 +130,11 @@ export class MolAudioEngine extends EventTarget {
     }
     this.context = undefined;
     this.startPromise = undefined;
+    for (const pending of this.pendingControls.values()) {
+      window.clearTimeout(pending.timer);
+      pending.resolve(false);
+    }
+    this.pendingControls.clear();
   }
 
   private async initialize(): Promise<void> {
@@ -73,6 +153,7 @@ export class MolAudioEngine extends EventTarget {
         outputChannelCount: [2],
       });
       this.node = node;
+      node.port.addEventListener("message", (event: MessageEvent<unknown>) => this.onMessage(event.data));
       node.connect(context.destination);
       await this.waitUntilReady(node.port);
       await context.resume();
@@ -84,6 +165,67 @@ export class MolAudioEngine extends EventTarget {
       this.startPromise = undefined;
       throw error;
     }
+  }
+
+  private async sendControl(payload: ControlPayload): Promise<boolean> {
+    await this.start();
+    if (this.node === undefined) return false;
+    const requestId = this.allocateRequestId();
+    return new Promise((resolve) => {
+      const timer = window.setTimeout(() => {
+        this.pendingControls.delete(requestId);
+        resolve(false);
+      }, CONTROL_TIMEOUT_MS);
+      this.pendingControls.set(requestId, { resolve, timer });
+      this.node?.port.postMessage({ type: "control", requestId, ...payload });
+    });
+  }
+
+  private onMessage(data: unknown): void {
+    if (data === null || typeof data !== "object") return;
+    const message = data as {
+      readonly type?: unknown;
+      readonly requestId?: number;
+      readonly accepted?: boolean;
+      readonly count?: number;
+      readonly words?: Uint32Array;
+    };
+    if (message.type === "control-processed" && Number.isInteger(message.requestId)) {
+      const pending = this.pendingControls.get(message.requestId ?? 0);
+      if (pending === undefined) return;
+      window.clearTimeout(pending.timer);
+      this.pendingControls.delete(message.requestId ?? 0);
+      pending.resolve(message.accepted === true);
+      return;
+    }
+    if (
+      message.type !== "engine-events" ||
+      !Number.isInteger(message.count) ||
+      message.count === undefined ||
+      message.count < 0 ||
+      message.count > MAX_BATCH_SIZE ||
+      !(message.words instanceof Uint32Array)
+    ) {
+      return;
+    }
+    const events: EngineEvent[] = [];
+    for (let index = 0; index < message.count; index += 1) {
+      const offset = index * 4;
+      events.push({
+        type: message.words[offset] ?? 0,
+        gestureId: message.words[offset + 1] ?? 0,
+        frame: message.words[offset + 2] ?? 0,
+        note: message.words[offset + 3] ?? 0,
+        detail: message.words[offset + 3] ?? 0,
+      });
+    }
+    this.dispatchEvent(new CustomEvent<readonly EngineEvent[]>("engineevents", { detail: events }));
+  }
+
+  private allocateRequestId(): number {
+    const id = this.nextRequestId;
+    this.nextRequestId = id === 0xffffffff ? 1 : id + 1;
+    return id;
   }
 
   private waitUntilReady(port: MessagePort): Promise<void> {

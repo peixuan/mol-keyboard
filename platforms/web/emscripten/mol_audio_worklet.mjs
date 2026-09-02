@@ -55,7 +55,7 @@ const render = molModule.cwrap("mol_wasm_render", "number", ["number", "number"]
 
 const MOL_RENDER_QUANTUM = 128;
 const MOL_CHANNEL_COUNT = 2;
-const MOL_MAX_VOICES = 8;
+const MOL_MAX_VOICES = 32;
 const MOL_MAX_MESSAGE_EVENTS = 64;
 const MOL_EVENT_WORDS = 4;
 

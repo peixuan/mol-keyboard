@@ -1,5 +1,6 @@
 import "./styles.css";
-import { MolAudioEngine } from "./audio-engine";
+import { type EngineEvent, MolAudioEngine } from "./audio-engine";
+import { ARPEGGIATORS, CHORDS, PRESETS, SCALES, optionsMarkup } from "./catalog";
 import {
   BINDING_BY_CODE,
   BINDING_BY_NOTE,
@@ -48,10 +49,30 @@ template.innerHTML = `
         <dl class="spec-list">
           <div><dt>Core</dt><dd>WebAssembly</dd></div>
           <div><dt>Thread</dt><dd>AudioWorklet</dd></div>
-          <div><dt>Voices</dt><dd>8 polyphonic</dd></div>
+          <div><dt>Voices</dt><dd>32 polyphonic</dd></div>
         </dl>
       </div>
     </section>
+
+    <nav class="mode-bar" aria-label="Application mode and connection">
+      <div class="mode-switch" aria-label="Interface mode">
+        <button type="button" data-mode="explore" aria-pressed="true" data-en="Explore" data-zh="探索">Explore</button>
+        <button type="button" data-mode="studio" aria-pressed="false" data-en="Studio" data-zh="工作室">Studio</button>
+      </div>
+      <label><span data-en="Backend" data-zh="后端">Backend</span>
+        <select data-backend aria-label="Audio backend">
+          <option value="standalone" data-en="This browser" data-zh="当前浏览器">This browser</option>
+          <option value="service" data-en="Desktop service" data-zh="桌面服务">Desktop service</option>
+          <option value="esp32" data-en="ESP32 device" data-zh="ESP32 设备">ESP32 device</option>
+        </select>
+      </label>
+      <label><span data-en="Language" data-zh="语言">Language</span>
+        <select data-language aria-label="Language">
+          <option value="en">English</option>
+          <option value="zh">中文</option>
+        </select>
+      </label>
+    </nav>
 
     <section class="instrument" id="instrument" aria-labelledby="instrument-title">
       <div class="instrument-heading">
@@ -79,6 +100,87 @@ template.innerHTML = `
       <div class="accessible-keys" data-accessible-keys aria-label="Accessible piano keys"></div>
     </section>
 
+    <section class="control-room" aria-labelledby="controls-title">
+      <div class="control-heading">
+        <div>
+          <p class="eyebrow" data-en="Shape the instrument" data-zh="塑造你的乐器">Shape the instrument</p>
+          <h2 id="controls-title" data-en="Controls" data-zh="控制">Controls</h2>
+        </div>
+        <p class="voice-readout"><strong data-active-voices>0</strong> <span data-en="actual voices" data-zh="实际声部">actual voices</span></p>
+      </div>
+
+      <div class="explore-controls control-grid">
+        <label class="control-card"><span data-en="Instrument" data-zh="音色">Instrument</span>
+          <select data-control="preset">${optionsMarkup(PRESETS)}</select>
+        </label>
+        <label class="control-card"><span data-en="Scale" data-zh="音阶">Scale</span>
+          <select data-control="scale">${optionsMarkup(SCALES)}</select>
+        </label>
+        <label class="control-card"><span data-en="Tonic" data-zh="主音">Tonic</span>
+          <select data-control="tonic">
+            <option value="0">C</option><option value="1">C♯</option><option value="2">D</option>
+            <option value="3">D♯</option><option value="4">E</option><option value="5">F</option>
+            <option value="6">F♯</option><option value="7">G</option><option value="8">G♯</option>
+            <option value="9">A</option><option value="10">A♯</option><option value="11">B</option>
+          </select>
+        </label>
+        <label class="control-card"><span data-en="Octave" data-zh="八度">Octave</span>
+          <select data-control="octave">
+            <option value="-2">−2</option><option value="-1">−1</option><option value="0" selected>0</option>
+            <option value="1">+1</option><option value="2">+2</option>
+          </select>
+        </label>
+        <label class="control-card range-card"><span><span data-en="Master volume" data-zh="主音量">Master volume</span><output data-output="volume">72%</output></span>
+          <input data-control="volume" type="range" min="0" max="1" value="0.72" step="0.01" />
+        </label>
+        <label class="control-card toggle-card"><span data-en="Metronome" data-zh="节拍器">Metronome</span>
+          <input data-control="metronome" type="checkbox" role="switch" />
+        </label>
+      </div>
+
+      <div class="transport-controls" aria-label="Recording and playback">
+        <button type="button" data-transport="record" class="record-button"><span class="record-dot" aria-hidden="true"></span><span data-en="Record" data-zh="录音">Record</span></button>
+        <button type="button" data-transport="stop" data-en="Stop" data-zh="停止">Stop</button>
+        <button type="button" data-transport="play" data-en="Play back" data-zh="回放">Play back</button>
+        <span data-recording-state role="status" data-en="No take yet" data-zh="尚无录音">No take yet</span>
+      </div>
+
+      <div class="studio-controls" data-studio hidden>
+        <div class="studio-section">
+          <h3 data-en="Space & effects" data-zh="空间与效果">Space & effects</h3>
+          <div class="control-grid three-up">
+            <label class="control-card range-card"><span><span>Chorus</span><output data-output="chorus">18%</output></span><input data-control="chorus" type="range" min="0" max="1" value="0.18" step="0.01" /></label>
+            <label class="control-card range-card"><span><span>Delay</span><output data-output="delay">12%</output></span><input data-control="delay" type="range" min="0" max="1" value="0.12" step="0.01" /></label>
+            <label class="control-card range-card"><span><span>Reverb</span><output data-output="reverb">22%</output></span><input data-control="reverb" type="range" min="0" max="1" value="0.22" step="0.01" /></label>
+          </div>
+        </div>
+        <div class="studio-section">
+          <h3 data-en="Harmony & movement" data-zh="和声与运动">Harmony & movement</h3>
+          <div class="control-grid">
+            <label class="control-card"><span data-en="Chord" data-zh="和弦">Chord</span><select data-control="chord">${optionsMarkup(CHORDS)}</select></label>
+            <label class="control-card"><span data-en="Arpeggiator" data-zh="琶音器">Arpeggiator</span><select data-control="arpeggiator">${optionsMarkup(ARPEGGIATORS)}</select></label>
+            <label class="control-card"><span data-en="Rate" data-zh="速率">Rate</span><select data-control="arp-rate"><option value="0">1/4</option><option value="1">1/8</option><option value="2">1/8T</option><option value="3" selected>1/16</option><option value="4">1/16T</option><option value="5">1/32</option></select></label>
+            <label class="control-card"><span data-en="Arp octaves" data-zh="琶音八度">Arp octaves</span><select data-control="arp-octaves"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select></label>
+            <label class="control-card range-card"><span><span>Gate</span><output data-output="gate">70%</output></span><input data-control="gate" type="range" min="0.05" max="1" value="0.7" step="0.05" /></label>
+            <label class="control-card"><span>BPM</span><input data-control="tempo" type="number" min="30" max="300" value="120" step="1" /></label>
+            <label class="control-card"><span data-en="Time signature" data-zh="拍号">Time signature</span><select data-control="time-signature"><option value="4/4">4/4</option><option value="3/4">3/4</option><option value="6/8">6/8</option><option value="5/4">5/4</option></select></label>
+            <label class="control-card"><span>Portamento</span><select data-control="portamento"><option value="0" data-en="Off" data-zh="关闭">Off</option><option value="1" data-en="Legato" data-zh="连奏">Legato</option><option value="2" data-en="Always" data-zh="始终">Always</option></select></label>
+            <label class="control-card range-card"><span><span data-en="Glide time" data-zh="滑音时间">Glide time</span><output data-output="portamento-time">120 ms</output></span><input data-control="portamento-time" type="range" min="0" max="2000" value="120" step="10" /></label>
+          </div>
+        </div>
+        <div class="studio-section diagnostics">
+          <h3 data-en="Runtime facts" data-zh="运行时事实">Runtime facts</h3>
+          <dl>
+            <div><dt data-en="Input" data-zh="输入">Input</dt><dd>Keyboard + Pointer Events</dd></div>
+            <div><dt data-en="Output" data-zh="输出">Output</dt><dd>Web Audio system default</dd></div>
+            <div><dt data-en="Fast path" data-zh="快速路径">Fast path</dt><dd data-fast-path>MessagePort baseline</dd></div>
+            <div><dt data-en="Persistence" data-zh="持久化">Persistence</dt><dd data-storage-state>Checking…</dd></div>
+            <div><dt data-en="Core events" data-zh="核心事件">Core events</dt><dd data-event-count>0</dd></div>
+          </dl>
+        </div>
+      </div>
+    </section>
+
     <footer>
       <p>MoL / Matter of Latency</p>
       <p>Local-first · Offline-ready foundation</p>
@@ -92,11 +194,14 @@ class MolKeyboardApp extends HTMLElement {
   private readonly activePointers = new Map<number, ActiveGesture>();
   private readonly activeAccessible = new Map<number, ActiveGesture>();
   private readonly soundingGestures = new Set<number>();
+  private readonly actualVoices = new Map<string, number>();
   private canvas: HTMLCanvasElement | undefined;
   private context: CanvasRenderingContext2D | undefined;
   private statusElement: HTMLElement | undefined;
   private startButton: HTMLButtonElement | undefined;
   private nextGestureId = 1;
+  private coreEventCount = 0;
+  private language: "en" | "zh" = navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
   private connected = false;
 
   connectedCallback(): void {
@@ -110,6 +215,9 @@ class MolKeyboardApp extends HTMLElement {
     this.configureCanvas();
     this.createAccessibleKeys();
     this.bindEvents();
+    this.bindControls();
+    this.applyLanguage(this.language);
+    this.updateRuntimeFacts();
     this.drawKeyboard();
   }
 
@@ -136,6 +244,223 @@ class MolKeyboardApp extends HTMLElement {
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "hidden") this.releaseAll();
     });
+    this.engine.addEventListener("engineevents", (event) => {
+      const engineEvent = event as CustomEvent<readonly EngineEvent[]>;
+      this.onEngineEvents(engineEvent.detail);
+    });
+    this.engine.addEventListener("statechange", () => this.onAudioReady());
+  }
+
+  private onAudioReady(): void {
+    const sampleRate = this.engine.sampleRate;
+    const rateLabel = sampleRate === undefined ? "worklet" : `${Math.round(sampleRate / 100) / 10} kHz worklet`;
+    this.setStatus(`Audio ready · ${rateLabel}`, "ready");
+    if (this.startButton !== undefined) {
+      this.startButton.disabled = true;
+      const label = this.startButton.querySelector("span");
+      if (label !== null) label.textContent = this.language === "zh" ? "音频已就绪" : "Audio ready";
+    }
+  }
+
+  private bindControls(): void {
+    for (const button of this.querySelectorAll<HTMLButtonElement>("[data-mode]")) {
+      button.addEventListener("click", () => this.setMode(button.dataset.mode === "studio"));
+    }
+    this.querySelector<HTMLSelectElement>("[data-language]")?.addEventListener("change", (event) => {
+      const value = (event.currentTarget as HTMLSelectElement).value;
+      this.applyLanguage(value === "zh" ? "zh" : "en");
+    });
+    this.querySelector<HTMLSelectElement>("[data-backend]")?.addEventListener("change", (event) => {
+      const value = (event.currentTarget as HTMLSelectElement).value;
+      if (value !== "standalone") {
+        this.setStatus(
+          value === "service"
+            ? "Desktop service controller selected · connection required"
+            : "ESP32 controller selected · connection required",
+          "loading",
+        );
+      } else {
+        this.setStatus("Standalone Web audio selected", "ready");
+      }
+    });
+
+    this.bindSelect("preset", (value) => this.engine.setPreset(value));
+    this.bindSelect("octave", (value) => this.engine.setOctave(value));
+    this.bindSelect("chord", (value) => this.engine.setChord(value));
+    this.bindSelect("tempo", (value) => this.engine.setTempo(value));
+    for (const control of ["scale", "tonic"] as const) {
+      this.control(control)?.addEventListener("change", () => {
+        this.runControl(
+          "scale",
+          this.engine.setScale(this.controlNumber("scale"), this.controlNumber("tonic"), 0),
+        );
+      });
+    }
+    for (const control of ["arpeggiator", "arp-rate", "arp-octaves", "gate"] as const) {
+      this.control(control)?.addEventListener("change", () => this.submitArpeggiator());
+    }
+    this.control("time-signature")?.addEventListener("change", () => {
+      const [numerator = 4, denominator = 4] = this.control("time-signature")!
+        .value.split("/")
+        .map(Number);
+      this.runControl("time signature", this.engine.setTimeSignature(numerator, denominator));
+    });
+    for (const control of ["portamento", "portamento-time"] as const) {
+      this.control(control)?.addEventListener("change", () => {
+        this.runControl(
+          "portamento",
+          this.engine.setPortamento(
+            this.controlNumber("portamento"),
+            this.controlNumber("portamento-time"),
+          ),
+        );
+      });
+    }
+    const metronome = this.querySelector<HTMLInputElement>("[data-control='metronome']");
+    metronome?.addEventListener("change", () => {
+      this.runControl("metronome", this.engine.setMetronome(metronome.checked, 0.5));
+    });
+
+    this.bindRange("volume", (value) => this.engine.setMasterGain(value));
+    this.bindRange("chorus", (value) => this.engine.setParameter(3, value));
+    this.bindRange("delay", (value) => this.engine.setParameter(6, value));
+    this.bindRange("reverb", (value) => this.engine.setParameter(11, value));
+    this.bindRange("gate", () => this.submitArpeggiator(), false);
+    this.bindRange(
+      "portamento-time",
+      (value) => this.engine.setPortamento(this.controlNumber("portamento"), value),
+      false,
+    );
+
+    this.querySelector("[data-transport='record']")?.addEventListener("click", () => {
+      this.runControl("record", this.engine.action("record-start"));
+    });
+    this.querySelector("[data-transport='stop']")?.addEventListener("click", () => {
+      this.runControl("stop recording", this.engine.action("record-stop"));
+      this.runControl("stop playback", this.engine.action("playback-stop"));
+    });
+    this.querySelector("[data-transport='play']")?.addEventListener("click", () => {
+      this.runControl("playback", this.engine.action("playback-start"));
+    });
+  }
+
+  private bindSelect(control: string, submit: (value: number) => Promise<boolean>): void {
+    this.control(control)?.addEventListener("change", () => {
+      this.runControl(control, submit(this.controlNumber(control)));
+    });
+  }
+
+  private bindRange(
+    control: string,
+    submit: (value: number) => Promise<boolean>,
+    submitOnInput = true,
+  ): void {
+    const input = this.querySelector<HTMLInputElement>(`[data-control='${control}']`);
+    if (input === null) return;
+    const update = (): void => {
+      const value = Number(input.value);
+      const output = this.querySelector<HTMLOutputElement>(`[data-output='${control}']`);
+      if (output !== null) {
+        output.value = control === "portamento-time" ? `${value} ms` : `${Math.round(value * 100)}%`;
+      }
+      if (submitOnInput) this.runControl(control, submit(value));
+    };
+    input.addEventListener("input", update);
+  }
+
+  private submitArpeggiator(): Promise<boolean> {
+    const operation = this.engine.setArpeggiator(
+      this.controlNumber("arpeggiator"),
+      this.controlNumber("arp-rate"),
+      this.controlNumber("gate"),
+      this.controlNumber("arp-octaves"),
+      0x4d4f4c,
+    );
+    this.runControl("arpeggiator", operation);
+    return operation;
+  }
+
+  private runControl(label: string, operation: Promise<boolean>): void {
+    void operation
+      .then((accepted) => {
+        if (!accepted) this.setStatus(`${label} was rejected by the audio engine`, "error");
+      })
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : `${label} failed`;
+        this.setStatus(message, "error");
+      });
+  }
+
+  private control(name: string): HTMLInputElement | HTMLSelectElement | null {
+    return this.querySelector<HTMLInputElement | HTMLSelectElement>(`[data-control='${name}']`);
+  }
+
+  private controlNumber(name: string): number {
+    return Number(this.control(name)?.value ?? 0);
+  }
+
+  private setMode(studio: boolean): void {
+    for (const button of this.querySelectorAll<HTMLButtonElement>("[data-mode]")) {
+      button.setAttribute("aria-pressed", String((button.dataset.mode === "studio") === studio));
+    }
+    const panel = this.querySelector<HTMLElement>("[data-studio]");
+    if (panel !== null) panel.hidden = !studio;
+  }
+
+  private applyLanguage(language: "en" | "zh"): void {
+    this.language = language;
+    document.documentElement.lang = language === "zh" ? "zh-CN" : "en";
+    const select = this.querySelector<HTMLSelectElement>("[data-language]");
+    if (select !== null) select.value = language;
+    for (const element of this.querySelectorAll<HTMLElement>("[data-en][data-zh]")) {
+      element.textContent = element.dataset[language] ?? element.textContent;
+    }
+  }
+
+  private updateRuntimeFacts(): void {
+    const isolated = window.crossOriginIsolated && typeof SharedArrayBuffer !== "undefined";
+    const fastPath = this.querySelector<HTMLElement>("[data-fast-path]");
+    if (fastPath !== null) {
+      fastPath.textContent = isolated ? "SharedArrayBuffer available" : "MessagePort baseline";
+    }
+    const storage = this.querySelector<HTMLElement>("[data-storage-state]");
+    if (storage !== null) {
+      storage.textContent = "indexedDB" in window ? "IndexedDB available" : "Unavailable";
+    }
+  }
+
+  private onEngineEvents(events: readonly EngineEvent[]): void {
+    this.coreEventCount += events.length;
+    for (const event of events) {
+      const key = `${event.gestureId}:${event.note}`;
+      if (event.type === 1) {
+        this.actualVoices.set(key, event.note);
+      } else if (event.type === 3 || event.type === 8) {
+        this.actualVoices.delete(key);
+      } else if (event.type === 7) {
+        this.setRecordingState(event.detail !== 0 ? "recording" : "recorded");
+      } else if (event.type === 14) {
+        this.setRecordingState(event.detail !== 0 ? "playing" : "recorded");
+      }
+    }
+    const voiceReadout = this.querySelector<HTMLElement>("[data-active-voices]");
+    if (voiceReadout !== null) voiceReadout.textContent = String(this.actualVoices.size);
+    const eventReadout = this.querySelector<HTMLElement>("[data-event-count]");
+    if (eventReadout !== null) eventReadout.textContent = String(this.coreEventCount);
+    if (this.actualVoices.size > 0) this.setStatus("Audio ready · playing", "ready");
+    this.drawKeyboard();
+  }
+
+  private setRecordingState(state: "recording" | "recorded" | "playing"): void {
+    const status = this.querySelector<HTMLElement>("[data-recording-state]");
+    if (status === null) return;
+    const labels = {
+      recording: this.language === "zh" ? "正在录音" : "Recording…",
+      recorded: this.language === "zh" ? "录音已保存在引擎中" : "Take held in the engine",
+      playing: this.language === "zh" ? "正在回放" : "Playing take…",
+    };
+    status.textContent = labels[state];
+    status.dataset.state = state;
   }
 
   private configureCanvas(): void {
@@ -178,12 +503,7 @@ class MolKeyboardApp extends HTMLElement {
     this.setStatus("Loading the WebAssembly audio core…", "loading");
     try {
       await this.engine.start();
-      const sampleRate = this.engine.sampleRate;
-      const rateLabel = sampleRate === undefined ? "worklet" : `${Math.round(sampleRate / 100) / 10} kHz worklet`;
-      this.setStatus(`Audio ready · ${rateLabel}`, "ready");
-      if (this.startButton !== undefined) {
-        this.startButton.querySelector("span")!.textContent = "Audio ready";
-      }
+      this.onAudioReady();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Audio initialization failed.";
       this.setStatus(message, "error");
@@ -201,7 +521,6 @@ class MolKeyboardApp extends HTMLElement {
         if (!this.isGestureActive(gesture.id)) return;
         this.engine.noteOn(note, 0.82, gesture.id);
         this.soundingGestures.add(gesture.id);
-        this.setStatus("Audio ready · playing", "ready");
       })
       .catch((error: unknown) => {
         const message = error instanceof Error ? error.message : "Audio initialization failed.";
@@ -297,11 +616,7 @@ class MolKeyboardApp extends HTMLElement {
   }
 
   private activeNotes(): ReadonlySet<number> {
-    return new Set([
-      ...[...this.activeKeys.values()].map((gesture) => gesture.note),
-      ...[...this.activePointers.values()].map((gesture) => gesture.note),
-      ...[...this.activeAccessible.values()].map((gesture) => gesture.note),
-    ]);
+    return new Set(this.actualVoices.values());
   }
 
   private allocateGestureId(): number {
