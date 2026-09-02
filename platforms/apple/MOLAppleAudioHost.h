@@ -6,6 +6,8 @@
 NS_ASSUME_NONNULL_BEGIN
 
 FOUNDATION_EXPORT NSErrorDomain const MOLAppleAudioErrorDomain;
+FOUNDATION_EXPORT NSNotificationName const MOLAppleAudioHostDidRestartNotification;
+FOUNDATION_EXPORT NSNotificationName const MOLAppleAudioHostMediaServicesResetNotification;
 
 typedef struct MOLAppleAudioStatus {
   uint32_t sampleRate;
@@ -27,6 +29,17 @@ typedef struct MOLAppleAudioStatus {
 - (void)stop;
 - (int32_t)noteOn:(uint8_t)note velocity:(float)velocity gestureId:(uint64_t)gestureId;
 - (int32_t)noteOff:(uint8_t)note gestureId:(uint64_t)gestureId;
+- (int32_t)submitCommandType:(uint32_t)commandType
+                   gestureId:(uint64_t)gestureId
+                    integer0:(int32_t)integer0
+                    integer1:(int32_t)integer1
+                    integer2:(int32_t)integer2
+                    integer3:(int32_t)integer3
+                     scalar0:(float)scalar0
+                     scalar1:(float)scalar1;
+- (NSArray<NSNumber*>*)pollEvents;
+- (nullable NSData*)exportRecording;
+- (int32_t)loadRecording:(NSData*)data;
 - (MOLAppleAudioStatus)status;
 
 @end
