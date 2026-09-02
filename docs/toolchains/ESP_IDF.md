@@ -36,3 +36,23 @@ The project stores `sdkconfig` in its selected build directory. This avoids
 cross-target configuration conflicts and permits subsequent independent builds.
 Successful compilation is build evidence only; flashing, startup logs, I2S
 output, and timing measurements require the corresponding physical device.
+
+## I2S host and size evidence
+
+The firmware uses the ESP-IDF standard-mode I2S API with six fixed 128-frame DMA
+descriptors. Target-specific reference pins and every board-facing I2S setting
+are exposed through Kconfig. See `docs/platform/ESP32_PORT.md` for wiring,
+configuration, task priority/core affinity, and diagnostic counters.
+
+Generate map-backed component evidence after either build:
+
+```powershell
+idf.py -B build-esp32 size-components
+idf.py -B build-esp32s3 size-components
+```
+
+On 2026-09-02 the ESP32 image was 124,256 bytes and the ESP32-S3 image was
+149,520 bytes. The size tool attributed 2,660 and 2,672 bytes of flash code to
+`libmol_core.a`, respectively. The firmware host's mapped static DRAM was
+22,168 bytes on both targets, including the 16 KiB engine arena, the static
+audio task stack, and fixed render/PCM buffers.

@@ -1,0 +1,55 @@
+menu "MoL Keyboard audio host"
+
+    config MOL_I2S_SAMPLE_RATE
+        int "I2S sample rate"
+        range 16000 48000
+        default 32000
+
+    config MOL_I2S_BCLK_GPIO
+        int "I2S bit-clock GPIO"
+        range 0 48
+        default 26 if IDF_TARGET_ESP32
+        default 4 if IDF_TARGET_ESP32S3
+
+    config MOL_I2S_WS_GPIO
+        int "I2S word-select GPIO"
+        range 0 48
+        default 25 if IDF_TARGET_ESP32
+        default 5 if IDF_TARGET_ESP32S3
+
+    config MOL_I2S_DOUT_GPIO
+        int "I2S serial-data output GPIO"
+        range 0 48
+        default 22 if IDF_TARGET_ESP32
+        default 6 if IDF_TARGET_ESP32S3
+
+    config MOL_I2S_MCLK_GPIO
+        int "Optional I2S master-clock GPIO (-1 disables MCLK)"
+        range -1 48
+        default -1
+
+    config MOL_I2S_DMA_DESCRIPTOR_COUNT
+        int "Fixed I2S DMA descriptor count"
+        range 2 16
+        default 6
+
+    config MOL_I2S_ENABLE_DITHER
+        bool "Enable deterministic triangular PCM16 dither"
+        default n
+
+    config MOL_AUDIO_TASK_PRIORITY
+        int "Audio render task priority"
+        range 1 24
+        default 20
+
+    config MOL_AUDIO_TASK_CORE
+        int "Audio render task core affinity"
+        range 0 1
+        default 1
+
+    config MOL_AUDIO_TASK_STACK_SIZE
+        int "Static audio task stack size in bytes"
+        range 3072 16384
+        default 4096
+
+endmenu

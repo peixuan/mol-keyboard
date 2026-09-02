@@ -64,13 +64,14 @@ Sustain: Space
 ## Headless and Web use / 无界面与 Web 使用
 
 The verified first headless entry point is `mol-render`; `mol-keyboardd` and
-`molctl` remain planned. The Web product will execute the same C core as
-WebAssembly in an AudioWorklet. Products are not claimed as available until
-their milestone evidence is recorded.
+`molctl` remain planned. The same C core now executes as WebAssembly in a
+verified AudioWorklet and builds into ESP32/ESP32-S3 firmware with a configurable
+I2S host. Products are not claimed as available until their milestone evidence
+is recorded.
 
-首个已验证的无界面入口是 `mol-render`，`mol-keyboardd` 与 `molctl` 仍在计划中。Web
-产品将在 AudioWorklet 中以 WebAssembly 运行同一份 C 核心；在里程碑证据完成前，不会
-将这些产品标记为可用。
+首个已验证的无界面入口是 `mol-render`，`mol-keyboardd` 与 `molctl` 仍在计划中。
+同一份 C 核心现已在 WebAssembly AudioWorklet 中通过验证，并已构建为带可配置 I2S
+宿主的 ESP32/ESP32-S3 固件；在里程碑证据完成前，不会将产品标记为可用。
 
 ## Platform boundaries / 平台边界
 

@@ -6,8 +6,8 @@ M0 portability baseline and M1 portable sound path.
 
 ## Last verified commit
 
-`f788bd1` (`feat(esp32): verify portable core component`) is the last verified
-commit. The AudioWorklet implementation below was verified in the current
+`6d99e84` (`feat(web): add synchronous AudioWorklet synthesis`) is the last
+verified commit. The ESP32 I2S implementation below was verified in the current
 worktree and will be committed atomically.
 
 ## Completed requirements
@@ -39,13 +39,19 @@ worktree and will be committed atomically.
   Release worklet artifact is 15,089 bytes.
 - ESP-IDF 6.1 builds the exact core source as a Tiny-profile component for both
   ESP32 and ESP32-S3 with independently generated target configuration.
-- Both firmware images contain a bounded static-memory C4 startup self-test;
-  ESP32 produced a 108,992-byte image and 2,664-byte core archive, while
-  ESP32-S3 produced a 121,648-byte image and 2,680-byte core archive.
+- Both firmware targets contain a bounded static-memory 32 kHz C4 conformance
+  check, a configurable ESP-IDF standard I2S TX host, fixed DMA geometry,
+  saturated PCM16 conversion, a statically allocated high-priority render task,
+  watchdog integration, and periodic underrun/timing/memory diagnostics.
+- ESP32 produced a 124,256-byte image with 2,660 bytes of mapped core flash
+  code; ESP32-S3 produced a 149,520-byte image with 2,672 bytes of mapped core
+  flash code. The firmware host reserves 22,168 bytes of static DRAM on each.
+- An independent native 32 kHz PCM16 render measured the firmware's C4 sequence
+  at 261.25 Hz with peak 0.19390869, zero non-finite samples, and zero underruns.
 
 ## In-progress work
 
-- ESP32 I2S minimum realtime output and desktop realtime output paths.
+- Desktop realtime output and Android/Apple/Harmony native call entries.
 
 ## Blocked platform checks
 
@@ -98,6 +104,8 @@ idf.py -B build-esp32s3 build
 
 Both targets built successfully with ESP-IDF 6.1 and GNU 15.2.0 on 2026-09-02.
 The build-local `sdkconfig` files allow the two configurations to coexist.
+`idf.py size-components` verified the mapped core and host sizes recorded
+above. Physical I2S playback and sustained-run counters remain unverified.
 
 ## Known failures
 
@@ -108,5 +116,5 @@ The build-local `sdkconfig` files allow the two configurations to coexist.
 
 ## Next highest-priority task
 
-Implement and build-test the ESP32 I2S output task, then add the desktop
-realtime host required to complete the next M1 portability gate.
+Implement and test the desktop realtime host, then add the Android, Apple, and
+Harmony native call entries required to complete the M1 portability gate.
