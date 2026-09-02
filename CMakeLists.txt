@@ -58,3 +58,7 @@ if(MOL_BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
 endif()
+
+if(MOL_BUILD_TOOLS)
+  add_subdirectory(apps/mol-render)
+endif()

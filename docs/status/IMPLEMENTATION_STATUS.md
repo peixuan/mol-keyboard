@@ -6,9 +6,9 @@ M0 — Blank repository and engineering baseline.
 
 ## Last verified commit
 
-`894c1a1` (`feat(core): add caller-owned engine lifecycle`) is the last verified
-commit. The M1 synthesis work below was verified in the current worktree and
-will be committed atomically.
+`add3a69` (`feat(synth): add polyphonic band-limited voice path`) is the last
+verified commit. The offline renderer below was verified in the current
+worktree and will be committed atomically.
 
 ## Completed requirements
 
@@ -24,10 +24,14 @@ will be committed atomically.
   sample-accurate command heap produce real polyphonic audio.
 - Automated analysis measured rendered MIDI C4 within 1 Hz of 261.6256 Hz,
   rejected NaN/Inf, verified release to silence, and exercised eight voices plus stealing.
+- `mol-render` creates deterministic little-endian 16-bit PCM mono/stereo WAV
+  files without opening an audio device and reports duration, peak, RMS,
+  clipping, non-finite samples, and underruns.
+- CTest validates the RIFF/WAVE header and verifies that rendered PCM is non-silent.
 
 ## In-progress work
 
-- Offline WAV rendering of the verified native synthesis path.
+- Compiling the same synthesis source to WebAssembly with Emscripten.
 
 ## Blocked platform checks
 
@@ -47,7 +51,11 @@ ctest --preset dev-debug
 cmake --preset dev-release
 cmake --build --preset dev-release
 ctest --preset dev-release
+build/dev-release/apps/mol-render/mol-render --output build/dev-release/c4-evidence.wav --duration 2 --sample-rate 48000 --channels 2 --note 60 --velocity 0.8
 ```
+
+The evidence render was 384,044 bytes with peak 0.19609803, RMS 0.06978670,
+zero clipped samples, zero non-finite samples, and zero underruns.
 
 ## Known failures
 
@@ -57,5 +65,5 @@ ctest --preset dev-release
 
 ## Next highest-priority task
 
-Add `mol-render` with a deterministic PCM WAV sink and validate its file output,
-then compile the same synthesis source with Emscripten.
+Install or provision a pinned Emscripten SDK, compile the same core to Wasm, and
+run a native/Wasm C4 conformance check before adding AudioWorklet integration.

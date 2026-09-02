@@ -42,6 +42,14 @@ implementations.
 Windows 用户需在 Visual Studio 开发者终端中运行，并确保 `PATH` 中包含 Ninja。其他平台
 命令会随真实验证的实现逐步补充。
 
+Render a deterministic C4 performance to 16-bit PCM WAV without an audio device:
+
+```powershell
+build/dev-release/apps/mol-render/mol-render --output c4.wav --duration 2 --note 60
+```
+
+无需音频设备即可用上述命令将确定性的 C4 演奏渲染为 16-bit PCM WAV。
+
 ## Physical key map / 物理键位
 
 The default 30-key chromatic range is C4–F6 and uses physical key codes:
@@ -55,14 +63,14 @@ Sustain: Space
 
 ## Headless and Web use / 无界面与 Web 使用
 
-The planned headless entry points are `mol-keyboardd`, `molctl`, and
-`mol-render`. The Web product will execute the same C core as WebAssembly in an
-AudioWorklet. These products are not claimed as available until their milestone
-evidence is recorded.
+The verified first headless entry point is `mol-render`; `mol-keyboardd` and
+`molctl` remain planned. The Web product will execute the same C core as
+WebAssembly in an AudioWorklet. Products are not claimed as available until
+their milestone evidence is recorded.
 
-计划中的无界面入口为 `mol-keyboardd`、`molctl` 和 `mol-render`。Web 产品将在
-AudioWorklet 中以 WebAssembly 运行同一份 C 核心；在里程碑证据完成前，不会将这些产品
-标记为可用。
+首个已验证的无界面入口是 `mol-render`，`mol-keyboardd` 与 `molctl` 仍在计划中。Web
+产品将在 AudioWorklet 中以 WebAssembly 运行同一份 C 核心；在里程碑证据完成前，不会
+将这些产品标记为可用。
 
 ## Platform boundaries / 平台边界
 
