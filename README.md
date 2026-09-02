@@ -50,6 +50,16 @@ build/dev-release/apps/mol-render/mol-render --output c4.wav --duration 2 --note
 
 无需音频设备即可用上述命令将确定性的 C4 演奏渲染为 16-bit PCM WAV。
 
+List desktop outputs or play the same C4 through the system default device:
+
+```powershell
+build/dev-release/apps/mol-play/mol-play --list-devices
+build/dev-release/apps/mol-play/mol-play --duration 2 --note 60
+```
+
+上述命令可列出桌面输出设备，或通过系统默认设备实时播放同一个 C4；蓝牙音箱由操作系统
+作为普通音频设备提供，本项目不重复实现系统配对。
+
 ## Physical key map / 物理键位
 
 The default 30-key chromatic range is C4–F6 and uses physical key codes:

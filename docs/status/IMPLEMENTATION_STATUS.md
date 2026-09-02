@@ -6,9 +6,9 @@ M0 portability baseline and M1 portable sound path.
 
 ## Last verified commit
 
-`6d99e84` (`feat(web): add synchronous AudioWorklet synthesis`) is the last
-verified commit. The ESP32 I2S implementation below was verified in the current
-worktree and will be committed atomically.
+`674adf0` (`build: pin audited miniaudio dependency`) is the last verified
+commit. The desktop realtime host below was verified in the current worktree
+and will be committed atomically.
 
 ## Completed requirements
 
@@ -48,10 +48,22 @@ worktree and will be committed atomically.
   flash code. The firmware host reserves 22,168 bytes of static DRAM on each.
 - An independent native 32 kHz PCM16 render measured the firmware's C4 sequence
   at 261.25 Hz with peak 0.19390869, zero non-finite samples, and zero underruns.
+- miniaudio 0.11.25 is pinned by commit and archive hash with a preserved
+  license, locked build options, third-party notice, SPDX 2.3 SBOM, dependency
+  audit documentation, and an automated license-integrity test.
+- `mol-play` enumerates desktop playback devices with reusable backend IDs,
+  follows the system default, reports actual sample rate and native period
+  geometry, and renders directly into an allocation-free device callback.
+- Debug and LTO Release null-backend realtime tests measured C4 at 261.25 Hz
+  with finite, non-silent output and zero render failures.
+- A real Release WASAPI run opened the Windows default output at 48 kHz, handled
+  109 callbacks/52,320 frames, measured C4 at 261.25 Hz, and reported zero
+  render failures and non-finite samples. The reported three 480-frame native
+  periods are a 30 ms buffer-duration estimate, not an end-to-end latency claim.
 
 ## In-progress work
 
-- Desktop realtime output and Android/Apple/Harmony native call entries.
+- Android, Apple, and Harmony native call entries.
 
 ## Blocked platform checks
 
@@ -70,10 +82,14 @@ cmake --preset dev-release
 cmake --build --preset dev-release
 ctest --preset dev-release
 build/dev-release/apps/mol-render/mol-render --output build/dev-release/c4-evidence.wav --duration 2 --sample-rate 48000 --channels 2 --note 60 --velocity 0.8
+build/dev-release/apps/mol-play/mol-play --list-devices
+build/dev-release/apps/mol-play/mol-play --duration 1.05 --note 60 --velocity 0.25
 ```
 
 The evidence render was 384,044 bytes with peak 0.19609803, RMS 0.06978670,
 zero clipped samples, zero non-finite samples, and zero underruns.
+Both native configurations pass 9/9 CTest tests, including dependency audit,
+device enumeration, and the one-second null-backend realtime callback test.
 
 With the pinned Emscripten SDK environment active:
 
@@ -86,7 +102,8 @@ cmake --build --preset wasm-release
 ctest --preset wasm-release
 ```
 
-Both configurations passed 6/6 tests on 2026-09-02. The sixth test loads the
+Both configurations passed 7/7 tests on 2026-09-02. One test audits the locked
+dependencies and license snapshot. The worklet conformance test loads the
 single-file worklet artifact in a mocked worklet global and verifies stereo C4,
 finite output, message-driven note control, and release to silence. The browser
 smoke page additionally passed in the Codex in-app Chromium browser with
@@ -116,5 +133,5 @@ above. Physical I2S playback and sustained-run counters remain unverified.
 
 ## Next highest-priority task
 
-Implement and test the desktop realtime host, then add the Android, Apple, and
-Harmony native call entries required to complete the M1 portability gate.
+Add the Android, Apple, and Harmony native call entries required to complete
+the M1 portability gate.
