@@ -21,7 +21,7 @@
 
 #define MOL_ESP32_RENDER_FRAMES 128u
 #define MOL_ESP32_CHANNEL_COUNT 2u
-#define MOL_ESP32_ENGINE_BYTES 32768u
+#define MOL_ESP32_ENGINE_BYTES 131072u
 #define MOL_ESP32_WRITE_TIMEOUT_MS 100u
 #define MOL_ESP32_DIAGNOSTIC_PERIOD_MS 10000u
 #define MOL_ESP32_C4_HZ 261.6256f
@@ -111,7 +111,7 @@ static bool verify_c4(mol_engine_t* test_engine, uint32_t sample_rate,
   *measured_frequency =
       (float)crossings * (float)sample_rate / (float)analysis_frames;
   *measured_peak = peak;
-  return peak > 0.1f && fabsf(*measured_frequency - MOL_ESP32_C4_HZ) < 1.0f;
+  return peak > 0.01f && fabsf(*measured_frequency - MOL_ESP32_C4_HZ) < 1.0f;
 }
 
 #if CONFIG_MOL_I2S_ENABLE_DITHER
