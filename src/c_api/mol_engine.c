@@ -3,19 +3,26 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "mol/effects.h"
 #include "mol/engine.h"
 #include "mol/music.h"
 #include "mol/patch.h"
 #include "mol/transport.h"
 #include "mol_dsp.h"
+#include "mol_effects.h"
 
 #define MOL_ENGINE_MAGIC UINT32_C(0x4D4F4C45)
 #define MOL_MASTER_GAIN_DEFAULT 0.25f
-#define MOL_SUSTAIN_LEVEL 0.70f
 #define MOL_SUSTAIN_ON_THRESHOLD (64.0f / 127.0f)
 #define MOL_PI 3.14159265358979323846f
 #define MOL_METRONOME_DURATION_SECONDS 0.025f
 #define MOL_STEAL_RAMP_FRAMES 64u
+#define MOL_OUTPUT_RAMP_FRAMES 128u
+
+typedef struct mol_stereo_frame {
+  float left;
+  float right;
+} mol_stereo_frame_t;
 
 typedef enum mol_voice_stage {
   MOL_VOICE_IDLE = 0,
@@ -97,6 +104,9 @@ struct mol_engine {
   size_t memory_size;
   mol_voice_t* voices;
   float* pluck_memory;
+  float* chorus_memory;
+  float* delay_memory;
+  float* reverb_memory;
   mol_gesture_t* gestures;
   mol_scheduled_command_t* commands;
   mol_event_t* events;
@@ -104,7 +114,17 @@ struct mol_engine {
   uint32_t event_head;
   uint32_t event_count;
   uint32_t gesture_capacity;
-  float master_gain;
+  mol_chorus_t chorus;
+  mol_delay_t delay;
+  mol_reverb_t reverb;
+  mol_dsp_smoother_t master_gain;
+  mol_dsp_dc_blocker_t dc_blocker[2];
+  mol_dsp_limiter_t limiter[2];
+  float delay_time_ms;
+  float delay_sync_beats;
+  float last_output[2];
+  float transition_tail[2];
+  uint32_t output_ramp_remaining;
   float sustain;
   int32_t octave_shift;
   int32_t transpose;
@@ -948,6 +968,100 @@ static void mol_clear_voices(mol_engine_t* engine, int emit_events) {
   }
 }
 
+static void mol_clear_effect_tails(mol_engine_t* engine) {
+  (void)engine;
+#if MOL_ENABLE_CHORUS
+  mol_chorus_clear(&engine->chorus);
+#endif
+#if MOL_ENABLE_DELAY
+  mol_delay_clear(&engine->delay);
+#endif
+#if MOL_ENABLE_REVERB
+  mol_reverb_clear(&engine->reverb);
+#endif
+}
+
+static void mol_begin_output_transition(mol_engine_t* engine) {
+  engine->transition_tail[0] = engine->last_output[0];
+  engine->transition_tail[1] = engine->last_output[1];
+  engine->output_ramp_remaining = MOL_OUTPUT_RAMP_FRAMES;
+  mol_clear_effect_tails(engine);
+}
+
+static void mol_update_synced_delay(mol_engine_t* engine) {
+#if MOL_ENABLE_DELAY
+  if (engine->delay_sync_beats > 0.0f) {
+    float bpm = (float)engine->tempo_milli_bpm / 1000.0f;
+    float milliseconds = 60000.0f * engine->delay_sync_beats / bpm;
+    mol_delay_set(&engine->delay, milliseconds, engine->delay.feedback.target,
+                  engine->delay.mix.target);
+  }
+#else
+  (void)engine;
+#endif
+}
+
+static void mol_process_parameter(mol_engine_t* engine, mol_parameter_id_t parameter, float value) {
+  switch (parameter) {
+#if MOL_ENABLE_CHORUS
+    case MOL_PARAMETER_CHORUS_RATE_HZ:
+      mol_dsp_smoother_set_target(&engine->chorus.rate_hz, value);
+      break;
+    case MOL_PARAMETER_CHORUS_DEPTH_MS:
+      mol_dsp_smoother_set_target(&engine->chorus.depth_ms, value);
+      break;
+    case MOL_PARAMETER_CHORUS_MIX:
+      mol_dsp_smoother_set_target(&engine->chorus.mix, value);
+      break;
+#endif
+#if MOL_ENABLE_DELAY
+    case MOL_PARAMETER_DELAY_TIME_MS:
+      engine->delay_time_ms = value;
+      engine->delay_sync_beats = 0.0f;
+      mol_delay_set(&engine->delay, value, engine->delay.feedback.target, engine->delay.mix.target);
+      break;
+    case MOL_PARAMETER_DELAY_FEEDBACK:
+      mol_dsp_smoother_set_target(&engine->delay.feedback, value);
+      break;
+    case MOL_PARAMETER_DELAY_MIX:
+      mol_dsp_smoother_set_target(&engine->delay.mix, value);
+      break;
+    case MOL_PARAMETER_DELAY_SYNC_BEATS:
+      engine->delay_sync_beats = value;
+      if (value == 0.0f) {
+        mol_delay_set(&engine->delay, engine->delay_time_ms, engine->delay.feedback.target,
+                      engine->delay.mix.target);
+      } else {
+        mol_update_synced_delay(engine);
+      }
+      break;
+#endif
+#if MOL_ENABLE_REVERB
+    case MOL_PARAMETER_REVERB_PREDELAY_MS:
+      mol_dsp_smoother_set_target(&engine->reverb.predelay_frames,
+                                  value * (float)engine->config.sample_rate / 1000.0f);
+      break;
+    case MOL_PARAMETER_REVERB_SIZE:
+      mol_dsp_smoother_set_target(&engine->reverb.size, value);
+      break;
+    case MOL_PARAMETER_REVERB_DAMPING:
+      mol_dsp_smoother_set_target(&engine->reverb.damping, value);
+      break;
+    case MOL_PARAMETER_REVERB_MIX:
+      mol_dsp_smoother_set_target(&engine->reverb.mix, value);
+      break;
+#endif
+    case MOL_PARAMETER_LIMITER_CEILING_DB:
+      mol_dsp_limiter_configure(&engine->limiter[0], engine->config.sample_rate, value, 0.0001f,
+                                0.05f);
+      mol_dsp_limiter_configure(&engine->limiter[1], engine->config.sample_rate, value, 0.0001f,
+                                0.05f);
+      break;
+    default:
+      break;
+  }
+}
+
 static void mol_process_command(mol_engine_t* engine, const mol_command_t* command) {
   uint32_t index;
   switch (command->command_type) {
@@ -1036,6 +1150,7 @@ static void mol_process_command(mol_engine_t* engine, const mol_command_t* comma
       break;
     }
     case MOL_COMMAND_ALL_SOUND_OFF:
+      mol_begin_output_transition(engine);
       mol_clear_voices(engine, 1);
       memset(engine->gestures, 0, sizeof(*engine->gestures) * engine->gesture_capacity);
       engine->arpeggiator_voice_active = 0u;
@@ -1045,6 +1160,7 @@ static void mol_process_command(mol_engine_t* engine, const mol_command_t* comma
       patch.struct_size = (uint32_t)sizeof(patch);
       if (mol_builtin_patch_load(command->payload.preset.preset, &patch) == MOL_OK) {
         if (command->payload.preset.hard_switch != 0u) {
+          mol_begin_output_transition(engine);
           mol_clear_voices(engine, 1);
           memset(engine->gestures, 0, sizeof(*engine->gestures) * engine->gesture_capacity);
           engine->arpeggiator_voice_active = 0u;
@@ -1063,7 +1179,11 @@ static void mol_process_command(mol_engine_t* engine, const mol_command_t* comma
       break;
     }
     case MOL_COMMAND_SET_MASTER_GAIN:
-      engine->master_gain = command->payload.scalar.value;
+      mol_dsp_smoother_set_target(&engine->master_gain, command->payload.scalar.value);
+      break;
+    case MOL_COMMAND_SET_PARAMETER:
+      mol_process_parameter(engine, command->payload.parameter.parameter,
+                            command->payload.parameter.value);
       break;
     case MOL_COMMAND_SET_OCTAVE_SHIFT:
       engine->octave_shift = command->payload.integer.value;
@@ -1102,6 +1222,7 @@ static void mol_process_command(mol_engine_t* engine, const mol_command_t* comma
       break;
     case MOL_COMMAND_SET_TEMPO:
       (void)mol_tempo_to_milli_bpm(command->payload.scalar.value, &engine->tempo_milli_bpm);
+      mol_update_synced_delay(engine);
       mol_reschedule_metronome(engine);
       mol_reschedule_arpeggiator(engine);
       mol_push_transport_event(engine, command);
@@ -1296,8 +1417,12 @@ static float mol_render_metronome(mol_engine_t* engine) {
   return sample;
 }
 
-static float mol_render_frame(mol_engine_t* engine) {
-  float mixed = 0.0f;
+static mol_stereo_frame_t mol_render_frame(mol_engine_t* engine) {
+  mol_stereo_frame_t output = {0.0f, 0.0f};
+  float dry = 0.0f;
+  float chorus_send = 0.0f;
+  float delay_send = 0.0f;
+  float reverb_send = 0.0f;
   uint32_t index;
   while (engine->command_count != 0u &&
          engine->commands[0].command.target_frame <= engine->current_frame) {
@@ -1318,22 +1443,72 @@ static float mol_render_frame(mol_engine_t* engine) {
     mol_process_metronome_tick(engine);
   }
   for (index = 0u; index < engine->config.max_voices; ++index) {
-    mixed += mol_render_voice(engine, &engine->voices[index]);
+    mol_voice_t* voice = &engine->voices[index];
+    float sample = mol_render_voice(engine, voice);
+    dry += sample;
+    chorus_send += sample * (float)voice->patch.chorus_send_milli / 1000.0f;
+    delay_send += sample * (float)voice->patch.delay_send_milli / 1000.0f;
+    reverb_send += sample * (float)voice->patch.reverb_send_milli / 1000.0f;
   }
-  mixed += mol_render_metronome(engine);
-  mixed *= engine->master_gain;
-  if (!isfinite(mixed)) {
-    mixed = 0.0f;
-  } else if (mixed > 1.0f) {
-    mixed = 1.0f;
-  } else if (mixed < -1.0f) {
-    mixed = -1.0f;
+  dry += mol_render_metronome(engine);
+  output.left = dry;
+  output.right = dry;
+#if MOL_ENABLE_CHORUS
+  {
+    float left;
+    float right;
+    mol_chorus_process(&engine->chorus, chorus_send, &left, &right);
+    output.left += left;
+    output.right += right;
   }
+#else
+  (void)chorus_send;
+#endif
+#if MOL_ENABLE_DELAY
+  {
+    float wet = mol_delay_process(&engine->delay, delay_send);
+    output.left += wet;
+    output.right += wet;
+  }
+#else
+  (void)delay_send;
+#endif
+#if MOL_ENABLE_REVERB
+  {
+    float left;
+    float right;
+    mol_reverb_process(&engine->reverb, reverb_send, &left, &right);
+    output.left += left;
+    output.right += right;
+  }
+#else
+  (void)reverb_send;
+#endif
+  {
+    float master_gain = mol_dsp_smoother_process(&engine->master_gain);
+    output.left = mol_dsp_dc_blocker_process(&engine->dc_blocker[0], output.left * master_gain);
+    output.right = mol_dsp_dc_blocker_process(&engine->dc_blocker[1], output.right * master_gain);
+    output.left = mol_dsp_limiter_process(&engine->limiter[0], output.left);
+    output.right = mol_dsp_limiter_process(&engine->limiter[1], output.right);
+  }
+  if (engine->output_ramp_remaining != 0u) {
+    float ramp = 1.0f - (float)engine->output_ramp_remaining / (float)MOL_OUTPUT_RAMP_FRAMES;
+    output.left = output.left * ramp + engine->transition_tail[0] * (1.0f - ramp);
+    output.right = output.right * ramp + engine->transition_tail[1] * (1.0f - ramp);
+    --engine->output_ramp_remaining;
+  }
+  if (!isfinite(output.left) || !isfinite(output.right)) {
+    output.left = 0.0f;
+    output.right = 0.0f;
+    mol_clear_effect_tails(engine);
+  }
+  engine->last_output[0] = output.left;
+  engine->last_output[1] = output.right;
   ++engine->current_frame;
   if (engine->transport_running != 0u) {
     ++engine->transport_frame;
   }
-  return mixed;
+  return output;
 }
 
 static mol_result_t mol_validate_render(const mol_engine_t* engine, uint32_t frame_count,
@@ -1410,6 +1585,15 @@ size_t mol_engine_query_memory(const mol_engine_config_t* config) {
       !mol_size_add_array(&size, _Alignof(mol_voice_t), sizeof(mol_voice_t), config->max_voices) ||
       !mol_size_add_array(&size, _Alignof(float), sizeof(float),
                           (size_t)config->max_voices * MOL_PROFILE_PLUCK_FRAMES) ||
+#if MOL_ENABLE_CHORUS
+      !mol_size_add_array(&size, _Alignof(float), sizeof(float), MOL_PROFILE_CHORUS_FRAMES) ||
+#endif
+#if MOL_ENABLE_DELAY
+      !mol_size_add_array(&size, _Alignof(float), sizeof(float), MOL_PROFILE_DELAY_FRAMES) ||
+#endif
+#if MOL_ENABLE_REVERB
+      !mol_size_add_array(&size, _Alignof(float), sizeof(float), MOL_PROFILE_REVERB_FRAMES) ||
+#endif
       !mol_size_add_array(&size, _Alignof(mol_gesture_t), sizeof(mol_gesture_t),
                           config->command_capacity) ||
       !mol_size_add_array(&size, _Alignof(mol_scheduled_command_t), sizeof(mol_scheduled_command_t),
@@ -1458,6 +1642,18 @@ mol_result_t mol_engine_init(void* memory, size_t memory_size, const mol_engine_
   engine->pluck_memory =
       (float*)mol_arena_take(bytes, &offset, _Alignof(float), sizeof(float),
                              (size_t)config->max_voices * MOL_PROFILE_PLUCK_FRAMES);
+#if MOL_ENABLE_CHORUS
+  engine->chorus_memory = (float*)mol_arena_take(bytes, &offset, _Alignof(float), sizeof(float),
+                                                 MOL_PROFILE_CHORUS_FRAMES);
+#endif
+#if MOL_ENABLE_DELAY
+  engine->delay_memory = (float*)mol_arena_take(bytes, &offset, _Alignof(float), sizeof(float),
+                                                MOL_PROFILE_DELAY_FRAMES);
+#endif
+#if MOL_ENABLE_REVERB
+  engine->reverb_memory = (float*)mol_arena_take(bytes, &offset, _Alignof(float), sizeof(float),
+                                                 MOL_PROFILE_REVERB_FRAMES);
+#endif
   engine->gestures = (mol_gesture_t*)mol_arena_take(
       bytes, &offset, _Alignof(mol_gesture_t), sizeof(mol_gesture_t), config->command_capacity);
   engine->commands = (mol_scheduled_command_t*)mol_arena_take(
@@ -1483,6 +1679,8 @@ void mol_engine_shutdown(mol_engine_t* engine) {
 
 void mol_engine_reset(mol_engine_t* engine) {
   if (mol_engine_is_valid(engine)) {
+    float previous_left = engine->last_output[0];
+    float previous_right = engine->last_output[1];
     mol_clear_voices(engine, 0);
     memset(engine->pluck_memory, 0,
            sizeof(*engine->pluck_memory) * engine->config.max_voices * MOL_PROFILE_PLUCK_FRAMES);
@@ -1496,7 +1694,34 @@ void mol_engine_reset(mol_engine_t* engine) {
     engine->command_count = 0u;
     engine->event_head = 0u;
     engine->event_count = 0u;
-    engine->master_gain = MOL_MASTER_GAIN_DEFAULT;
+    mol_dsp_smoother_configure(&engine->master_gain, engine->config.sample_rate, 0.01f,
+                               MOL_MASTER_GAIN_DEFAULT);
+    mol_dsp_dc_blocker_configure(&engine->dc_blocker[0], 0.995f);
+    mol_dsp_dc_blocker_configure(&engine->dc_blocker[1], 0.995f);
+    mol_dsp_limiter_configure(&engine->limiter[0], engine->config.sample_rate, -1.0f, 0.0001f,
+                              0.05f);
+    mol_dsp_limiter_configure(&engine->limiter[1], engine->config.sample_rate, -1.0f, 0.0001f,
+                              0.05f);
+#if MOL_ENABLE_CHORUS
+    mol_chorus_configure(&engine->chorus, engine->chorus_memory, MOL_PROFILE_CHORUS_FRAMES,
+                         engine->config.sample_rate);
+#endif
+#if MOL_ENABLE_DELAY
+    mol_delay_configure(&engine->delay, engine->delay_memory, MOL_PROFILE_DELAY_FRAMES,
+                        engine->config.sample_rate);
+#endif
+#if MOL_ENABLE_REVERB
+    mol_reverb_configure(&engine->reverb, engine->reverb_memory, MOL_PROFILE_REVERB_FRAMES,
+                         engine->config.sample_rate,
+                         (float)MOL_PROFILE_REVERB_SCALE_MILLI / 1000.0f);
+#endif
+    engine->delay_time_ms = 240.0f;
+    engine->delay_sync_beats = 0.0f;
+    engine->last_output[0] = previous_left;
+    engine->last_output[1] = previous_right;
+    engine->transition_tail[0] = previous_left;
+    engine->transition_tail[1] = previous_right;
+    engine->output_ramp_remaining = MOL_OUTPUT_RAMP_FRAMES;
     engine->sustain = 0.0f;
     engine->octave_shift = 0;
     engine->transpose = 0;
@@ -1537,6 +1762,73 @@ void mol_engine_reset(mol_engine_t* engine) {
   }
 }
 
+static mol_result_t mol_validate_parameter(const mol_engine_t* engine, mol_parameter_id_t parameter,
+                                           float value) {
+  (void)engine;
+  if (!isfinite(value)) {
+    return MOL_ERROR_INVALID_ARGUMENT;
+  }
+  switch (parameter) {
+#if MOL_ENABLE_CHORUS
+    case MOL_PARAMETER_CHORUS_RATE_HZ:
+      return value >= MOL_CHORUS_RATE_MIN_HZ && value <= MOL_CHORUS_RATE_MAX_HZ
+                 ? MOL_OK
+                 : MOL_ERROR_INVALID_ARGUMENT;
+    case MOL_PARAMETER_CHORUS_DEPTH_MS:
+      return value >= MOL_CHORUS_DEPTH_MIN_MS && value <= MOL_CHORUS_DEPTH_MAX_MS
+                 ? MOL_OK
+                 : MOL_ERROR_INVALID_ARGUMENT;
+    case MOL_PARAMETER_CHORUS_MIX:
+      return value >= 0.0f && value <= 1.0f ? MOL_OK : MOL_ERROR_INVALID_ARGUMENT;
+#endif
+#if MOL_ENABLE_DELAY
+    case MOL_PARAMETER_DELAY_TIME_MS: {
+      float maximum =
+          1000.0f * ((float)MOL_PROFILE_DELAY_FRAMES - 2.0f) / (float)engine->config.sample_rate;
+      if (maximum > MOL_DELAY_TIME_MAX_MS) {
+        maximum = MOL_DELAY_TIME_MAX_MS;
+      }
+      return value >= MOL_DELAY_TIME_MIN_MS && value <= maximum ? MOL_OK
+                                                                : MOL_ERROR_INVALID_ARGUMENT;
+    }
+    case MOL_PARAMETER_DELAY_FEEDBACK:
+      return value >= 0.0f && value <= MOL_DELAY_FEEDBACK_MAX ? MOL_OK : MOL_ERROR_INVALID_ARGUMENT;
+    case MOL_PARAMETER_DELAY_MIX:
+      return value >= 0.0f && value <= 1.0f ? MOL_OK : MOL_ERROR_INVALID_ARGUMENT;
+    case MOL_PARAMETER_DELAY_SYNC_BEATS: {
+      float milliseconds =
+          value == 0.0f ? 0.0f : 60000000.0f * value / (float)engine->tempo_milli_bpm;
+      float maximum =
+          1000.0f * ((float)MOL_PROFILE_DELAY_FRAMES - 2.0f) / (float)engine->config.sample_rate;
+      return (value == 0.0f || (value >= 0.125f && value <= MOL_DELAY_SYNC_MAX_BEATS)) &&
+                     milliseconds <= maximum
+                 ? MOL_OK
+                 : MOL_ERROR_INVALID_ARGUMENT;
+    }
+#endif
+#if MOL_ENABLE_REVERB
+    case MOL_PARAMETER_REVERB_PREDELAY_MS: {
+      float maximum = 1000.0f * ((float)engine->reverb.predelay_capacity - 2.0f) /
+                      (float)engine->config.sample_rate;
+      return value >= 0.0f && value <= maximum && value <= MOL_REVERB_PREDELAY_MAX_MS
+                 ? MOL_OK
+                 : MOL_ERROR_INVALID_ARGUMENT;
+    }
+    case MOL_PARAMETER_REVERB_SIZE:
+    case MOL_PARAMETER_REVERB_MIX:
+      return value >= 0.0f && value <= 1.0f ? MOL_OK : MOL_ERROR_INVALID_ARGUMENT;
+    case MOL_PARAMETER_REVERB_DAMPING:
+      return value >= 0.0f && value <= MOL_REVERB_DAMPING_MAX ? MOL_OK : MOL_ERROR_INVALID_ARGUMENT;
+#endif
+    case MOL_PARAMETER_LIMITER_CEILING_DB:
+      return value >= MOL_LIMITER_CEILING_MIN_DB && value <= MOL_LIMITER_CEILING_MAX_DB
+                 ? MOL_OK
+                 : MOL_ERROR_INVALID_ARGUMENT;
+    default:
+      return MOL_ERROR_UNSUPPORTED;
+  }
+}
+
 mol_result_t mol_engine_submit(mol_engine_t* engine, const mol_command_t* command) {
   mol_scheduled_command_t scheduled;
   if (!mol_engine_is_valid(engine) || command == NULL || command->struct_size < sizeof(*command)) {
@@ -1570,6 +1862,14 @@ mol_result_t mol_engine_submit(mol_engine_t* engine, const mol_command_t* comman
         return MOL_ERROR_INVALID_ARGUMENT;
       }
       break;
+    case MOL_COMMAND_SET_PARAMETER: {
+      mol_result_t result = mol_validate_parameter(engine, command->payload.parameter.parameter,
+                                                   command->payload.parameter.value);
+      if (result != MOL_OK) {
+        return result;
+      }
+      break;
+    }
     case MOL_COMMAND_SUSTAIN:
       if (!isfinite(command->payload.scalar.value) || command->payload.scalar.value < 0.0f ||
           command->payload.scalar.value > 1.0f) {
@@ -1662,7 +1962,6 @@ mol_result_t mol_engine_submit(mol_engine_t* engine, const mol_command_t* comman
 mol_result_t mol_engine_render_interleaved_f32(mol_engine_t* engine, float* output,
                                                uint32_t frame_count, uint32_t channel_count) {
   uint32_t frame;
-  uint32_t channel;
   mol_result_t result = mol_validate_render(engine, frame_count, channel_count);
   if (result != MOL_OK || output == NULL) {
     return result != MOL_OK ? result : MOL_ERROR_INVALID_ARGUMENT;
@@ -1672,9 +1971,12 @@ mol_result_t mol_engine_render_interleaved_f32(mol_engine_t* engine, float* outp
     return MOL_ERROR_OVERFLOW;
   }
   for (frame = 0u; frame < frame_count; ++frame) {
-    float sample = mol_render_frame(engine);
-    for (channel = 0u; channel < channel_count; ++channel) {
-      output[(size_t)frame * channel_count + channel] = sample;
+    mol_stereo_frame_t sample = mol_render_frame(engine);
+    if (channel_count == 1u) {
+      output[frame] = 0.5f * (sample.left + sample.right);
+    } else {
+      output[(size_t)frame * channel_count] = sample.left;
+      output[(size_t)frame * channel_count + 1u] = sample.right;
     }
   }
   return MOL_OK;
@@ -1694,9 +1996,12 @@ mol_result_t mol_engine_render_planar_f32(mol_engine_t* engine, float* const* ou
     }
   }
   for (frame = 0u; frame < frame_count; ++frame) {
-    float sample = mol_render_frame(engine);
-    for (channel = 0u; channel < channel_count; ++channel) {
-      output_channels[channel][frame] = sample;
+    mol_stereo_frame_t sample = mol_render_frame(engine);
+    if (channel_count == 1u) {
+      output_channels[0][frame] = 0.5f * (sample.left + sample.right);
+    } else {
+      output_channels[0][frame] = sample.left;
+      output_channels[1][frame] = sample.right;
     }
   }
   return MOL_OK;
@@ -1766,12 +2071,25 @@ mol_result_t mol_engine_get_state(const mol_engine_t* engine, mol_engine_state_t
 }
 
 mol_capability_flags_t mol_engine_get_capabilities(const mol_engine_t* engine) {
+  mol_capability_flags_t capabilities;
   if (!mol_engine_is_valid(engine)) {
     return 0u;
   }
-  return MOL_CAPABILITY_CALLER_MEMORY | MOL_CAPABILITY_INTERLEAVED_F32 | MOL_CAPABILITY_PLANAR_F32 |
-         MOL_CAPABILITY_POLYPHONIC_SYNTH | MOL_CAPABILITY_SAMPLE_ACCURATE_COMMANDS |
-         MOL_CAPABILITY_SCALE_LOCK | MOL_CAPABILITY_CHORD_MODE | MOL_CAPABILITY_CONTINUOUS_SUSTAIN |
-         MOL_CAPABILITY_TRANSPORT | MOL_CAPABILITY_METRONOME | MOL_CAPABILITY_ARPEGGIATOR |
-         MOL_CAPABILITY_MONOPHONIC_PORTAMENTO | MOL_CAPABILITY_BUILTIN_PATCHES;
+  capabilities = MOL_CAPABILITY_CALLER_MEMORY | MOL_CAPABILITY_INTERLEAVED_F32 |
+                 MOL_CAPABILITY_PLANAR_F32 | MOL_CAPABILITY_POLYPHONIC_SYNTH |
+                 MOL_CAPABILITY_SAMPLE_ACCURATE_COMMANDS | MOL_CAPABILITY_SCALE_LOCK |
+                 MOL_CAPABILITY_CHORD_MODE | MOL_CAPABILITY_CONTINUOUS_SUSTAIN |
+                 MOL_CAPABILITY_TRANSPORT | MOL_CAPABILITY_METRONOME | MOL_CAPABILITY_ARPEGGIATOR |
+                 MOL_CAPABILITY_MONOPHONIC_PORTAMENTO | MOL_CAPABILITY_BUILTIN_PATCHES |
+                 MOL_CAPABILITY_LIMITER;
+#if MOL_ENABLE_CHORUS
+  capabilities |= MOL_CAPABILITY_CHORUS | MOL_CAPABILITY_STEREO_EFFECTS;
+#endif
+#if MOL_ENABLE_DELAY
+  capabilities |= MOL_CAPABILITY_DELAY;
+#endif
+#if MOL_ENABLE_REVERB
+  capabilities |= MOL_CAPABILITY_REVERB | MOL_CAPABILITY_STEREO_EFFECTS;
+#endif
+  return capabilities;
 }

@@ -4,6 +4,7 @@
 
 #include "mol/capabilities.h"
 #include "mol/command.h"
+#include "mol/effects.h"
 #include "mol/engine.h"
 #include "mol/event.h"
 #include "mol/music.h"

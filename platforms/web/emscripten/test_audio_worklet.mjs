@@ -40,6 +40,7 @@ const right = new Float32Array(128);
 let previous = 0.0;
 let crossings = 0;
 let peak = 0.0;
+let stereoDifference = 0.0;
 for (let block = 0; block < 375; block += 1) {
   if (!processor.process([], [[left, right]], {})) {
     throw new Error("AudioWorklet processor unexpectedly stopped");
@@ -47,10 +48,11 @@ for (let block = 0; block < 375; block += 1) {
   for (let index = 0; index < left.length; index += 1) {
     const frame = block * left.length + index;
     const sample = left[index];
-    if (!Number.isFinite(sample) || sample !== right[index]) {
+    if (!Number.isFinite(sample) || !Number.isFinite(right[index])) {
       throw new Error(`Invalid stereo AudioWorklet sample at frame ${frame}`);
     }
     peak = Math.max(peak, Math.abs(sample));
+    stereoDifference += Math.abs(sample - right[index]);
     if (frame >= 4800 && frame < 43200 && previous <= 0.0 && sample > 0.0) {
       crossings += 1;
     }
@@ -59,12 +61,17 @@ for (let block = 0; block < 375; block += 1) {
 }
 
 const frequency = crossings / 0.8;
-if (peak <= 0.01 || peak > 1.0 || Math.abs(frequency - 261.6256) >= 1.0) {
+if (
+  peak <= 0.01 ||
+  peak > 1.0 ||
+  stereoDifference <= 0.000001 ||
+  Math.abs(frequency - 261.6256) >= 1.0
+) {
   throw new Error(`AudioWorklet C4 analysis failed: frequency=${frequency}, peak=${peak}`);
 }
 
 processor.port.onmessage({ data: { type: "note-off", gestureId: 1 } });
-for (let block = 0; block < 400; block += 1) {
+for (let block = 0; block < 1200; block += 1) {
   processor.process([], [[left, right]], {});
 }
 peak = 0.0;

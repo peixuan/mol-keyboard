@@ -57,18 +57,40 @@ set_target_properties(
 mol_enable_warnings(mol_core)
 mol_enable_optional_instrumentation(mol_core)
 
+if(MOL_ENABLE_CHORUS)
+  target_compile_definitions(mol_core PUBLIC MOL_ENABLE_CHORUS=1)
+else()
+  target_compile_definitions(mol_core PUBLIC MOL_ENABLE_CHORUS=0)
+endif()
+if(MOL_ENABLE_DELAY)
+  target_compile_definitions(mol_core PUBLIC MOL_ENABLE_DELAY=1)
+else()
+  target_compile_definitions(mol_core PUBLIC MOL_ENABLE_DELAY=0)
+endif()
+if(MOL_ENABLE_REVERB)
+  target_compile_definitions(mol_core PUBLIC MOL_ENABLE_REVERB=1)
+else()
+  target_compile_definitions(mol_core PUBLIC MOL_ENABLE_REVERB=0)
+endif()
+
 if(MOL_PROFILE_TINY)
   target_compile_definitions(
     mol_core PUBLIC MOL_BUILD_PROFILE=1 MOL_PROFILE_MAX_VOICES=12
-                    MOL_PROFILE_PLUCK_FRAMES=384)
+                    MOL_PROFILE_PLUCK_FRAMES=384 MOL_PROFILE_CHORUS_FRAMES=1024
+                    MOL_PROFILE_DELAY_FRAMES=8192 MOL_PROFILE_REVERB_FRAMES=8192
+                    MOL_PROFILE_REVERB_SCALE_MILLI=650)
 elseif(MOL_PROFILE_STANDARD)
   target_compile_definitions(
     mol_core PUBLIC MOL_BUILD_PROFILE=2 MOL_PROFILE_MAX_VOICES=32
-                    MOL_PROFILE_PLUCK_FRAMES=384)
+                    MOL_PROFILE_PLUCK_FRAMES=384 MOL_PROFILE_CHORUS_FRAMES=4096
+                    MOL_PROFILE_DELAY_FRAMES=96000 MOL_PROFILE_REVERB_FRAMES=16384
+                    MOL_PROFILE_REVERB_SCALE_MILLI=1000)
 else()
   target_compile_definitions(
     mol_core PUBLIC MOL_BUILD_PROFILE=3 MOL_PROFILE_MAX_VOICES=64
-                    MOL_PROFILE_PLUCK_FRAMES=512)
+                    MOL_PROFILE_PLUCK_FRAMES=512 MOL_PROFILE_CHORUS_FRAMES=8192
+                    MOL_PROFILE_DELAY_FRAMES=192000 MOL_PROFILE_REVERB_FRAMES=32768
+                    MOL_PROFILE_REVERB_SCALE_MILLI=1350)
 endif()
 
 add_library(mol_platform_audio_runtime platforms/common/mol_audio_runtime.c)

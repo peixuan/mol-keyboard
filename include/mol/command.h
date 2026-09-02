@@ -92,6 +92,10 @@ typedef union mol_command_payload {
     uint8_t hard_switch;
     uint8_t reserved[3];
   } preset;
+  struct {
+    uint32_t parameter;
+    float value;
+  } parameter;
   uint8_t bytes[64];
 } mol_command_payload_t;
 
