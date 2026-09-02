@@ -102,6 +102,12 @@ function(mol_add_oboe)
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
   FetchContent_MakeAvailable(oboe)
 
+  # Oboe's public headers are third-party code. Keep the project's strict warning
+  # policy for first-party sources without promoting upstream header warnings to
+  # errors in every consumer.
+  set_property(TARGET oboe APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                                           "${oboe_SOURCE_DIR}/include")
+
   add_library(mol_oboe INTERFACE)
   add_library(mol::oboe ALIAS mol_oboe)
   target_link_libraries(mol_oboe INTERFACE oboe)

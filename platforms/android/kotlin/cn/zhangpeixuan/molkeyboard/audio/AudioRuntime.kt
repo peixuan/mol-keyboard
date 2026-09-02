@@ -40,6 +40,38 @@ class AudioRuntime : Closeable {
         NativeAudio.nativeNoteOff(requireHandle(), note, gestureId)
 
     @Synchronized
+    fun submitControl(
+        commandType: Int,
+        gestureId: Long = 0,
+        integer0: Int = 0,
+        integer1: Int = 0,
+        integer2: Int = 0,
+        integer3: Int = 0,
+        scalar0: Float = 0f,
+        scalar1: Float = 0f,
+    ): Int = NativeAudio.nativeSubmitControl(
+        requireHandle(),
+        commandType,
+        gestureId,
+        integer0,
+        integer1,
+        integer2,
+        integer3,
+        scalar0,
+        scalar1,
+    )
+
+    @Synchronized
+    fun pollEvents(): LongArray = NativeAudio.nativePollEvents(requireHandle())
+
+    @Synchronized
+    fun exportRecording(): ByteArray? = NativeAudio.nativeExportRecording(requireHandle())
+
+    @Synchronized
+    fun loadRecording(bytes: ByteArray): Int =
+        NativeAudio.nativeLoadRecording(requireHandle(), bytes)
+
+    @Synchronized
     fun status(): AudioStatus {
         val values = NativeAudio.nativeStatus(requireHandle())
         check(values.size == STATUS_FIELD_COUNT) { "Invalid native audio status" }
@@ -88,4 +120,18 @@ internal object NativeAudio {
     external fun nativeNoteOn(handle: Long, note: Int, velocity: Float, gestureId: Long): Int
     external fun nativeNoteOff(handle: Long, note: Int, gestureId: Long): Int
     external fun nativeStatus(handle: Long): LongArray
+    external fun nativeSubmitControl(
+        handle: Long,
+        commandType: Int,
+        gestureId: Long,
+        integer0: Int,
+        integer1: Int,
+        integer2: Int,
+        integer3: Int,
+        scalar0: Float,
+        scalar1: Float,
+    ): Int
+    external fun nativePollEvents(handle: Long): LongArray
+    external fun nativeExportRecording(handle: Long): ByteArray?
+    external fun nativeLoadRecording(handle: Long, bytes: ByteArray): Int
 }
