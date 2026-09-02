@@ -5,6 +5,26 @@ menu "MoL Keyboard audio host"
         range 32 128
         default 64
 
+    config MOL_BLUETOOTH_HID_TASK_PRIORITY
+        int "Bluetooth HID reconnect task priority"
+        range 1 10
+        default 5
+
+    config MOL_BLUETOOTH_HID_TASK_CORE
+        int "Bluetooth HID reconnect task core affinity"
+        range 0 1
+        default 0
+
+    config MOL_BLUETOOTH_HID_TASK_STACK_SIZE
+        int "Static Bluetooth HID reconnect task stack size"
+        range 3072 8192
+        default 4096
+
+    config MOL_BLUETOOTH_HID_EVENT_STACK_SIZE
+        int "ESP HID event task stack size"
+        range 3072 8192
+        default 4096
+
     config MOL_I2S_SAMPLE_RATE
         int "I2S sample rate"
         range 16000 48000

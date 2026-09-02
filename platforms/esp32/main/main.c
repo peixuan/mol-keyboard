@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "bluetooth_hid.h"
 #include "device_settings.h"
 #include "device_storage.h"
 #include "driver/i2s_std.h"
@@ -27,7 +28,7 @@
 
 #define MOL_ESP32_RENDER_FRAMES 128u
 #define MOL_ESP32_CHANNEL_COUNT 2u
-#define MOL_ESP32_ENGINE_BYTES 131072u
+#define MOL_ESP32_ENGINE_BYTES 49152u
 #define MOL_ESP32_WRITE_TIMEOUT_MS 100u
 #define MOL_ESP32_DIAGNOSTIC_PERIOD_MS 10000u
 #define MOL_ESP32_C4_HZ 261.6256f
@@ -307,6 +308,7 @@ void app_main(void) {
   mol_command_t settings_commands[MOL_DEVICE_SETTINGS_COMMAND_COUNT];
   size_t settings_command_count = 0u;
   size_t settings_command_index;
+  size_t engine_bytes;
   float frequency = 0.0f;
   float peak = 0.0f;
 
@@ -345,11 +347,15 @@ void app_main(void) {
            sequence_summary.event_count, sequence_summary.final_frame);
   config.sample_rate = CONFIG_MOL_I2S_SAMPLE_RATE;
   config.channel_count = MOL_ESP32_CHANNEL_COUNT;
-  config.max_voices = 12u;
-  config.command_capacity = 32u;
-  config.event_capacity = 32u;
-  if (mol_engine_query_memory(&config) > sizeof(engine_memory.bytes)) {
-    ESP_LOGE(kTag, "Tiny engine exceeds the static memory budget");
+  config.max_voices = 8u;
+  config.command_capacity = 16u;
+  config.event_capacity = 16u;
+  config.sequence_capacity = 64u;
+  engine_bytes = mol_engine_query_memory(&config);
+  ESP_LOGI(kTag, "Tiny engine memory: required=%" PRIu32 " static=%" PRIu32 " bytes",
+           (uint32_t)engine_bytes, (uint32_t)sizeof(engine_memory.bytes));
+  if (engine_bytes == 0u || engine_bytes > sizeof(engine_memory.bytes)) {
+    ESP_LOGE(kTag, "Tiny engine configuration is invalid or exceeds the static memory budget");
     return;
   }
 
@@ -416,6 +422,18 @@ void app_main(void) {
            (uint32_t)CONFIG_MOL_I2S_SAMPLE_RATE, CONFIG_MOL_I2S_BCLK_GPIO, CONFIG_MOL_I2S_WS_GPIO,
            CONFIG_MOL_I2S_DOUT_GPIO, CONFIG_MOL_I2S_DMA_DESCRIPTOR_COUNT, MOL_ESP32_RENDER_FRAMES,
            CONFIG_MOL_AUDIO_TASK_PRIORITY, CONFIG_MOL_AUDIO_TASK_CORE);
+  result = mol_bluetooth_hid_start(device_settings.paired_peer_address,
+                                   device_settings.paired_peer_valid != 0u);
+  if (result == ESP_OK) {
+#if CONFIG_IDF_TARGET_ESP32
+    ESP_LOGI(kTag, "Bluetooth HID host active: BLE + Classic");
+#else
+    ESP_LOGI(kTag, "Bluetooth HID host active: BLE (Classic unsupported by this SoC)");
+#endif
+  } else {
+    ESP_LOGW(kTag, "Bluetooth HID host unavailable: %s; live audio remains enabled",
+             esp_err_to_name(result));
+  }
 
   for (;;) {
     mol_esp32_audio_snapshot_t audio_snapshot;
@@ -423,12 +441,14 @@ void app_main(void) {
     mol_gpio_matrix_stats_t gpio_stats;
     mol_device_storage_stats_t storage_stats;
     mol_sequence_storage_stats_t sequence_storage_stats;
+    mol_bluetooth_hid_stats_t bluetooth_stats;
     vTaskDelay(pdMS_TO_TICKS(MOL_ESP32_DIAGNOSTIC_PERIOD_MS));
     audio_snapshot = audio_stats_snapshot();
     input_stats = mol_input_queue_stats();
     gpio_stats = mol_gpio_matrix_stats();
     storage_stats = mol_device_storage_stats();
     sequence_storage_stats = mol_sequence_storage_stats();
+    bluetooth_stats = mol_bluetooth_hid_stats();
     if (mol_input_take_config_mode_request()) {
       ESP_LOGI(kTag, "Configuration mode requested by physical hold gesture");
     }
@@ -441,6 +461,9 @@ void app_main(void) {
         " gpio_events=%" PRIu32 " gpio_ghost=%" PRIu32 " gpio_fail=%" PRIu32 " nvs_load=%" PRIu32
         " nvs_save=%" PRIu32 " nvs_missing=%" PRIu32 " nvs_corrupt=%" PRIu32 " nvs_io_fail=%" PRIu32
         " seq_load=%" PRIu32 " seq_save=%" PRIu32 " seq_corrupt=%" PRIu32 " seq_io_fail=%" PRIu32
+        " bt_ble_scan=%" PRIu32 " bt_classic_scan=%" PRIu32 " bt_open=%" PRIu32
+        " bt_connect=%" PRIu32 " bt_disconnect=%" PRIu32 " bt_report=%" PRIu32
+        " bt_invalid=%" PRIu32 " bt_fail=%" PRIu32 " bt_stack_min=%" PRIu32
         " audio_stack_min=%u gpio_stack_min=%" PRIu32 " internal_heap_min=%u",
         audio_snapshot.rendered_frames, audio_snapshot.render_failures,
         audio_snapshot.write_failures, audio_snapshot.partial_writes,
@@ -452,6 +475,10 @@ void app_main(void) {
         storage_stats.settings_saves, storage_stats.missing_records, storage_stats.corrupt_records,
         storage_stats.io_failures, sequence_storage_stats.loads, sequence_storage_stats.saves,
         sequence_storage_stats.corrupt_files, sequence_storage_stats.io_failures,
+        bluetooth_stats.ble_scans, bluetooth_stats.classic_scans, bluetooth_stats.open_attempts,
+        bluetooth_stats.connections, bluetooth_stats.disconnects, bluetooth_stats.reports,
+        bluetooth_stats.invalid_reports, bluetooth_stats.delivery_failures,
+        bluetooth_stats.stack_high_water,
         (unsigned int)uxTaskGetStackHighWaterMark(audio_task_handle), gpio_stats.stack_high_water,
         (unsigned int)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL));
   }
