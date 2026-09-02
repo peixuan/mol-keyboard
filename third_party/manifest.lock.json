@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "generated_on": "2026-09-02",
+  "components": [
+    {
+      "name": "actions/checkout",
+      "version": "6.0.2",
+      "revision": "de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+      "source": "https://github.com/actions/checkout.git",
+      "license": "MIT",
+      "usage": "CI source checkout",
+      "distributed": false,
+      "local_patches": []
+    },
+    {
+      "name": "Emscripten SDK",
+      "version": "6.0.5",
+      "revision": "dfb9d1a46c3bb8f52e1e6324be23123b9d73c190",
+      "release_revision": "dbd755b5da399329c2576f6e3dfa7f419f5d8409",
+      "source": "https://github.com/emscripten-core/emsdk.git",
+      "license": "MIT OR NCSA",
+      "usage": "WebAssembly build and test toolchain",
+      "distributed": false,
+      "build_options": ["upstream LLVM backend", "fixed WebAssembly memory"],
+      "local_patches": []
+    }
+  ]
+}

@@ -12,7 +12,7 @@ typedef union consumer_storage {
 } consumer_storage_t;
 
 int main(void) {
-  consumer_storage_t storage;
+  static consumer_storage_t storage;
   mol_engine_config_t config = mol_engine_config_default();
   mol_engine_t* engine = NULL;
   if (mol_engine_init(storage.bytes, sizeof(storage.bytes), &config, &engine) != MOL_OK) {

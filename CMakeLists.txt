@@ -54,8 +54,19 @@ install(
   NAMESPACE mol::
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/mol_keyboard)
 
+if(EMSCRIPTEN AND DEFINED ENV{EMSDK_NODE})
+  set(CMAKE_CROSSCOMPILING_EMULATOR "$ENV{EMSDK_NODE}")
+endif()
+
 if(MOL_BUILD_TESTS)
   enable_testing()
+endif()
+
+if(EMSCRIPTEN)
+  add_subdirectory(platforms/web/emscripten)
+endif()
+
+if(MOL_BUILD_TESTS)
   add_subdirectory(tests)
 endif()
 

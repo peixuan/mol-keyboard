@@ -2,12 +2,12 @@
 
 ## Current milestone
 
-M0 — Blank repository and engineering baseline.
+M0 portability baseline and M1 portable sound path.
 
 ## Last verified commit
 
-`add3a69` (`feat(synth): add polyphonic band-limited voice path`) is the last
-verified commit. The offline renderer below was verified in the current
+`be59267` (`feat(render): add deterministic PCM WAV output`) is the last verified
+commit. The WebAssembly implementation below was verified in the current
 worktree and will be committed atomically.
 
 ## Completed requirements
@@ -28,14 +28,18 @@ worktree and will be committed atomically.
   files without opening an audio device and reports duration, peak, RMS,
   clipping, non-finite samples, and underruns.
 - CTest validates the RIFF/WAVE header and verifies that rendered PCM is non-silent.
+- Emscripten 6.0.5 compiles the same core and all portable C/C++ tests in Debug
+  and LTO Release configurations.
+- A fixed-memory ES module exposes the engine to workers and passed a Node.js
+  Wasm C4 conformance test at 261.25 Hz with peak 0.24512254.
+- The LTO Release Web artifacts are 3,897-byte Wasm and 9,862-byte JS loader files.
 
 ## In-progress work
 
-- Compiling the same synthesis source to WebAssembly with Emscripten.
+- ESP-IDF component integration and a real ESP32/ESP32-S3 toolchain build.
 
 ## Blocked platform checks
 
-- Emscripten is not installed on the current host; Wasm is not verified.
 - ESP-IDF is not installed on the current host; ESP32 builds are not verified.
 - Android NDK, Apple SDKs, and HarmonyOS SDKs have not been discovered or verified.
 - Physical devices and signing credentials have not been provided.
@@ -57,6 +61,19 @@ build/dev-release/apps/mol-render/mol-render --output build/dev-release/c4-evide
 The evidence render was 384,044 bytes with peak 0.19609803, RMS 0.06978670,
 zero clipped samples, zero non-finite samples, and zero underruns.
 
+With the pinned Emscripten SDK environment active:
+
+```powershell
+cmake --preset wasm-debug
+cmake --build --preset wasm-debug
+ctest --preset wasm-debug
+cmake --preset wasm-release
+cmake --build --preset wasm-release
+ctest --preset wasm-release
+```
+
+Both configurations passed 5/5 tests on 2026-09-02.
+
 ## Known failures
 
 - `ninja`, `cl`, `emcc`, and `idf.py` are not on the default `PATH`.
@@ -65,5 +82,5 @@ zero clipped samples, zero non-finite samples, and zero underruns.
 
 ## Next highest-priority task
 
-Install or provision a pinned Emscripten SDK, compile the same core to Wasm, and
-run a native/Wasm C4 conformance check before adding AudioWorklet integration.
+Provision the current stable ESP-IDF toolchain, add `mol_core` as a component,
+and perform real ESP32 and ESP32-S3 compile checks before I2S integration.

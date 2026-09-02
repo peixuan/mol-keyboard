@@ -2,8 +2,8 @@
 
 | Gate | State | Evidence |
 |---|---|---|
-| M0 engineering baseline | in progress | Windows x64 Debug/Release core and C/C++ consumers verified; Wasm and ESP-IDF pending |
-| M1 portable sound path | in progress | Native synthesis plus deterministic PCM16 WAV verified; Wasm, realtime desktop, AudioWorklet, and ESP32 I2S pending |
+| M0 engineering baseline | in progress | Windows x64 and Wasm Debug/Release core plus C/C++ consumers verified; ESP-IDF pending |
+| M1 portable sound path | in progress | Native/Wasm synthesis and deterministic PCM16 WAV verified; realtime desktop, AudioWorklet, and ESP32 I2S pending |
 | M2 music semantics | not started | Depends on M1 |
 | M3 instruments and DSP | not started | Depends on M2 |
 | M4 recording and tools | not started | Depends on M3 |

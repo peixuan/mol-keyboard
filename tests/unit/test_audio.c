@@ -40,7 +40,7 @@ static mol_command_t note_command(mol_command_type_t type, mol_frame_index_t fra
 }
 
 static void test_c4_frequency_and_release(void) {
-  audio_test_storage_t storage;
+  static audio_test_storage_t storage;
   mol_engine_config_t config = mol_engine_config_default();
   mol_engine_t* engine = NULL;
   mol_command_t note_on = note_command(MOL_COMMAND_NOTE_ON, 0u, 1u);
@@ -89,7 +89,7 @@ static void test_c4_frequency_and_release(void) {
 }
 
 static void test_sample_accurate_start(void) {
-  audio_test_storage_t storage;
+  static audio_test_storage_t storage;
   mol_engine_config_t config = mol_engine_config_default();
   mol_engine_t* engine = NULL;
   mol_command_t note_on = note_command(MOL_COMMAND_NOTE_ON, 64u, 2u);
@@ -113,7 +113,7 @@ static void test_sample_accurate_start(void) {
 }
 
 static void test_eight_voice_polyphony(void) {
-  audio_test_storage_t storage;
+  static audio_test_storage_t storage;
   mol_engine_config_t config = mol_engine_config_default();
   mol_engine_t* engine = NULL;
   mol_engine_state_t state = {0};

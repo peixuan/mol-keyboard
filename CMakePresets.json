@@ -80,7 +80,8 @@
       "inherits": "base",
       "toolchainFile": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
       "cacheVariables": {
-        "MOL_BUILD_TESTS": "OFF",
+        "MOL_BUILD_TESTS": "ON",
+        "MOL_BUILD_TOOLS": "OFF",
         "MOL_BUILD_DAEMON": "OFF",
         "MOL_BUILD_WEB_SERVER": "OFF"
       }
@@ -159,7 +160,9 @@
     { "name": "ci-linux-gcc", "configurePreset": "ci-linux-gcc", "output": { "outputOnFailure": true } },
     { "name": "ci-linux-clang", "configurePreset": "ci-linux-clang", "output": { "outputOnFailure": true } },
     { "name": "ci-windows-msvc", "configurePreset": "ci-windows-msvc", "output": { "outputOnFailure": true } },
-    { "name": "ci-macos", "configurePreset": "ci-macos", "output": { "outputOnFailure": true } }
+    { "name": "ci-macos", "configurePreset": "ci-macos", "output": { "outputOnFailure": true } },
+    { "name": "wasm-debug", "configurePreset": "wasm-debug", "output": { "outputOnFailure": true } },
+    { "name": "wasm-release", "configurePreset": "wasm-release", "output": { "outputOnFailure": true } }
   ],
   "vendor": {
     "mol.keyboard/license": "Apache-2.0"

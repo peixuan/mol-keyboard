@@ -24,7 +24,7 @@ static int failures = 0;
   } while (0)
 
 static void test_lifecycle(void) {
-  test_storage_t storage;
+  static test_storage_t storage;
   mol_engine_config_t config = mol_engine_config_default();
   mol_engine_t* engine = NULL;
   mol_engine_state_t state = {0};
@@ -57,7 +57,7 @@ static void test_lifecycle(void) {
 }
 
 static void test_validation(void) {
-  test_storage_t storage;
+  static test_storage_t storage;
   mol_engine_config_t config = mol_engine_config_default();
   mol_engine_t* engine = (mol_engine_t*)(uintptr_t)1u;
 
@@ -77,7 +77,7 @@ static void test_validation(void) {
 }
 
 static void test_planar_and_commands(void) {
-  test_storage_t storage;
+  static test_storage_t storage;
   mol_engine_config_t config = mol_engine_config_default();
   mol_engine_t* engine = NULL;
   mol_command_t command = {0};
