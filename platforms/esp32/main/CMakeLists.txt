@@ -11,7 +11,7 @@ configure_file(
   "${CMAKE_CURRENT_BINARY_DIR}/generated/mol_sequence_fixture_bytes.h" @ONLY)
 
 idf_component_register(
-  SRCS "main.c" "matrix_logic.c" "input_queue.c" "gpio_matrix.c"
+  SRCS "main.c" "matrix_logic.c" "input_queue.c" "gpio_matrix.c" "device_settings.c"
        "${MOL_REPOSITORY_ROOT}/tests/conformance/sequence_fixture.c"
   PRIV_INCLUDE_DIRS "${MOL_REPOSITORY_ROOT}/tests/conformance"
                     "${CMAKE_CURRENT_BINARY_DIR}/generated"

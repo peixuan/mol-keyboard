@@ -71,6 +71,17 @@ mol_enable_warnings(mol_esp32_matrix_tests)
 mol_enable_optional_instrumentation(mol_esp32_matrix_tests)
 add_test(NAME mol_esp32_matrix_tests COMMAND mol_esp32_matrix_tests)
 
+add_executable(
+  mol_esp32_settings_tests unit/test_esp32_settings.c
+                           ${PROJECT_SOURCE_DIR}/platforms/esp32/main/device_settings.c)
+target_include_directories(mol_esp32_settings_tests
+                           PRIVATE ${PROJECT_SOURCE_DIR}/platforms/esp32/main)
+target_link_libraries(mol_esp32_settings_tests PRIVATE mol::core)
+set_target_properties(mol_esp32_settings_tests PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_esp32_settings_tests)
+mol_enable_optional_instrumentation(mol_esp32_settings_tests)
+add_test(NAME mol_esp32_settings_tests COMMAND mol_esp32_settings_tests)
+
 add_test(
   NAME mol_harmony_project_audit
   COMMAND
