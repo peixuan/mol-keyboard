@@ -10,13 +10,20 @@ configure_file(
   "${MOL_REPOSITORY_ROOT}/tests/fixtures/sequence_fixture_bytes.h.in"
   "${CMAKE_CURRENT_BINARY_DIR}/generated/mol_sequence_fixture_bytes.h" @ONLY)
 
+set(MOL_USB_HID_SOURCES)
+set(MOL_USB_HID_REQUIRES)
+if(CONFIG_IDF_TARGET_ESP32S3)
+  list(APPEND MOL_USB_HID_SOURCES "usb_hid.c")
+  list(APPEND MOL_USB_HID_REQUIRES espressif__usb espressif__usb_host_hid)
+endif()
+
 idf_component_register(
   SRCS "main.c" "matrix_logic.c" "input_queue.c" "gpio_matrix.c" "device_settings.c"
        "device_storage.c" "sequence_store.c" "sequence_storage.c" "hid_keyboard.c"
-       "bluetooth_hid.c"
+       "bluetooth_hid.c" ${MOL_USB_HID_SOURCES}
        "${MOL_REPOSITORY_ROOT}/tests/conformance/sequence_fixture.c"
   PRIV_INCLUDE_DIRS "${MOL_REPOSITORY_ROOT}/tests/conformance"
                     "${CMAKE_CURRENT_BINARY_DIR}/generated"
   REQUIRES mol_core bt esp_hid esp_driver_gpio esp_driver_i2s esp_system esp_timer fatfs nvs_flash
-           wear_levelling)
+           wear_levelling ${MOL_USB_HID_REQUIRES})
 target_compile_options(${COMPONENT_LIB} PRIVATE -Wall -Wextra -Werror)

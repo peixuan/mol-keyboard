@@ -25,6 +25,40 @@ menu "MoL Keyboard audio host"
         range 3072 8192
         default 4096
 
+    config MOL_USB_HID_ENABLE
+        bool "Enable the ESP32-S3 USB HID keyboard host"
+        depends on IDF_TARGET_ESP32S3
+        default y
+
+    if MOL_USB_HID_ENABLE
+
+    config MOL_USB_HID_TASK_PRIORITY
+        int "USB HID class event task priority"
+        range 1 10
+        default 5
+
+    config MOL_USB_HID_TASK_CORE
+        int "USB HID task core affinity"
+        range 0 1
+        default 0
+
+    config MOL_USB_HID_TASK_STACK_SIZE
+        int "Static USB HID class event task stack size"
+        range 3072 8192
+        default 4096
+
+    config MOL_USB_HOST_TASK_PRIORITY
+        int "USB Host library event task priority"
+        range 1 10
+        default 4
+
+    config MOL_USB_HOST_TASK_STACK_SIZE
+        int "Static USB Host library event task stack size"
+        range 3072 8192
+        default 4096
+
+    endif
+
     config MOL_I2S_SAMPLE_RATE
         int "I2S sample rate"
         range 16000 48000

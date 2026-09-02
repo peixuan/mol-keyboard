@@ -26,6 +26,10 @@
 #include "sequence_fixture.h"
 #include "sequence_storage.h"
 
+#if CONFIG_MOL_USB_HID_ENABLE
+#include "usb_hid.h"
+#endif
+
 #define MOL_ESP32_RENDER_FRAMES 128u
 #define MOL_ESP32_CHANNEL_COUNT 2u
 #define MOL_ESP32_ENGINE_BYTES 49152u
@@ -434,6 +438,21 @@ void app_main(void) {
     ESP_LOGW(kTag, "Bluetooth HID host unavailable: %s; live audio remains enabled",
              esp_err_to_name(result));
   }
+#if CONFIG_MOL_USB_HID_ENABLE
+  result = mol_usb_hid_start();
+  if (result == ESP_OK) {
+    ESP_LOGI(kTag,
+             "USB HID host active: internal PHY D-=GPIO19 D+=GPIO20; external 5 V VBUS supply "
+             "required");
+  } else {
+    ESP_LOGW(kTag, "USB HID host unavailable: %s; live audio remains enabled",
+             esp_err_to_name(result));
+  }
+#elif CONFIG_IDF_TARGET_ESP32S3
+  ESP_LOGI(kTag, "USB HID host capability=unsupported (disabled by build configuration)");
+#else
+  ESP_LOGI(kTag, "USB HID host capability=unsupported (not supported by this SoC)");
+#endif
 
   for (;;) {
     mol_esp32_audio_snapshot_t audio_snapshot;
@@ -481,5 +500,21 @@ void app_main(void) {
         bluetooth_stats.stack_high_water,
         (unsigned int)uxTaskGetStackHighWaterMark(audio_task_handle), gpio_stats.stack_high_water,
         (unsigned int)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL));
+#if CONFIG_MOL_USB_HID_ENABLE
+    {
+      const mol_usb_hid_stats_t usb_stats = mol_usb_hid_stats();
+      ESP_LOGI(kTag,
+               "usb_ifaces=%" PRIu32 " usb_open=%" PRIu32 " usb_reject=%" PRIu32
+               " usb_disconnect=%" PRIu32 " usb_report=%" PRIu32 " usb_invalid=%" PRIu32
+               " usb_transfer_err=%" PRIu32 " usb_delivery_fail=%" PRIu32
+               " usb_driver_fail=%" PRIu32 " usb_queue_ovf=%" PRIu32 " usb_host_stack_min=%" PRIu32
+               " usb_hid_stack_min=%" PRIu32,
+               usb_stats.interfaces_seen, usb_stats.keyboards_opened, usb_stats.rejected_interfaces,
+               usb_stats.disconnects, usb_stats.reports, usb_stats.invalid_reports,
+               usb_stats.transfer_errors, usb_stats.delivery_failures, usb_stats.driver_failures,
+               usb_stats.event_queue_overflows, usb_stats.host_stack_high_water,
+               usb_stats.hid_stack_high_water);
+    }
+#endif
   }
 }
