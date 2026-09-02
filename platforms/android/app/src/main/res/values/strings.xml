@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<resources>
+    <string name="app_name">MoL Keyboard</string>
+    <string name="audio_channel_name">Instrument playback</string>
+    <string name="audio_channel_description">Audio explicitly started from MoL Keyboard</string>
+    <string name="audio_notification_title">MoL Keyboard is playing</string>
+    <string name="audio_notification_text">Tap to return; Stop ends background audio.</string>
+    <string name="stop_audio">Stop audio</string>
+</resources>

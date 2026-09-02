@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<resources>
+    <string name="app_name">张多少的键盘</string>
+    <string name="audio_channel_name">乐器播放</string>
+    <string name="audio_channel_description">由用户在张多少的键盘中明确启动的音频</string>
+    <string name="audio_notification_title">张多少的键盘正在播放</string>
+    <string name="audio_notification_text">点按可返回；“停止音频”将结束后台音频。</string>
+    <string name="stop_audio">停止音频</string>
+</resources>

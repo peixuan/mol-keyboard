@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<resources>
+    <style name="Theme.MolKeyboard" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">#F2EFE7</item>
+        <item name="android:navigationBarColor">#10100F</item>
+        <item name="android:colorAccent">#E94E2B</item>
+    </style>
+</resources>
