@@ -12,6 +12,8 @@ typedef struct mol_gpio_matrix_stats {
   uint32_t ghost_scans;
   uint32_t delivery_failures;
   uint32_t config_holds;
+  uint32_t clear_pairing_holds;
+  uint32_t factory_reset_holds;
   uint32_t stack_high_water;
 } mol_gpio_matrix_stats_t;
 

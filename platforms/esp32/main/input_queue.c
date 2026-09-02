@@ -16,7 +16,13 @@ static atomic_uint_least32_t queued_count;
 static atomic_uint_least32_t dropped_count;
 static atomic_uint_least32_t rejected_count;
 static atomic_uint_least32_t high_water;
-static atomic_bool config_mode_requested;
+enum {
+  MOL_INPUT_REQUEST_CONFIG_MODE = 1u << 0u,
+  MOL_INPUT_REQUEST_CLEAR_PAIRING = 1u << 1u,
+  MOL_INPUT_REQUEST_FACTORY_RESET = 1u << 2u
+};
+
+static atomic_uint_least32_t pending_requests;
 
 void mol_input_queue_init(void) {
   command_queue = xQueueCreateStatic(CONFIG_MOL_INPUT_QUEUE_LENGTH, sizeof(mol_command_t),
@@ -25,7 +31,7 @@ void mol_input_queue_init(void) {
   atomic_store_explicit(&dropped_count, 0u, memory_order_relaxed);
   atomic_store_explicit(&rejected_count, 0u, memory_order_relaxed);
   atomic_store_explicit(&high_water, 0u, memory_order_relaxed);
-  atomic_store_explicit(&config_mode_requested, false, memory_order_relaxed);
+  atomic_store_explicit(&pending_requests, 0u, memory_order_relaxed);
 }
 
 bool mol_input_submit(const mol_command_t* command) {
@@ -62,11 +68,35 @@ uint32_t mol_input_drain(mol_engine_t* engine) {
 }
 
 void mol_input_request_config_mode(void) {
-  atomic_store_explicit(&config_mode_requested, true, memory_order_release);
+  atomic_fetch_or_explicit(&pending_requests, MOL_INPUT_REQUEST_CONFIG_MODE, memory_order_release);
 }
 
 bool mol_input_take_config_mode_request(void) {
-  return atomic_exchange_explicit(&config_mode_requested, false, memory_order_acq_rel);
+  return (atomic_fetch_and_explicit(&pending_requests, ~MOL_INPUT_REQUEST_CONFIG_MODE,
+                                    memory_order_acq_rel) &
+          MOL_INPUT_REQUEST_CONFIG_MODE) != 0u;
+}
+
+void mol_input_request_clear_pairing(void) {
+  atomic_fetch_or_explicit(&pending_requests, MOL_INPUT_REQUEST_CLEAR_PAIRING,
+                           memory_order_release);
+}
+
+bool mol_input_take_clear_pairing_request(void) {
+  return (atomic_fetch_and_explicit(&pending_requests, ~MOL_INPUT_REQUEST_CLEAR_PAIRING,
+                                    memory_order_acq_rel) &
+          MOL_INPUT_REQUEST_CLEAR_PAIRING) != 0u;
+}
+
+void mol_input_request_factory_reset(void) {
+  atomic_fetch_or_explicit(&pending_requests, MOL_INPUT_REQUEST_FACTORY_RESET,
+                           memory_order_release);
+}
+
+bool mol_input_take_factory_reset_request(void) {
+  return (atomic_fetch_and_explicit(&pending_requests, ~MOL_INPUT_REQUEST_FACTORY_RESET,
+                                    memory_order_acq_rel) &
+          MOL_INPUT_REQUEST_FACTORY_RESET) != 0u;
 }
 
 mol_input_queue_stats_t mol_input_queue_stats(void) {

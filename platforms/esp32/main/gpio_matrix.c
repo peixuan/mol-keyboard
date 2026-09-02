@@ -24,6 +24,8 @@ typedef struct mol_gpio_runtime_stats {
   atomic_uint_least32_t ghost_scans;
   atomic_uint_least32_t delivery_failures;
   atomic_uint_least32_t config_holds;
+  atomic_uint_least32_t clear_pairing_holds;
+  atomic_uint_least32_t factory_reset_holds;
   atomic_uint_least32_t stack_high_water;
 } mol_gpio_runtime_stats_t;
 
@@ -74,6 +76,18 @@ static void deliver_matrix_event(const mol_matrix_event_t* event) {
   if (event->type == MOL_MATRIX_EVENT_CONFIG_HOLD) {
     atomic_fetch_add_explicit(&runtime_stats.config_holds, 1u, memory_order_relaxed);
     mol_input_request_config_mode();
+    recovery_needed = !submit_all_notes_off();
+    return;
+  }
+  if (event->type == MOL_MATRIX_EVENT_CLEAR_PAIRING_HOLD) {
+    atomic_fetch_add_explicit(&runtime_stats.clear_pairing_holds, 1u, memory_order_relaxed);
+    mol_input_request_clear_pairing();
+    recovery_needed = !submit_all_notes_off();
+    return;
+  }
+  if (event->type == MOL_MATRIX_EVENT_FACTORY_RESET_HOLD) {
+    atomic_fetch_add_explicit(&runtime_stats.factory_reset_holds, 1u, memory_order_relaxed);
+    mol_input_request_factory_reset();
     recovery_needed = !submit_all_notes_off();
     return;
   }
@@ -238,6 +252,8 @@ esp_err_t mol_gpio_matrix_start(void) {
       .rows = MOL_MATRIX_MAX_ROWS,
       .columns = MOL_MATRIX_MAX_COLUMNS,
       .config_key = CONFIG_MOL_GPIO_CONFIG_KEY,
+      .clear_pairing_key = CONFIG_MOL_GPIO_CLEAR_PAIRING_KEY,
+      .factory_reset_key = CONFIG_MOL_GPIO_FACTORY_RESET_KEY,
 #if CONFIG_MOL_GPIO_GHOST_ALLOW
       .ghost_policy = MOL_MATRIX_GHOST_ALLOW,
 #else
@@ -248,6 +264,12 @@ esp_err_t mol_gpio_matrix_start(void) {
                      CONFIG_MOL_GPIO_SCAN_PERIOD_MS),
       .config_hold_scans =
           (uint16_t)((CONFIG_MOL_GPIO_CONFIG_HOLD_MS + CONFIG_MOL_GPIO_SCAN_PERIOD_MS - 1) /
+                     CONFIG_MOL_GPIO_SCAN_PERIOD_MS),
+      .clear_pairing_hold_scans =
+          (uint16_t)((CONFIG_MOL_GPIO_CLEAR_PAIRING_HOLD_MS + CONFIG_MOL_GPIO_SCAN_PERIOD_MS - 1) /
+                     CONFIG_MOL_GPIO_SCAN_PERIOD_MS),
+      .factory_reset_hold_scans =
+          (uint16_t)((CONFIG_MOL_GPIO_FACTORY_RESET_HOLD_MS + CONFIG_MOL_GPIO_SCAN_PERIOD_MS - 1) /
                      CONFIG_MOL_GPIO_SCAN_PERIOD_MS),
   };
   esp_err_t result = configure_pins();
@@ -280,6 +302,10 @@ mol_gpio_matrix_stats_t mol_gpio_matrix_stats(void) {
       (uint32_t)atomic_load_explicit(&runtime_stats.delivery_failures, memory_order_relaxed);
   stats.config_holds =
       (uint32_t)atomic_load_explicit(&runtime_stats.config_holds, memory_order_relaxed);
+  stats.clear_pairing_holds =
+      (uint32_t)atomic_load_explicit(&runtime_stats.clear_pairing_holds, memory_order_relaxed);
+  stats.factory_reset_holds =
+      (uint32_t)atomic_load_explicit(&runtime_stats.factory_reset_holds, memory_order_relaxed);
   stats.stack_high_water =
       (uint32_t)atomic_load_explicit(&runtime_stats.stack_high_water, memory_order_relaxed);
   return stats;

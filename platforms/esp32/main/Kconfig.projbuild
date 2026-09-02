@@ -255,6 +255,26 @@ menu "MoL Keyboard audio host"
         range 1000 10000
         default 3000
 
+    config MOL_GPIO_CLEAR_PAIRING_KEY
+        int "Key paired with the configuration key to clear Bluetooth bonds"
+        range 0 29
+        default 28
+
+    config MOL_GPIO_CLEAR_PAIRING_HOLD_MS
+        int "Clear-pairing chord hold time in milliseconds"
+        range 3000 15000
+        default 5000
+
+    config MOL_GPIO_FACTORY_RESET_KEY
+        int "Key paired with the configuration key to restore factory defaults"
+        range 0 29
+        default 27
+
+    config MOL_GPIO_FACTORY_RESET_HOLD_MS
+        int "Factory-reset chord hold time in milliseconds"
+        range 5000 20000
+        default 8000
+
     config MOL_GPIO_TASK_PRIORITY
         int "GPIO scan task priority"
         range 1 19

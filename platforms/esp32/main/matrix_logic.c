@@ -36,12 +36,18 @@ mol_matrix_result_t mol_matrix_init(mol_matrix_state_t* state, const mol_matrix_
   if (state == NULL || config == NULL || config->rows == 0u || config->rows > MOL_MATRIX_MAX_ROWS ||
       config->columns == 0u || config->columns > MOL_MATRIX_MAX_COLUMNS ||
       config->debounce_scans == 0u || config->config_hold_scans == 0u ||
+      config->clear_pairing_hold_scans == 0u || config->factory_reset_hold_scans == 0u ||
       (config->ghost_policy != MOL_MATRIX_GHOST_ALLOW &&
        config->ghost_policy != MOL_MATRIX_GHOST_SUPPRESS_AMBIGUOUS)) {
     return MOL_MATRIX_INVALID_ARGUMENT;
   }
   key_count = (uint32_t)config->rows * (uint32_t)config->columns;
-  if ((uint32_t)config->config_key >= key_count) {
+  if ((uint32_t)config->config_key >= key_count ||
+      (uint32_t)config->clear_pairing_key >= key_count ||
+      (uint32_t)config->factory_reset_key >= key_count ||
+      config->config_key == config->clear_pairing_key ||
+      config->config_key == config->factory_reset_key ||
+      config->clear_pairing_key == config->factory_reset_key) {
     return MOL_MATRIX_INVALID_ARGUMENT;
   }
   memset(state, 0, sizeof(*state));
@@ -110,7 +116,50 @@ mol_matrix_result_t mol_matrix_process(mol_matrix_state_t* state, uint32_t raw_b
     }
   }
 
-  if ((next.stable_bits & (UINT32_C(1) << next.config.config_key)) != 0u) {
+  if ((next.stable_bits & (UINT32_C(1) << next.config.config_key)) == 0u) {
+    next.config_hold_age = 0u;
+    next.clear_pairing_hold_age = 0u;
+    next.factory_reset_hold_age = 0u;
+    next.config_hold_fired = false;
+    next.clear_pairing_hold_fired = false;
+    next.factory_reset_hold_fired = false;
+  } else if ((next.stable_bits & (UINT32_C(1) << next.config.factory_reset_key)) != 0u) {
+    next.config_hold_age = 0u;
+    next.clear_pairing_hold_age = 0u;
+    next.config_hold_fired = false;
+    next.clear_pairing_hold_fired = false;
+    if (!next.factory_reset_hold_fired) {
+      if (next.factory_reset_hold_age < UINT16_MAX) {
+        ++next.factory_reset_hold_age;
+      }
+      if (next.factory_reset_hold_age >= next.config.factory_reset_hold_scans) {
+        next.factory_reset_hold_fired = true;
+        pending[pending_count].type = MOL_MATRIX_EVENT_FACTORY_RESET_HOLD;
+        pending[pending_count].key = next.config.factory_reset_key;
+        ++pending_count;
+      }
+    }
+  } else if ((next.stable_bits & (UINT32_C(1) << next.config.clear_pairing_key)) != 0u) {
+    next.config_hold_age = 0u;
+    next.factory_reset_hold_age = 0u;
+    next.config_hold_fired = false;
+    next.factory_reset_hold_fired = false;
+    if (!next.clear_pairing_hold_fired) {
+      if (next.clear_pairing_hold_age < UINT16_MAX) {
+        ++next.clear_pairing_hold_age;
+      }
+      if (next.clear_pairing_hold_age >= next.config.clear_pairing_hold_scans) {
+        next.clear_pairing_hold_fired = true;
+        pending[pending_count].type = MOL_MATRIX_EVENT_CLEAR_PAIRING_HOLD;
+        pending[pending_count].key = next.config.clear_pairing_key;
+        ++pending_count;
+      }
+    }
+  } else {
+    next.clear_pairing_hold_age = 0u;
+    next.factory_reset_hold_age = 0u;
+    next.clear_pairing_hold_fired = false;
+    next.factory_reset_hold_fired = false;
     if (!next.config_hold_fired) {
       if (next.config_hold_age < UINT16_MAX) {
         ++next.config_hold_age;
@@ -122,9 +171,6 @@ mol_matrix_result_t mol_matrix_process(mol_matrix_state_t* state, uint32_t raw_b
         ++pending_count;
       }
     }
-  } else {
-    next.config_hold_age = 0u;
-    next.config_hold_fired = false;
   }
 
   *event_count = pending_count;

@@ -21,9 +21,13 @@ static mol_matrix_config_t test_config(void) {
   config.rows = 5u;
   config.columns = 6u;
   config.config_key = 29u;
+  config.clear_pairing_key = 28u;
+  config.factory_reset_key = 27u;
   config.ghost_policy = MOL_MATRIX_GHOST_SUPPRESS_AMBIGUOUS;
   config.debounce_scans = 3u;
   config.config_hold_scans = 4u;
+  config.clear_pairing_hold_scans = 5u;
+  config.factory_reset_hold_scans = 6u;
   return config;
 }
 
@@ -43,6 +47,9 @@ static void test_validation(void) {
   EXPECT_TRUE(mol_matrix_init(&state, &config) == MOL_MATRIX_INVALID_ARGUMENT);
   config = test_config();
   config.config_key = 30u;
+  EXPECT_TRUE(mol_matrix_init(&state, &config) == MOL_MATRIX_INVALID_ARGUMENT);
+  config = test_config();
+  config.clear_pairing_key = config.config_key;
   EXPECT_TRUE(mol_matrix_init(&state, &config) == MOL_MATRIX_INVALID_ARGUMENT);
 }
 
@@ -129,6 +136,43 @@ static void test_config_hold_fires_once(void) {
   EXPECT_TRUE(!state.config_hold_fired);
 }
 
+static void test_clear_pairing_chord_is_mutually_exclusive(void) {
+  mol_matrix_state_t state;
+  mol_matrix_config_t config = test_config();
+  mol_matrix_event_t events[MOL_MATRIX_MAX_EVENTS];
+  bool ghost = false;
+  size_t count = 0u;
+  uint32_t scan;
+  const uint32_t chord = (UINT32_C(1) << 29u) | (UINT32_C(1) << 28u);
+  EXPECT_TRUE(mol_matrix_init(&state, &config) == MOL_MATRIX_OK);
+  for (scan = 0u; scan < 7u; ++scan) {
+    count = process(&state, chord, events, &ghost);
+  }
+  EXPECT_TRUE(count == 1u && events[0].type == MOL_MATRIX_EVENT_CLEAR_PAIRING_HOLD &&
+              events[0].key == 28u);
+  EXPECT_TRUE(!state.config_hold_fired && state.clear_pairing_hold_fired);
+  EXPECT_TRUE(process(&state, chord, events, &ghost) == 0u);
+}
+
+static void test_factory_reset_chord_takes_precedence(void) {
+  mol_matrix_state_t state;
+  mol_matrix_config_t config = test_config();
+  mol_matrix_event_t events[MOL_MATRIX_MAX_EVENTS];
+  bool ghost = false;
+  size_t count = 0u;
+  uint32_t scan;
+  const uint32_t chord = (UINT32_C(1) << 29u) | (UINT32_C(1) << 28u) | (UINT32_C(1) << 27u);
+  EXPECT_TRUE(mol_matrix_init(&state, &config) == MOL_MATRIX_OK);
+  for (scan = 0u; scan < 8u; ++scan) {
+    count = process(&state, chord, events, &ghost);
+  }
+  EXPECT_TRUE(count == 1u && events[0].type == MOL_MATRIX_EVENT_FACTORY_RESET_HOLD &&
+              events[0].key == 27u);
+  EXPECT_TRUE(!state.config_hold_fired && !state.clear_pairing_hold_fired &&
+              state.factory_reset_hold_fired);
+  EXPECT_TRUE(process(&state, chord, events, &ghost) == 0u);
+}
+
 static void test_small_output_is_transactional(void) {
   mol_matrix_state_t state;
   mol_matrix_config_t config = test_config();
@@ -152,6 +196,8 @@ int main(void) {
   test_ghost_suppression_freezes_stable_keys();
   test_diode_policy_allows_rectangle();
   test_config_hold_fires_once();
+  test_clear_pairing_chord_is_mutually_exclusive();
+  test_factory_reset_chord_takes_precedence();
   test_small_output_is_transactional();
   if (failures != 0) {
     fprintf(stderr, "%d ESP32 matrix test(s) failed\n", failures);

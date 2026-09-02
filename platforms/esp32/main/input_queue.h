@@ -19,6 +19,10 @@ bool mol_input_submit(const mol_command_t* command);
 uint32_t mol_input_drain(mol_engine_t* engine);
 void mol_input_request_config_mode(void);
 bool mol_input_take_config_mode_request(void);
+void mol_input_request_clear_pairing(void);
+bool mol_input_take_clear_pairing_request(void);
+void mol_input_request_factory_reset(void);
+bool mol_input_take_factory_reset_request(void);
 mol_input_queue_stats_t mol_input_queue_stats(void);
 
 #endif /* MOL_ESP32_INPUT_QUEUE_H_ */

@@ -23,7 +23,9 @@ typedef enum mol_matrix_ghost_policy {
 typedef enum mol_matrix_event_type {
   MOL_MATRIX_EVENT_KEY_DOWN = 1,
   MOL_MATRIX_EVENT_KEY_UP = 2,
-  MOL_MATRIX_EVENT_CONFIG_HOLD = 3
+  MOL_MATRIX_EVENT_CONFIG_HOLD = 3,
+  MOL_MATRIX_EVENT_CLEAR_PAIRING_HOLD = 4,
+  MOL_MATRIX_EVENT_FACTORY_RESET_HOLD = 5
 } mol_matrix_event_type_t;
 
 typedef enum mol_matrix_result {
@@ -36,9 +38,13 @@ typedef struct mol_matrix_config {
   uint8_t rows;
   uint8_t columns;
   uint8_t config_key;
+  uint8_t clear_pairing_key;
+  uint8_t factory_reset_key;
   mol_matrix_ghost_policy_t ghost_policy;
   uint16_t debounce_scans;
   uint16_t config_hold_scans;
+  uint16_t clear_pairing_hold_scans;
+  uint16_t factory_reset_hold_scans;
 } mol_matrix_config_t;
 
 typedef struct mol_matrix_state {
@@ -47,7 +53,11 @@ typedef struct mol_matrix_state {
   uint32_t candidate_bits;
   uint16_t candidate_age[MOL_MATRIX_MAX_KEYS];
   uint16_t config_hold_age;
+  uint16_t clear_pairing_hold_age;
+  uint16_t factory_reset_hold_age;
   bool config_hold_fired;
+  bool clear_pairing_hold_fired;
+  bool factory_reset_hold_fired;
 } mol_matrix_state_t;
 
 typedef struct mol_matrix_event {
