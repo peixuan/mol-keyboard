@@ -1,0 +1,101 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "MoL-Keyboard-SBOM",
+  "documentNamespace": "https://github.com/mol-keyboard/mol-keyboard/sbom/0.1.0",
+  "creationInfo": {
+    "created": "2026-09-02T00:00:00Z",
+    "creators": [
+      "Tool: MoL Keyboard dependency audit"
+    ]
+  },
+  "packages": [
+    {
+      "name": "MoL Keyboard",
+      "SPDXID": "SPDXRef-Package-MoL-Keyboard",
+      "versionInfo": "0.1.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "Copyright 2026 MoL Keyboard contributors"
+    },
+    {
+      "name": "miniaudio",
+      "SPDXID": "SPDXRef-Package-miniaudio",
+      "versionInfo": "0.11.25",
+      "downloadLocation": "https://github.com/mackron/miniaudio/archive/9634bedb5b5a2ca38c1ee7108a9358a4e233f14d.tar.gz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "1a3a79b80fc6f0b0cc155e28b954a598e0ddfa2db64e2afa8466be88c476fa55"
+        }
+      ],
+      "licenseConcluded": "MIT-0",
+      "licenseDeclared": "MIT-0 OR Unlicense",
+      "copyrightText": "Copyright 2025 David Reid"
+    },
+    {
+      "name": "actions/checkout",
+      "SPDXID": "SPDXRef-Package-actions-checkout",
+      "versionInfo": "6.0.2",
+      "downloadLocation": "git+https://github.com/actions/checkout.git@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "BUILD_TOOL"
+    },
+    {
+      "name": "Emscripten SDK",
+      "SPDXID": "SPDXRef-Package-emsdk",
+      "versionInfo": "6.0.5",
+      "downloadLocation": "git+https://github.com/emscripten-core/emsdk.git@dfb9d1a46c3bb8f52e1e6324be23123b9d73c190",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR NCSA",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "BUILD_TOOL"
+    },
+    {
+      "name": "ESP-IDF",
+      "SPDXID": "SPDXRef-Package-esp-idf",
+      "versionInfo": "6.1",
+      "downloadLocation": "git+https://github.com/espressif/esp-idf.git@fff9895c82d744c7237be8847347bdd1b07c6643",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "BUILD_TOOL"
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-MoL-Keyboard"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-MoL-Keyboard",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-miniaudio"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-actions-checkout",
+      "relationshipType": "BUILD_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-MoL-Keyboard"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-emsdk",
+      "relationshipType": "BUILD_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-MoL-Keyboard"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-esp-idf",
+      "relationshipType": "BUILD_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-MoL-Keyboard"
+    }
+  ]
+}

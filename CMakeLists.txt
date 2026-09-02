@@ -60,6 +60,11 @@ endif()
 
 if(MOL_BUILD_TESTS)
   enable_testing()
+  add_test(
+    NAME mol_dependency_license_audit
+    COMMAND
+      ${CMAKE_COMMAND} -DMOL_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR} -P
+      ${CMAKE_CURRENT_SOURCE_DIR}/tools/license_audit.cmake)
 endif()
 
 if(EMSCRIPTEN)

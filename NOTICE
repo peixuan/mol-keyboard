@@ -2,3 +2,7 @@ MoL Keyboard
 Copyright 2026 MoL Keyboard contributors
 
 This product includes software developed by the MoL Keyboard contributors.
+
+The optional desktop realtime host includes miniaudio 0.11.25, copyright 2025
+David Reid, used under the MIT No Attribution (MIT-0) license option. See
+THIRD_PARTY_NOTICES.md for the complete record.

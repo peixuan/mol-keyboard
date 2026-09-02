@@ -21,7 +21,10 @@
       "license": "MIT OR NCSA",
       "usage": "WebAssembly build and test toolchain",
       "distributed": false,
-      "build_options": ["upstream LLVM backend", "fixed WebAssembly memory"],
+      "build_options": [
+        "upstream LLVM backend",
+        "fixed WebAssembly memory"
+      ],
       "local_patches": []
     },
     {
@@ -32,8 +35,34 @@
       "license": "Apache-2.0",
       "usage": "ESP32 and ESP32-S3 firmware build SDK and toolchain manifest",
       "distributed": false,
-      "build_options": ["minimal component build", "Tiny core profile"],
+      "build_options": [
+        "minimal component build",
+        "Tiny core profile"
+      ],
       "local_patches": []
+    }
+  ],
+  "dependencies": [
+    {
+      "name": "miniaudio",
+      "version": "0.11.25",
+      "commit": "9634bedb5b5a2ca38c1ee7108a9358a4e233f14d",
+      "source": "https://github.com/mackron/miniaudio",
+      "archive": "https://github.com/mackron/miniaudio/archive/9634bedb5b5a2ca38c1ee7108a9358a4e233f14d.tar.gz",
+      "archive_sha256": "1a3a79b80fc6f0b0cc155e28b954a598e0ddfa2db64e2afa8466be88c476fa55",
+      "license_expression": "MIT-0 OR Unlicense",
+      "selected_license": "MIT-0",
+      "license_file": "third_party/licenses/miniaudio-LICENSE.txt",
+      "license_file_sha256": "1d13e0cd56bb6bff8c66eb67084765fbefddcfd931922d2a75c072a9efb7cde9",
+      "local_modifications": [],
+      "build_options": [
+        "device I/O only",
+        "WASAPI on Windows",
+        "Core Audio on macOS",
+        "PulseAudio/ALSA/JACK on Linux",
+        "null backend for conformance tests",
+        "decoding/encoding/resource manager/node graph/engine/generators disabled"
+      ]
     }
   ]
 }
