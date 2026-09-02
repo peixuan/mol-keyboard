@@ -1,0 +1,10 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+#ifndef MOL_SEQUENCE_FIXTURE_BYTES_H_
+#define MOL_SEQUENCE_FIXTURE_BYTES_H_
+
+#include <stddef.h>
+
+static const unsigned char kMolSequenceFixtureBytes[] = {@MOL_SEQUENCE_FIXTURE_BYTES@};
+static const size_t kMolSequenceFixtureSize = sizeof(kMolSequenceFixtureBytes);
+
+#endif /* MOL_SEQUENCE_FIXTURE_BYTES_H_ */

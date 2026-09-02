@@ -1,6 +1,4 @@
 /* SPDX-License-Identifier: Apache-2.0 */
-#include "mol/mol.h"
-
 #include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>
@@ -18,6 +16,8 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "mol/mol.h"
+#include "sequence_fixture.h"
 
 #define MOL_ESP32_RENDER_FRAMES 128u
 #define MOL_ESP32_CHANNEL_COUNT 2u
@@ -71,8 +71,8 @@ static mol_command_t make_note_on(void) {
   return command;
 }
 
-static bool verify_c4(mol_engine_t* test_engine, uint32_t sample_rate,
-                      float* measured_frequency, float* measured_peak) {
+static bool verify_c4(mol_engine_t* test_engine, uint32_t sample_rate, float* measured_frequency,
+                      float* measured_peak) {
   const uint32_t analysis_start = sample_rate / 10u;
   const uint32_t analysis_frames = (sample_rate * 8u) / 10u;
   const uint32_t analysis_end = analysis_start + analysis_frames;
@@ -85,8 +85,7 @@ static bool verify_c4(mol_engine_t* test_engine, uint32_t sample_rate,
 
   for (block = 0u; block < block_count; ++block) {
     uint32_t frame;
-    if (mol_engine_render_interleaved_f32(test_engine, render_buffer,
-                                          MOL_ESP32_RENDER_FRAMES,
+    if (mol_engine_render_interleaved_f32(test_engine, render_buffer, MOL_ESP32_RENDER_FRAMES,
                                           MOL_ESP32_CHANNEL_COUNT) != MOL_OK) {
       return false;
     }
@@ -100,16 +99,15 @@ static bool verify_c4(mol_engine_t* test_engine, uint32_t sample_rate,
       if (magnitude > peak) {
         peak = magnitude;
       }
-      if (absolute_frame >= analysis_start && absolute_frame < analysis_end &&
-          previous <= 0.0f && sample > 0.0f) {
+      if (absolute_frame >= analysis_start && absolute_frame < analysis_end && previous <= 0.0f &&
+          sample > 0.0f) {
         ++crossings;
       }
       previous = sample;
     }
   }
 
-  *measured_frequency =
-      (float)crossings * (float)sample_rate / (float)analysis_frames;
+  *measured_frequency = (float)crossings * (float)sample_rate / (float)analysis_frames;
   *measured_peak = peak;
   return peak > 0.01f && fabsf(*measured_frequency - MOL_ESP32_C4_HZ) < 1.0f;
 }
@@ -144,9 +142,8 @@ static int16_t float_to_pcm16(float sample) {
   return (int16_t)rounded;
 }
 
-static bool IRAM_ATTR on_send_queue_overflow(i2s_chan_handle_t handle,
-                                              i2s_event_data_t* event,
-                                              void* user_context) {
+static bool IRAM_ATTR on_send_queue_overflow(i2s_chan_handle_t handle, i2s_event_data_t* event,
+                                             void* user_context) {
   mol_esp32_audio_stats_t* stats = (mol_esp32_audio_stats_t*)user_context;
   (void)handle;
   (void)event;
@@ -155,17 +152,15 @@ static bool IRAM_ATTR on_send_queue_overflow(i2s_chan_handle_t handle,
 }
 
 static void initialize_i2s(void) {
-  i2s_chan_config_t channel_config =
-      I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_MASTER);
+  i2s_chan_config_t channel_config = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_MASTER);
   i2s_std_config_t standard_config = {
       .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(CONFIG_MOL_I2S_SAMPLE_RATE),
-      .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT,
-                                                       I2S_SLOT_MODE_STEREO),
+      .slot_cfg =
+          I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO),
       .gpio_cfg =
           {
-              .mclk = CONFIG_MOL_I2S_MCLK_GPIO < 0
-                          ? I2S_GPIO_UNUSED
-                          : (gpio_num_t)CONFIG_MOL_I2S_MCLK_GPIO,
+              .mclk = CONFIG_MOL_I2S_MCLK_GPIO < 0 ? I2S_GPIO_UNUSED
+                                                   : (gpio_num_t)CONFIG_MOL_I2S_MCLK_GPIO,
               .bclk = (gpio_num_t)CONFIG_MOL_I2S_BCLK_GPIO,
               .ws = (gpio_num_t)CONFIG_MOL_I2S_WS_GPIO,
               .dout = (gpio_num_t)CONFIG_MOL_I2S_DOUT_GPIO,
@@ -191,8 +186,7 @@ static void initialize_i2s(void) {
   channel_config.intr_priority = 3;
   ESP_ERROR_CHECK(i2s_new_channel(&channel_config, &i2s_tx_channel, NULL));
   ESP_ERROR_CHECK(i2s_channel_init_std_mode(i2s_tx_channel, &standard_config));
-  ESP_ERROR_CHECK(i2s_channel_register_event_callback(i2s_tx_channel, &callbacks,
-                                                       &audio_stats));
+  ESP_ERROR_CHECK(i2s_channel_register_event_callback(i2s_tx_channel, &callbacks, &audio_stats));
   ESP_ERROR_CHECK(i2s_channel_enable(i2s_tx_channel));
 }
 
@@ -216,8 +210,7 @@ static void audio_render_task(void* context) {
         engine, render_buffer, MOL_ESP32_RENDER_FRAMES, MOL_ESP32_CHANNEL_COUNT);
 
     if (render_result == MOL_OK) {
-      for (index = 0u; index < MOL_ESP32_RENDER_FRAMES * MOL_ESP32_CHANNEL_COUNT;
-           ++index) {
+      for (index = 0u; index < MOL_ESP32_RENDER_FRAMES * MOL_ESP32_CHANNEL_COUNT; ++index) {
         pcm_buffer[index] = float_to_pcm16(render_buffer[index]);
       }
     } else {
@@ -226,8 +219,7 @@ static void audio_render_task(void* context) {
     }
 
     {
-      const uint32_t render_time_us =
-          (uint32_t)(esp_timer_get_time() - render_start);
+      const uint32_t render_time_us = (uint32_t)(esp_timer_get_time() - render_start);
       if (render_time_us > audio_stats.max_render_time_us) {
         audio_stats.max_render_time_us = render_time_us;
       }
@@ -236,8 +228,8 @@ static void audio_render_task(void* context) {
       }
     }
 
-    write_result = i2s_channel_write(i2s_tx_channel, pcm_buffer, sizeof(pcm_buffer),
-                                     &bytes_written, MOL_ESP32_WRITE_TIMEOUT_MS);
+    write_result = i2s_channel_write(i2s_tx_channel, pcm_buffer, sizeof(pcm_buffer), &bytes_written,
+                                     MOL_ESP32_WRITE_TIMEOUT_MS);
     if (write_result != ESP_OK) {
       ++audio_stats.write_failures;
     } else if (bytes_written != sizeof(pcm_buffer)) {
@@ -256,11 +248,18 @@ static void audio_render_task(void* context) {
 void app_main(void) {
   mol_engine_config_t config = mol_engine_config_default();
   mol_command_t note_on = make_note_on();
+  mol_sequence_fixture_summary_t sequence_summary;
   mol_result_t result;
   float frequency = 0.0f;
   float peak = 0.0f;
 
   ESP_LOGI(kTag, "Reset reason=%d", (int)esp_reset_reason());
+  if (!mol_sequence_fixture_verify(&sequence_summary)) {
+    ESP_LOGE(kTag, "Shared Mol Sequence fixture conformance failed");
+    return;
+  }
+  ESP_LOGI(kTag, "Shared Mol Sequence passed: events=%" PRIu32 " final=%" PRIu64,
+           sequence_summary.event_count, sequence_summary.final_frame);
   config.sample_rate = CONFIG_MOL_I2S_SAMPLE_RATE;
   config.channel_count = MOL_ESP32_CHANNEL_COUNT;
   config.max_voices = 8u;
@@ -271,21 +270,19 @@ void app_main(void) {
     return;
   }
 
-  result = mol_engine_init(engine_memory.bytes, sizeof(engine_memory.bytes), &config,
-                           &engine);
+  result = mol_engine_init(engine_memory.bytes, sizeof(engine_memory.bytes), &config, &engine);
   if (result != MOL_OK) {
     ESP_LOGE(kTag, "Engine initialization failed: %s", mol_result_string(result));
     return;
   }
   result = mol_engine_submit(engine, &note_on);
-  if (result != MOL_OK ||
-      !verify_c4(engine, CONFIG_MOL_I2S_SAMPLE_RATE, &frequency, &peak)) {
+  if (result != MOL_OK || !verify_c4(engine, CONFIG_MOL_I2S_SAMPLE_RATE, &frequency, &peak)) {
     ESP_LOGE(kTag, "Core C4 conformance failed");
     mol_engine_shutdown(engine);
     return;
   }
-  ESP_LOGI(kTag, "Tiny core C4 passed: frequency=%.4f Hz peak=%.6f",
-           (double)frequency, (double)peak);
+  ESP_LOGI(kTag, "Tiny core C4 passed: frequency=%.4f Hz peak=%.6f", (double)frequency,
+           (double)peak);
 
   initialize_i2s();
   audio_task_handle = xTaskCreateStaticPinnedToCore(
@@ -294,25 +291,23 @@ void app_main(void) {
       CONFIG_MOL_AUDIO_TASK_CORE);
   ESP_ERROR_CHECK(audio_task_handle != NULL ? ESP_OK : ESP_ERR_NO_MEM);
   ESP_LOGI(kTag,
-           "I2S active: %" PRIu32 " Hz, BCLK=%d WS=%d DOUT=%d, DMA=%d x %u, "
+           "I2S active: %" PRIu32
+           " Hz, BCLK=%d WS=%d DOUT=%d, DMA=%d x %u, "
            "audio priority=%d core=%d",
-           (uint32_t)CONFIG_MOL_I2S_SAMPLE_RATE, CONFIG_MOL_I2S_BCLK_GPIO,
-           CONFIG_MOL_I2S_WS_GPIO, CONFIG_MOL_I2S_DOUT_GPIO,
-           CONFIG_MOL_I2S_DMA_DESCRIPTOR_COUNT, MOL_ESP32_RENDER_FRAMES,
+           (uint32_t)CONFIG_MOL_I2S_SAMPLE_RATE, CONFIG_MOL_I2S_BCLK_GPIO, CONFIG_MOL_I2S_WS_GPIO,
+           CONFIG_MOL_I2S_DOUT_GPIO, CONFIG_MOL_I2S_DMA_DESCRIPTOR_COUNT, MOL_ESP32_RENDER_FRAMES,
            CONFIG_MOL_AUDIO_TASK_PRIORITY, CONFIG_MOL_AUDIO_TASK_CORE);
 
   for (;;) {
     vTaskDelay(pdMS_TO_TICKS(MOL_ESP32_DIAGNOSTIC_PERIOD_MS));
     ESP_LOGI(kTag,
-             "audio frames=%" PRIu64 " render_fail=%" PRIu32
-             " write_fail=%" PRIu32 " partial=%" PRIu32
-             " dma_q_ovf=%" PRIu32 " deadline_miss=%" PRIu32
-             " max_render_us=%" PRIu32 " wdt_fail=%" PRIu32
-             " stack_min=%u internal_heap_min=%u",
-             audio_stats.rendered_frames, audio_stats.render_failures,
-             audio_stats.write_failures, audio_stats.partial_writes,
-             audio_stats.dma_queue_overflows, audio_stats.render_deadline_misses,
-             audio_stats.max_render_time_us, audio_stats.watchdog_failures,
+             "audio frames=%" PRIu64 " render_fail=%" PRIu32 " write_fail=%" PRIu32
+             " partial=%" PRIu32 " dma_q_ovf=%" PRIu32 " deadline_miss=%" PRIu32
+             " max_render_us=%" PRIu32 " wdt_fail=%" PRIu32 " stack_min=%u internal_heap_min=%u",
+             audio_stats.rendered_frames, audio_stats.render_failures, audio_stats.write_failures,
+             audio_stats.partial_writes, audio_stats.dma_queue_overflows,
+             audio_stats.render_deadline_misses, audio_stats.max_render_time_us,
+             audio_stats.watchdog_failures,
              (unsigned int)uxTaskGetStackHighWaterMark(audio_task_handle),
              (unsigned int)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL));
   }

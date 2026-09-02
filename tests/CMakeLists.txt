@@ -61,6 +61,30 @@ mol_enable_warnings(mol_recording_tests)
 mol_enable_optional_instrumentation(mol_recording_tests)
 add_test(NAME mol_recording_tests COMMAND mol_recording_tests)
 
+file(READ "${PROJECT_SOURCE_DIR}/examples/sequences/scale-study.molseq"
+     MOL_SEQUENCE_FIXTURE_HEX HEX)
+string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," MOL_SEQUENCE_FIXTURE_BYTES
+                     "${MOL_SEQUENCE_FIXTURE_HEX}")
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated")
+configure_file(
+  fixtures/sequence_fixture_bytes.h.in
+  "${CMAKE_CURRENT_BINARY_DIR}/generated/mol_sequence_fixture_bytes.h" @ONLY)
+add_executable(mol_sequence_fixture conformance/sequence_fixture.c)
+target_link_libraries(mol_sequence_fixture PRIVATE mol::core)
+target_include_directories(mol_sequence_fixture PRIVATE conformance
+                                                        "${CMAKE_CURRENT_BINARY_DIR}/generated")
+target_compile_definitions(mol_sequence_fixture PRIVATE MOL_SEQUENCE_FIXTURE_STANDALONE=1)
+set_target_properties(mol_sequence_fixture PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_sequence_fixture)
+mol_enable_optional_instrumentation(mol_sequence_fixture)
+add_test(
+  NAME mol_sequence_fixture_conformance
+  COMMAND
+    ${CMAKE_COMMAND} -DMOL_EXECUTABLE=$<TARGET_FILE:mol_sequence_fixture>
+    -DMOL_EMULATOR=${CMAKE_CROSSCOMPILING_EMULATOR}
+    -DMOL_EXPECTED=${CMAKE_CURRENT_SOURCE_DIR}/golden/m4_sequence_fixture.txt -P
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_event_trace.cmake)
+
 add_executable(mol_instrument_tests integration/test_instruments.c)
 target_link_libraries(mol_instrument_tests PRIVATE mol::core)
 set_target_properties(mol_instrument_tests PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)

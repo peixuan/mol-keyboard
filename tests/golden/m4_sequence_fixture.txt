@@ -1,0 +1,1 @@
+sample_rate=48000 time_base=48000 events=12 metadata=1 note_on=4 note_off=4 final=108000
