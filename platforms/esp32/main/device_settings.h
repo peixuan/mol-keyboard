@@ -9,6 +9,7 @@
 
 #define MOL_DEVICE_SETTINGS_RECORD_SIZE 128u
 #define MOL_DEVICE_SETTINGS_VERSION 1u
+#define MOL_DEVICE_SETTINGS_COMMAND_COUNT 11u
 
 typedef uint32_t mol_device_output_mode_t;
 enum { MOL_DEVICE_OUTPUT_I2S = 0u, MOL_DEVICE_OUTPUT_A2DP = 1u, MOL_DEVICE_OUTPUT_MODE_COUNT = 2u };
@@ -47,5 +48,8 @@ mol_result_t mol_device_settings_encode(const mol_device_settings_t* settings,
                                         uint8_t output[MOL_DEVICE_SETTINGS_RECORD_SIZE]);
 mol_result_t mol_device_settings_decode(const uint8_t* input, size_t input_size,
                                         mol_device_settings_t* settings);
+mol_result_t mol_device_settings_compile_commands(const mol_device_settings_t* settings,
+                                                  mol_command_t* commands, size_t capacity,
+                                                  size_t* command_count);
 
 #endif /* MOL_ESP32_DEVICE_SETTINGS_H_ */

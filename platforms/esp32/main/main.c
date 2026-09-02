@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "device_settings.h"
+#include "device_storage.h"
 #include "driver/i2s_std.h"
 #include "esp_attr.h"
 #include "esp_err.h"
@@ -299,10 +301,35 @@ void app_main(void) {
   mol_command_t note_on = make_note_on();
   mol_sequence_fixture_summary_t sequence_summary;
   mol_result_t result;
+  mol_device_settings_t device_settings;
+  mol_device_settings_source_t settings_source;
+  mol_command_t settings_commands[MOL_DEVICE_SETTINGS_COMMAND_COUNT];
+  size_t settings_command_count = 0u;
+  size_t settings_command_index;
   float frequency = 0.0f;
   float peak = 0.0f;
 
   ESP_LOGI(kTag, "Reset reason=%d", (int)esp_reset_reason());
+  device_settings = mol_device_settings_default();
+  settings_source = MOL_DEVICE_SETTINGS_DEFAULT_IO_ERROR;
+  result = mol_device_storage_initialize();
+  if (result != MOL_OK) {
+    ESP_LOGW(kTag, "NVS initialization failed; volatile safe defaults selected");
+  } else {
+    result = mol_device_storage_load_settings(&device_settings, &settings_source);
+    if (result != MOL_OK) {
+      device_settings = mol_device_settings_default();
+      settings_source = MOL_DEVICE_SETTINGS_DEFAULT_IO_ERROR;
+      ESP_LOGW(kTag, "NVS settings read failed; volatile safe defaults selected");
+    }
+  }
+  if (settings_source == MOL_DEVICE_SETTINGS_DEFAULT_CORRUPT) {
+    ESP_LOGW(kTag, "Settings record corrupt or unsupported; safe defaults selected");
+  } else if (settings_source == MOL_DEVICE_SETTINGS_DEFAULT_MISSING) {
+    ESP_LOGI(kTag, "No settings record; safe defaults selected");
+  } else if (settings_source == MOL_DEVICE_SETTINGS_FROM_NVS) {
+    ESP_LOGI(kTag, "Settings loaded from NVS: generation=%" PRIu32, device_settings.generation);
+  }
   if (!mol_sequence_fixture_verify(&sequence_summary)) {
     ESP_LOGE(kTag, "Shared Mol Sequence fixture conformance failed");
     return;
@@ -342,6 +369,20 @@ void app_main(void) {
   }
 
   mol_input_queue_init();
+  result = mol_device_settings_compile_commands(&device_settings, settings_commands,
+                                                MOL_DEVICE_SETTINGS_COMMAND_COUNT,
+                                                &settings_command_count);
+  if (result != MOL_OK) {
+    ESP_LOGE(kTag, "Persisted settings could not be compiled: %s", mol_result_string(result));
+    return;
+  }
+  for (settings_command_index = 0u; settings_command_index < settings_command_count;
+       ++settings_command_index) {
+    if (!mol_input_submit(&settings_commands[settings_command_index])) {
+      ESP_LOGE(kTag, "Persisted settings queue capacity is insufficient");
+      return;
+    }
+  }
   initialize_i2s();
   audio_task_handle = xTaskCreateStaticPinnedToCore(
       audio_render_task, "mol-audio", CONFIG_MOL_AUDIO_TASK_STACK_SIZE, NULL,
@@ -373,10 +414,12 @@ void app_main(void) {
     mol_esp32_audio_snapshot_t audio_snapshot;
     mol_input_queue_stats_t input_stats;
     mol_gpio_matrix_stats_t gpio_stats;
+    mol_device_storage_stats_t storage_stats;
     vTaskDelay(pdMS_TO_TICKS(MOL_ESP32_DIAGNOSTIC_PERIOD_MS));
     audio_snapshot = audio_stats_snapshot();
     input_stats = mol_input_queue_stats();
     gpio_stats = mol_gpio_matrix_stats();
+    storage_stats = mol_device_storage_stats();
     if (mol_input_take_config_mode_request()) {
       ESP_LOGI(kTag, "Configuration mode requested by physical hold gesture");
     }
@@ -386,7 +429,8 @@ void app_main(void) {
         " dma_q_ovf=%" PRIu32 " deadline_miss=%" PRIu32 " max_render_us=%" PRIu32
         " wdt_fail=%" PRIu32 " commands=%" PRIu32 " input_queued=%" PRIu32 " input_drop=%" PRIu32
         " input_reject=%" PRIu32 " input_high=%" PRIu32 " gpio_scans=%" PRIu32
-        " gpio_events=%" PRIu32 " gpio_ghost=%" PRIu32 " gpio_fail=%" PRIu32
+        " gpio_events=%" PRIu32 " gpio_ghost=%" PRIu32 " gpio_fail=%" PRIu32 " nvs_load=%" PRIu32
+        " nvs_save=%" PRIu32 " nvs_missing=%" PRIu32 " nvs_corrupt=%" PRIu32 " nvs_io_fail=%" PRIu32
         " audio_stack_min=%u gpio_stack_min=%" PRIu32 " internal_heap_min=%u",
         audio_snapshot.rendered_frames, audio_snapshot.render_failures,
         audio_snapshot.write_failures, audio_snapshot.partial_writes,
@@ -394,8 +438,10 @@ void app_main(void) {
         audio_snapshot.max_render_time_us, audio_snapshot.watchdog_failures,
         audio_snapshot.submitted_commands, input_stats.queued, input_stats.dropped,
         input_stats.rejected, input_stats.high_water, gpio_stats.scans, gpio_stats.transitions,
-        gpio_stats.ghost_scans, gpio_stats.delivery_failures,
-        (unsigned int)uxTaskGetStackHighWaterMark(audio_task_handle), gpio_stats.stack_high_water,
+        gpio_stats.ghost_scans, gpio_stats.delivery_failures, storage_stats.settings_loads,
+        storage_stats.settings_saves, storage_stats.missing_records, storage_stats.corrupt_records,
+        storage_stats.io_failures, (unsigned int)uxTaskGetStackHighWaterMark(audio_task_handle),
+        gpio_stats.stack_high_water,
         (unsigned int)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL));
   }
 }

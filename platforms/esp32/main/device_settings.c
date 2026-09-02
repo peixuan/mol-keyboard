@@ -230,3 +230,70 @@ mol_result_t mol_device_settings_decode(const uint8_t* input, size_t input_size,
   *settings = decoded;
   return MOL_OK;
 }
+
+static mol_command_t settings_command(mol_command_type_t command_type) {
+  mol_command_t command;
+  memset(&command, 0, sizeof(command));
+  command.struct_size = (uint32_t)sizeof(command);
+  command.api_version = MOL_API_VERSION;
+  command.command_type = command_type;
+  command.source_id = UINT32_C(0x45535032);
+  command.target_frame = MOL_FRAME_IMMEDIATE;
+  return command;
+}
+
+mol_result_t mol_device_settings_compile_commands(const mol_device_settings_t* settings,
+                                                  mol_command_t* commands, size_t capacity,
+                                                  size_t* command_count) {
+  size_t index = 0u;
+  mol_result_t result;
+  if (command_count == NULL) {
+    return MOL_ERROR_INVALID_ARGUMENT;
+  }
+  *command_count = MOL_DEVICE_SETTINGS_COMMAND_COUNT;
+  result = mol_device_settings_validate(settings);
+  if (result != MOL_OK) {
+    return result;
+  }
+  if (capacity < MOL_DEVICE_SETTINGS_COMMAND_COUNT) {
+    return MOL_ERROR_BUFFER_TOO_SMALL;
+  }
+  if (commands == NULL) {
+    return MOL_ERROR_INVALID_ARGUMENT;
+  }
+
+  commands[index] = settings_command(MOL_COMMAND_SET_MASTER_GAIN);
+  commands[index++].payload.scalar.value = settings->master_gain;
+  commands[index] = settings_command(MOL_COMMAND_SET_PRESET);
+  commands[index].payload.preset.preset = settings->preset;
+  commands[index++].payload.preset.hard_switch = 1u;
+  commands[index] = settings_command(MOL_COMMAND_SET_OCTAVE_SHIFT);
+  commands[index++].payload.integer.value = settings->octave_shift;
+  commands[index] = settings_command(MOL_COMMAND_SET_TRANSPOSE);
+  commands[index++].payload.integer.value = settings->transpose;
+  commands[index] = settings_command(MOL_COMMAND_SET_SCALE);
+  commands[index].payload.scale.type = settings->scale_type;
+  commands[index].payload.scale.tonic = settings->scale_tonic;
+  commands[index++].payload.scale.mapping = settings->scale_mapping;
+  commands[index] = settings_command(MOL_COMMAND_SET_CHORD_MODE);
+  commands[index++].payload.integer.value = (int32_t)settings->chord_mode;
+  commands[index] = settings_command(MOL_COMMAND_SET_ARPEGGIATOR);
+  commands[index].payload.arpeggiator.mode = settings->arpeggiator_mode;
+  commands[index].payload.arpeggiator.rate = settings->arpeggiator_rate;
+  commands[index].payload.arpeggiator.gate = settings->arpeggiator_gate;
+  commands[index].payload.arpeggiator.random_seed = settings->arpeggiator_random_seed;
+  commands[index++].payload.arpeggiator.octaves = settings->arpeggiator_octaves;
+  commands[index] = settings_command(MOL_COMMAND_SET_TEMPO);
+  commands[index++].payload.scalar.value = settings->tempo;
+  commands[index] = settings_command(MOL_COMMAND_SET_TIME_SIGNATURE);
+  commands[index].payload.time_signature.numerator = settings->time_signature_numerator;
+  commands[index++].payload.time_signature.denominator = settings->time_signature_denominator;
+  commands[index] = settings_command(MOL_COMMAND_SET_METRONOME);
+  commands[index].payload.metronome.enabled = settings->metronome_enabled;
+  commands[index++].payload.metronome.level = settings->metronome_level;
+  commands[index] = settings_command(MOL_COMMAND_SET_PORTAMENTO);
+  commands[index].payload.portamento.mode = settings->portamento_mode;
+  commands[index++].payload.portamento.time_ms = settings->portamento_time_ms;
+  *command_count = index;
+  return MOL_OK;
+}

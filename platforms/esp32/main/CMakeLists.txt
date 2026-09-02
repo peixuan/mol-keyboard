@@ -12,8 +12,9 @@ configure_file(
 
 idf_component_register(
   SRCS "main.c" "matrix_logic.c" "input_queue.c" "gpio_matrix.c" "device_settings.c"
+       "device_storage.c"
        "${MOL_REPOSITORY_ROOT}/tests/conformance/sequence_fixture.c"
   PRIV_INCLUDE_DIRS "${MOL_REPOSITORY_ROOT}/tests/conformance"
                     "${CMAKE_CURRENT_BINARY_DIR}/generated"
-  REQUIRES mol_core esp_driver_gpio esp_driver_i2s esp_system esp_timer)
+  REQUIRES mol_core esp_driver_gpio esp_driver_i2s esp_system esp_timer nvs_flash)
 target_compile_options(${COMPONENT_LIB} PRIVATE -Wall -Wextra -Werror)

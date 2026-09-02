@@ -149,12 +149,77 @@ static void test_invalid_values_are_rejected(void) {
   EXPECT_TRUE(mol_device_settings_validate(&settings) == MOL_OK);
 }
 
+static void test_command_compilation(void) {
+  mol_device_settings_t settings = mol_device_settings_default();
+  mol_command_t commands[MOL_DEVICE_SETTINGS_COMMAND_COUNT];
+  mol_command_t untouched;
+  size_t count = 0u;
+  memset(&untouched, 0xa5, sizeof(untouched));
+  settings.master_gain = 0.75f;
+  settings.preset = MOL_PRESET_VIOLIN;
+  settings.octave_shift = 2;
+  settings.transpose = -5;
+  settings.scale_type = MOL_SCALE_DORIAN;
+  settings.scale_tonic = 3u;
+  settings.scale_mapping = (uint8_t)MOL_SCALE_MAP_DOWN;
+  settings.chord_mode = MOL_CHORD_POWER_5;
+  settings.arpeggiator_mode = MOL_ARPEGGIATOR_UP_DOWN;
+  settings.arpeggiator_rate = MOL_ARPEGGIATOR_RATE_EIGHTH_TRIPLET;
+  settings.arpeggiator_gate = 0.6f;
+  settings.arpeggiator_octaves = 3u;
+  settings.arpeggiator_random_seed = 99u;
+  settings.tempo = 140.0f;
+  settings.time_signature_numerator = 5u;
+  settings.metronome_enabled = 1u;
+  settings.metronome_level = 0.7f;
+  settings.portamento_mode = MOL_PORTAMENTO_LEGATO_ONLY;
+  settings.portamento_time_ms = 45.0f;
+  EXPECT_TRUE(mol_device_settings_compile_commands(&settings, &untouched, 1u, &count) ==
+              MOL_ERROR_BUFFER_TOO_SMALL);
+  EXPECT_TRUE(count == MOL_DEVICE_SETTINGS_COMMAND_COUNT);
+  {
+    mol_command_t expected;
+    memset(&expected, 0xa5, sizeof(expected));
+    EXPECT_TRUE(memcmp(&untouched, &expected, sizeof(expected)) == 0);
+  }
+  EXPECT_TRUE(mol_device_settings_compile_commands(
+                  &settings, commands, MOL_DEVICE_SETTINGS_COMMAND_COUNT, &count) == MOL_OK);
+  EXPECT_TRUE(count == MOL_DEVICE_SETTINGS_COMMAND_COUNT);
+  EXPECT_TRUE(commands[0].command_type == MOL_COMMAND_SET_MASTER_GAIN &&
+              commands[0].payload.scalar.value == 0.75f);
+  EXPECT_TRUE(commands[1].command_type == MOL_COMMAND_SET_PRESET &&
+              commands[1].payload.preset.preset == MOL_PRESET_VIOLIN &&
+              commands[1].payload.preset.hard_switch == 1u);
+  EXPECT_TRUE(commands[2].payload.integer.value == 2);
+  EXPECT_TRUE(commands[3].payload.integer.value == -5);
+  EXPECT_TRUE(commands[4].payload.scale.type == MOL_SCALE_DORIAN &&
+              commands[4].payload.scale.tonic == 3u &&
+              commands[4].payload.scale.mapping == MOL_SCALE_MAP_DOWN);
+  EXPECT_TRUE(commands[5].payload.integer.value == (int32_t)MOL_CHORD_POWER_5);
+  EXPECT_TRUE(commands[6].payload.arpeggiator.mode == MOL_ARPEGGIATOR_UP_DOWN &&
+              commands[6].payload.arpeggiator.rate == MOL_ARPEGGIATOR_RATE_EIGHTH_TRIPLET &&
+              commands[6].payload.arpeggiator.gate == 0.6f &&
+              commands[6].payload.arpeggiator.octaves == 3u &&
+              commands[6].payload.arpeggiator.random_seed == 99u);
+  EXPECT_TRUE(commands[7].payload.scalar.value == 140.0f);
+  EXPECT_TRUE(commands[8].payload.time_signature.numerator == 5u &&
+              commands[8].payload.time_signature.denominator == 4u);
+  EXPECT_TRUE(commands[9].payload.metronome.enabled == 1u &&
+              commands[9].payload.metronome.level == 0.7f);
+  EXPECT_TRUE(commands[10].payload.portamento.mode == MOL_PORTAMENTO_LEGATO_ONLY &&
+              commands[10].payload.portamento.time_ms == 45.f);
+  EXPECT_TRUE(commands[10].struct_size == sizeof(mol_command_t) &&
+              commands[10].api_version == MOL_API_VERSION &&
+              commands[10].target_frame == MOL_FRAME_IMMEDIATE);
+}
+
 int main(void) {
   test_default_round_trip();
   test_non_default_round_trip();
   test_corruption_is_rejected();
   test_noncanonical_fields_are_rejected();
   test_invalid_values_are_rejected();
+  test_command_compilation();
   if (failures != 0) {
     fprintf(stderr, "%d ESP32 settings test(s) failed\n", failures);
     return 1;
