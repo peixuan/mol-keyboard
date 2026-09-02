@@ -9,6 +9,7 @@
 #include "mol/command.h"
 #include "mol/event.h"
 #include "mol/result.h"
+#include "mol/sequence.h"
 #include "mol/version.h"
 
 #ifdef __cplusplus
@@ -26,6 +27,7 @@ typedef struct mol_engine_config {
   uint32_t command_capacity;
   uint32_t event_capacity;
   uint32_t random_seed;
+  uint32_t sequence_capacity;
 } mol_engine_config_t;
 
 typedef struct mol_engine_state {
@@ -58,6 +60,12 @@ typedef struct mol_engine_state {
   uint32_t portamento_mode;
   float portamento_time_ms;
   uint32_t preset;
+  float pitch_bend;
+  uint32_t recording_event_count;
+  uint32_t loaded_sequence_event_count;
+  uint8_t recording;
+  uint8_t playback;
+  uint8_t reserved[2];
 } mol_engine_state_t;
 
 /** Returns a portable default Standard-profile configuration. */
@@ -81,6 +89,16 @@ void mol_engine_reset(mol_engine_t* engine);
 
 /** Submits a versioned music command. */
 mol_result_t mol_engine_submit(mol_engine_t* engine, const mol_command_t* command);
+
+/** Copies a validated sequence into caller-owned engine storage for later playback. */
+mol_result_t mol_engine_load_sequence(mol_engine_t* engine, const mol_sequence_config_t* config,
+                                      const mol_sequence_event_t* events, uint32_t event_count);
+
+/** Copies the current recording and captured initial state into caller storage. */
+mol_result_t mol_engine_copy_recording(const mol_engine_t* engine,
+                                       mol_sequence_config_t* out_config,
+                                       mol_sequence_event_t* events, uint32_t capacity,
+                                       uint32_t* out_event_count);
 
 /** Renders interleaved floating-point PCM without allocation. */
 mol_result_t mol_engine_render_interleaved_f32(mol_engine_t* engine, float* output,

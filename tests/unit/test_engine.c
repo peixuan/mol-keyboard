@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: Apache-2.0 */
-#include "mol/mol.h"
-
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+
+#include "mol/mol.h"
 
 typedef union test_storage {
   long double floating_alignment;
@@ -14,13 +14,12 @@ typedef union test_storage {
 
 static int failures = 0;
 
-#define EXPECT_TRUE(condition)                                                 \
-  do {                                                                         \
-    if (!(condition)) {                                                        \
-      (void)fprintf(stderr, "%s:%d: expectation failed: %s\n", __FILE__,     \
-                    __LINE__, #condition);                                     \
-      ++failures;                                                              \
-    }                                                                          \
+#define EXPECT_TRUE(condition)                                                                  \
+  do {                                                                                          \
+    if (!(condition)) {                                                                         \
+      (void)fprintf(stderr, "%s:%d: expectation failed: %s\n", __FILE__, __LINE__, #condition); \
+      ++failures;                                                                               \
+    }                                                                                           \
   } while (0)
 
 static void test_lifecycle(void) {
@@ -76,6 +75,20 @@ static void test_validation(void) {
   EXPECT_TRUE(mol_engine_query_memory(&config) == 0u);
 }
 
+static void test_tiny_embedded_budget(void) {
+#if MOL_BUILD_PROFILE == 1
+  static test_storage_t storage;
+  mol_engine_config_t config = mol_engine_config_default();
+  mol_engine_t* engine = NULL;
+  config.max_voices = 8u;
+  config.command_capacity = 32u;
+  config.event_capacity = 32u;
+  EXPECT_TRUE(mol_engine_query_memory(&config) <= 131072u);
+  EXPECT_TRUE(mol_engine_init(storage.bytes, 131072u, &config, &engine) == MOL_OK);
+  mol_engine_shutdown(engine);
+#endif
+}
+
 static void test_planar_and_commands(void) {
   static test_storage_t storage;
   mol_engine_config_t config = mol_engine_config_default();
@@ -106,6 +119,7 @@ static void test_planar_and_commands(void) {
 int main(void) {
   test_lifecycle();
   test_validation();
+  test_tiny_embedded_budget();
   test_planar_and_commands();
   if (failures != 0) {
     (void)fprintf(stderr, "%d test expectations failed\n", failures);

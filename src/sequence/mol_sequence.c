@@ -104,7 +104,7 @@ static int mol_seq_initial_state_is_valid(const mol_sequence_initial_state_t* in
   if (initial == NULL || initial->struct_size < sizeof(*initial) ||
       initial->api_version != MOL_API_VERSION || initial->preset >= MOL_PRESET_COUNT ||
       !isfinite(initial->master_gain) || initial->master_gain < 0.0f ||
-      initial->master_gain > 4.0f || !isfinite(initial->tempo) || initial->tempo < MOL_TEMPO_MIN ||
+      initial->master_gain > 2.0f || !isfinite(initial->tempo) || initial->tempo < MOL_TEMPO_MIN ||
       initial->tempo > MOL_TEMPO_MAX ||
       !mol_time_signature_is_valid(initial->time_signature_numerator,
                                    initial->time_signature_denominator) ||
@@ -143,6 +143,10 @@ static int mol_seq_config_is_valid(const mol_sequence_config_t* config) {
          config->sample_rate <= 192000u && config->time_base != 0u &&
          config->time_base <= UINT32_C(1000000) &&
          mol_seq_initial_state_is_valid(&config->initial_state);
+}
+
+mol_result_t mol_sequence_validate_config(const mol_sequence_config_t* config) {
+  return mol_seq_config_is_valid(config) ? MOL_OK : MOL_ERROR_INVALID_ARGUMENT;
 }
 
 mol_sequence_initial_state_t mol_sequence_initial_state_default(void) {
@@ -250,7 +254,23 @@ static mol_result_t mol_seq_encode_payload(const mol_sequence_event_t* event, ui
   const mol_command_payload_t* payload = &event->payload;
   switch (event->command_type) {
     case MOL_COMMAND_NOTE_ON:
+      if (event->gesture_id == 0u || payload->note.note > 127u ||
+          !isfinite(payload->note.velocity) || payload->note.velocity <= 0.0f ||
+          payload->note.velocity > 1.0f)
+        return MOL_ERROR_INVALID_ARGUMENT;
+      output[0] = payload->note.note;
+      mol_seq_write_float(output + 1u, payload->note.velocity);
+      *out_size = 5u;
+      return MOL_OK;
     case MOL_COMMAND_NOTE_OFF:
+      if (event->gesture_id == 0u || payload->note.note > 127u ||
+          !isfinite(payload->note.velocity) || payload->note.velocity < 0.0f ||
+          payload->note.velocity > 1.0f)
+        return MOL_ERROR_INVALID_ARGUMENT;
+      output[0] = payload->note.note;
+      mol_seq_write_float(output + 1u, payload->note.velocity);
+      *out_size = 5u;
+      return MOL_OK;
     case MOL_COMMAND_POLY_PRESSURE:
       if (payload->note.note > 127u || !isfinite(payload->note.velocity) ||
           payload->note.velocity < 0.0f || payload->note.velocity > 1.0f)
@@ -382,6 +402,16 @@ static mol_result_t mol_seq_encode_payload(const mol_sequence_event_t* event, ui
     default:
       return MOL_ERROR_UNSUPPORTED;
   }
+}
+
+mol_result_t mol_sequence_validate_event(const mol_sequence_event_t* event) {
+  uint8_t payload[MOL_SEQUENCE_EVENT_BODY_MAX];
+  size_t payload_size = 0u;
+  if (event == NULL || event->struct_size < sizeof(*event) ||
+      event->api_version != MOL_API_VERSION || event->frame == MOL_FRAME_IMMEDIATE) {
+    return MOL_ERROR_INVALID_ARGUMENT;
+  }
+  return mol_seq_encode_payload(event, payload, &payload_size);
 }
 
 mol_result_t mol_sequence_writer_append(mol_sequence_writer_t* writer,

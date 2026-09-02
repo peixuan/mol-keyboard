@@ -36,6 +36,7 @@ typedef enum mol_voice_stage {
 
 typedef struct mol_voice {
   mol_gesture_id_t gesture_id;
+  mol_gesture_id_t sequence_gesture_id;
   mol_frame_index_t started_at;
   mol_patch_t patch;
   mol_dsp_adsr_t amplitude;
@@ -110,10 +111,18 @@ struct mol_engine {
   mol_gesture_t* gestures;
   mol_scheduled_command_t* commands;
   mol_event_t* events;
+  mol_sequence_event_t* sequence_events;
   uint32_t command_count;
   uint32_t event_head;
   uint32_t event_count;
   uint32_t gesture_capacity;
+  mol_sequence_config_t sequence_config;
+  mol_frame_index_t recording_start_frame;
+  mol_frame_index_t playback_start_frame;
+  uint64_t recording_gesture_serial;
+  uint32_t recording_event_count;
+  uint32_t loaded_sequence_event_count;
+  uint32_t playback_event_index;
   mol_chorus_t chorus;
   mol_delay_t delay;
   mol_reverb_t reverb;
@@ -122,10 +131,13 @@ struct mol_engine {
   mol_dsp_limiter_t limiter[2];
   float delay_time_ms;
   float delay_sync_beats;
+  float limiter_ceiling_db;
   float last_output[2];
   float transition_tail[2];
   uint32_t output_ramp_remaining;
   float sustain;
+  float pitch_bend;
+  float pitch_bend_ratio;
   int32_t octave_shift;
   int32_t transpose;
   mol_scale_type_t scale_type;
@@ -159,6 +171,11 @@ struct mol_engine {
   uint32_t portamento_frames;
   float monophonic_last_phase_increment;
   uint8_t monophonic_last_pitch_valid;
+  uint8_t recording;
+  uint8_t playback;
+  uint8_t playback_dispatch;
+  uint8_t sequence_loaded;
+  uint8_t recording_available;
   mol_patch_t current_patch;
   mol_preset_id_t current_preset;
 };
@@ -174,7 +191,8 @@ static int mol_engine_config_is_valid(const mol_engine_config_t* config) {
   }
   if ((config->channel_count != 1u && config->channel_count != 2u) || config->max_voices < 8u ||
       config->max_voices > MOL_PROFILE_MAX_VOICES || config->command_capacity == 0u ||
-      config->event_capacity == 0u) {
+      config->event_capacity == 0u || config->sequence_capacity == 0u ||
+      config->sequence_capacity > MOL_PROFILE_SEQUENCE_EVENTS) {
     return 0;
   }
   return 1;
@@ -266,6 +284,122 @@ static mol_scheduled_command_t mol_command_heap_pop(mol_engine_t* engine) {
     parent = smallest;
   }
   return first;
+}
+
+static void mol_push_mode_event(mol_engine_t* engine, mol_event_type_t event_type, uint8_t enabled,
+                                uint8_t detail) {
+  mol_event_t* event;
+  uint32_t tail;
+  if (engine->event_count >= engine->config.event_capacity) return;
+  tail = (engine->event_head + engine->event_count) % engine->config.event_capacity;
+  event = &engine->events[tail];
+  memset(event, 0, sizeof(*event));
+  event->struct_size = (uint32_t)sizeof(*event);
+  event->api_version = MOL_API_VERSION;
+  event->event_type = event_type;
+  event->frame = engine->current_frame;
+  event->payload[0] = enabled;
+  event->payload[1] = detail;
+  ++engine->event_count;
+}
+
+static void mol_capture_sequence_initial_state(mol_engine_t* engine) {
+  mol_sequence_initial_state_t* initial;
+  engine->sequence_config = mol_sequence_config_default(engine->config.sample_rate);
+  initial = &engine->sequence_config.initial_state;
+  initial->preset = engine->current_preset;
+  initial->master_gain = engine->master_gain.target;
+  initial->tempo = (float)engine->tempo_milli_bpm / 1000.0f;
+  initial->time_signature_numerator = engine->time_signature_numerator;
+  initial->time_signature_denominator = engine->time_signature_denominator;
+  initial->octave_shift = (int8_t)engine->octave_shift;
+  initial->transpose = (int8_t)engine->transpose;
+  initial->scale_type = engine->scale_type;
+  initial->scale_tonic = engine->scale_tonic;
+  initial->scale_mapping = (uint8_t)engine->scale_mapping;
+  initial->chord_mode = engine->chord_mode;
+  initial->arpeggiator_mode = engine->arpeggiator_mode;
+  initial->arpeggiator_rate = engine->arpeggiator_rate;
+  initial->arpeggiator_gate = (float)engine->arpeggiator_gate_milli / 1000.0f;
+  initial->arpeggiator_random_seed = engine->arpeggiator_random_seed;
+  initial->arpeggiator_octaves = engine->arpeggiator_octaves;
+  initial->sustain = engine->sustain;
+  initial->pitch_bend = engine->pitch_bend;
+  initial->portamento_mode = engine->portamento_mode;
+  initial->portamento_time_ms =
+      (float)engine->portamento_frames * 1000.0f / (float)engine->config.sample_rate;
+  initial->metronome_level = engine->metronome_level;
+  initial->metronome_enabled = engine->metronome_enabled;
+}
+
+static void mol_record_event(mol_engine_t* engine, mol_command_type_t command_type,
+                             uint32_t source_id, mol_gesture_id_t gesture_id,
+                             const mol_command_payload_t* payload) {
+  mol_sequence_event_t* event;
+  if (engine->recording == 0u || engine->playback_dispatch != 0u) return;
+  if (engine->recording_event_count >= engine->config.sequence_capacity) {
+    engine->recording = 0u;
+    engine->loaded_sequence_event_count = engine->recording_event_count;
+    engine->sequence_loaded = 1u;
+    engine->recording_available = 1u;
+    mol_push_mode_event(engine, MOL_EVENT_RECORDING_CHANGED, 0u, 1u);
+    return;
+  }
+  event = &engine->sequence_events[engine->recording_event_count++];
+  memset(event, 0, sizeof(*event));
+  event->struct_size = (uint32_t)sizeof(*event);
+  event->api_version = MOL_API_VERSION;
+  event->frame = engine->current_frame - engine->recording_start_frame;
+  event->command_type = command_type;
+  event->source_id = source_id;
+  event->gesture_id = gesture_id;
+  if (payload != NULL) event->payload = *payload;
+}
+
+static void mol_record_command(mol_engine_t* engine, const mol_command_t* command) {
+  mol_record_event(engine, command->command_type, command->source_id, command->gesture_id,
+                   &command->payload);
+}
+
+static void mol_record_voice_note(mol_engine_t* engine, mol_command_type_t command_type,
+                                  const mol_voice_t* voice) {
+  mol_command_payload_t payload;
+  memset(&payload, 0, sizeof(payload));
+  payload.note.note = voice->note;
+  payload.note.velocity = voice->velocity;
+  mol_record_event(engine, command_type, voice->source_id, voice->sequence_gesture_id, &payload);
+}
+
+static void mol_record_parameter_value(mol_engine_t* engine, mol_parameter_id_t parameter,
+                                       float value) {
+  mol_command_payload_t payload;
+  memset(&payload, 0, sizeof(payload));
+  payload.parameter.parameter = parameter;
+  payload.parameter.value = value;
+  mol_record_event(engine, MOL_COMMAND_SET_PARAMETER, 0u, 0u, &payload);
+}
+
+static void mol_record_initial_parameters(mol_engine_t* engine) {
+#if MOL_ENABLE_CHORUS
+  mol_record_parameter_value(engine, MOL_PARAMETER_CHORUS_RATE_HZ, engine->chorus.rate_hz.target);
+  mol_record_parameter_value(engine, MOL_PARAMETER_CHORUS_DEPTH_MS, engine->chorus.depth_ms.target);
+  mol_record_parameter_value(engine, MOL_PARAMETER_CHORUS_MIX, engine->chorus.mix.target);
+#endif
+#if MOL_ENABLE_DELAY
+  mol_record_parameter_value(engine, MOL_PARAMETER_DELAY_TIME_MS, engine->delay_time_ms);
+  mol_record_parameter_value(engine, MOL_PARAMETER_DELAY_FEEDBACK, engine->delay.feedback.target);
+  mol_record_parameter_value(engine, MOL_PARAMETER_DELAY_MIX, engine->delay.mix.target);
+  mol_record_parameter_value(engine, MOL_PARAMETER_DELAY_SYNC_BEATS, engine->delay_sync_beats);
+#endif
+#if MOL_ENABLE_REVERB
+  mol_record_parameter_value(
+      engine, MOL_PARAMETER_REVERB_PREDELAY_MS,
+      engine->reverb.predelay_frames.target * 1000.0f / (float)engine->config.sample_rate);
+  mol_record_parameter_value(engine, MOL_PARAMETER_REVERB_SIZE, engine->reverb.size.target);
+  mol_record_parameter_value(engine, MOL_PARAMETER_REVERB_DAMPING, engine->reverb.damping.target);
+  mol_record_parameter_value(engine, MOL_PARAMETER_REVERB_MIX, engine->reverb.mix.target);
+#endif
+  mol_record_parameter_value(engine, MOL_PARAMETER_LIMITER_CEILING_DB, engine->limiter_ceiling_db);
 }
 
 static void mol_push_note_event(mol_engine_t* engine, mol_event_type_t event_type,
@@ -394,6 +528,7 @@ static float mol_note_frequency(uint8_t note) {
 
 static void mol_voice_release(mol_engine_t* engine, mol_voice_t* voice) {
   if (voice->stage != MOL_VOICE_IDLE && voice->stage != MOL_VOICE_RELEASE) {
+    mol_record_voice_note(engine, MOL_COMMAND_NOTE_OFF, voice);
     mol_dsp_adsr_note_off(&voice->amplitude);
     voice->stage = MOL_VOICE_RELEASE;
     mol_push_note_event(engine, MOL_EVENT_NOTE_RELEASED, voice);
@@ -438,6 +573,7 @@ static mol_voice_t* mol_allocate_voice(mol_engine_t* engine) {
     }
   }
   mol_push_note_event(engine, MOL_EVENT_VOICE_STOLEN, selected);
+  mol_record_voice_note(engine, MOL_COMMAND_NOTE_OFF, selected);
   return selected;
 }
 
@@ -528,6 +664,8 @@ static mol_voice_t* mol_start_voice(mol_engine_t* engine, const mol_gesture_t* g
   voice->stolen_tail = stolen_tail;
   voice->stolen_ramp_remaining = stolen_tail != 0.0f ? MOL_STEAL_RAMP_FRAMES : 0u;
   voice->gesture_id = gesture->gesture_id;
+  voice->sequence_gesture_id =
+      engine->recording != 0u ? ++engine->recording_gesture_serial : gesture->gesture_id;
   voice->started_at = engine->current_frame;
   voice->patch = engine->current_patch;
   voice->preset = engine->current_preset;
@@ -542,6 +680,7 @@ static mol_voice_t* mol_start_voice(mol_engine_t* engine, const mol_gesture_t* g
   voice->arpeggiated = arpeggiated;
   mol_voice_configure_synthesis(engine, voice, note);
   mol_push_note_event(engine, MOL_EVENT_NOTE_STARTED, voice);
+  mol_record_voice_note(engine, MOL_COMMAND_NOTE_ON, voice);
   return voice;
 }
 
@@ -573,7 +712,10 @@ static void mol_retarget_monophonic_voice(mol_engine_t* engine, mol_voice_t* voi
                                           const mol_gesture_t* gesture, int glide) {
   float target_phase_increment =
       mol_note_frequency(gesture->notes[0]) / (float)engine->config.sample_rate;
+  mol_record_voice_note(engine, MOL_COMMAND_NOTE_OFF, voice);
   voice->gesture_id = gesture->gesture_id;
+  voice->sequence_gesture_id =
+      engine->recording != 0u ? ++engine->recording_gesture_serial : gesture->gesture_id;
   voice->started_at = engine->current_frame;
   voice->velocity = gesture->velocity;
   voice->source_id = gesture->source_id;
@@ -591,6 +733,7 @@ static void mol_retarget_monophonic_voice(mol_engine_t* engine, mol_voice_t* voi
   engine->monophonic_last_phase_increment = target_phase_increment;
   engine->monophonic_last_pitch_valid = 1u;
   mol_push_note_event(engine, MOL_EVENT_NOTE_STARTED, voice);
+  mol_record_voice_note(engine, MOL_COMMAND_NOTE_ON, voice);
 }
 
 static void mol_start_monophonic_voice(mol_engine_t* engine, mol_gesture_t* gesture) {
@@ -1052,6 +1195,7 @@ static void mol_process_parameter(mol_engine_t* engine, mol_parameter_id_t param
       break;
 #endif
     case MOL_PARAMETER_LIMITER_CEILING_DB:
+      engine->limiter_ceiling_db = value;
       mol_dsp_limiter_configure(&engine->limiter[0], engine->config.sample_rate, value, 0.0001f,
                                 0.05f);
       mol_dsp_limiter_configure(&engine->limiter[1], engine->config.sample_rate, value, 0.0001f,
@@ -1062,8 +1206,101 @@ static void mol_process_parameter(mol_engine_t* engine, mol_parameter_id_t param
   }
 }
 
+static void mol_apply_sequence_initial_state(mol_engine_t* engine) {
+  const mol_sequence_initial_state_t* initial = &engine->sequence_config.initial_state;
+  mol_clear_voices(engine, 1);
+  memset(engine->gestures, 0, sizeof(*engine->gestures) * engine->gesture_capacity);
+  memset(engine->pluck_memory, 0,
+         sizeof(*engine->pluck_memory) * engine->config.max_voices * MOL_PROFILE_PLUCK_FRAMES);
+#if MOL_ENABLE_CHORUS
+  mol_chorus_configure(&engine->chorus, engine->chorus_memory, MOL_PROFILE_CHORUS_FRAMES,
+                       engine->config.sample_rate);
+#endif
+#if MOL_ENABLE_DELAY
+  mol_delay_configure(&engine->delay, engine->delay_memory, MOL_PROFILE_DELAY_FRAMES,
+                      engine->config.sample_rate);
+#endif
+#if MOL_ENABLE_REVERB
+  mol_reverb_configure(&engine->reverb, engine->reverb_memory, MOL_PROFILE_REVERB_FRAMES,
+                       engine->config.sample_rate, (float)MOL_PROFILE_REVERB_SCALE_MILLI / 1000.0f);
+#endif
+  mol_dsp_dc_blocker_configure(&engine->dc_blocker[0], 0.995f);
+  mol_dsp_dc_blocker_configure(&engine->dc_blocker[1], 0.995f);
+  mol_dsp_limiter_configure(&engine->limiter[0], engine->config.sample_rate, -1.0f, 0.0001f, 0.05f);
+  mol_dsp_limiter_configure(&engine->limiter[1], engine->config.sample_rate, -1.0f, 0.0001f, 0.05f);
+  engine->delay_time_ms = 240.0f;
+  engine->delay_sync_beats = 0.0f;
+  engine->limiter_ceiling_db = -1.0f;
+  engine->last_output[0] = 0.0f;
+  engine->last_output[1] = 0.0f;
+  engine->transition_tail[0] = 0.0f;
+  engine->transition_tail[1] = 0.0f;
+  engine->output_ramp_remaining = 0u;
+  mol_dsp_smoother_configure(&engine->master_gain, engine->config.sample_rate, 0.01f,
+                             initial->master_gain);
+  engine->sustain = initial->sustain;
+  engine->pitch_bend = initial->pitch_bend;
+  engine->pitch_bend_ratio = powf(2.0f, initial->pitch_bend / 6.0f);
+  engine->octave_shift = initial->octave_shift;
+  engine->transpose = initial->transpose;
+  engine->scale_type = initial->scale_type;
+  engine->scale_tonic = initial->scale_tonic;
+  engine->scale_mapping = initial->scale_mapping;
+  engine->chord_mode = initial->chord_mode;
+  engine->tempo_milli_bpm = (uint32_t)(initial->tempo * 1000.0f + 0.5f);
+  engine->time_signature_numerator = initial->time_signature_numerator;
+  engine->time_signature_denominator = initial->time_signature_denominator;
+  engine->transport_frame = 0u;
+  engine->transport_running = 0u;
+  engine->metronome_enabled = initial->metronome_enabled;
+  engine->metronome_level = initial->metronome_level;
+  engine->metronome_remaining = 0u;
+  engine->arpeggiator_mode = initial->arpeggiator_mode;
+  engine->arpeggiator_rate = initial->arpeggiator_rate;
+  engine->arpeggiator_gate_milli = (uint16_t)(initial->arpeggiator_gate * 1000.0f + 0.5f);
+  engine->arpeggiator_random_seed = initial->arpeggiator_random_seed;
+  engine->arpeggiator_octaves = initial->arpeggiator_octaves;
+  engine->arpeggiator_voice_active = 0u;
+  engine->portamento_mode = initial->portamento_mode;
+  engine->portamento_frames =
+      (uint32_t)(initial->portamento_time_ms * (float)engine->config.sample_rate / 1000.0f + 0.5f);
+  engine->monophonic_last_phase_increment = 0.0f;
+  engine->monophonic_last_pitch_valid = 0u;
+  engine->current_preset = initial->preset;
+  engine->current_patch.struct_size = (uint32_t)sizeof(engine->current_patch);
+  (void)mol_builtin_patch_load(engine->current_preset, &engine->current_patch);
+  mol_update_synced_delay(engine);
+  mol_reschedule_metronome(engine);
+  mol_reschedule_arpeggiator(engine);
+}
+
 static void mol_process_command(mol_engine_t* engine, const mol_command_t* command) {
   uint32_t index;
+  switch (command->command_type) {
+    case MOL_COMMAND_PITCH_BEND:
+    case MOL_COMMAND_POLY_PRESSURE:
+    case MOL_COMMAND_SUSTAIN:
+    case MOL_COMMAND_ALL_SOUND_OFF:
+    case MOL_COMMAND_SET_MASTER_GAIN:
+    case MOL_COMMAND_SET_PRESET:
+    case MOL_COMMAND_SET_PARAMETER:
+    case MOL_COMMAND_SET_OCTAVE_SHIFT:
+    case MOL_COMMAND_SET_TRANSPOSE:
+    case MOL_COMMAND_SET_SCALE:
+    case MOL_COMMAND_SET_CHORD_MODE:
+    case MOL_COMMAND_SET_ARPEGGIATOR:
+    case MOL_COMMAND_SET_TEMPO:
+    case MOL_COMMAND_SET_TIME_SIGNATURE:
+    case MOL_COMMAND_TRANSPORT_START:
+    case MOL_COMMAND_TRANSPORT_STOP:
+    case MOL_COMMAND_TRANSPORT_SEEK:
+    case MOL_COMMAND_SET_METRONOME:
+    case MOL_COMMAND_SET_PORTAMENTO:
+      mol_record_command(engine, command);
+      break;
+    default:
+      break;
+  }
   switch (command->command_type) {
     case MOL_COMMAND_NOTE_ON:
       mol_process_note_on(engine, command);
@@ -1093,6 +1330,20 @@ static void mol_process_command(mol_engine_t* engine, const mol_command_t* comma
       }
       break;
     }
+    case MOL_COMMAND_POLY_PRESSURE:
+      for (index = 0u; index < engine->config.max_voices; ++index) {
+        mol_voice_t* voice = &engine->voices[index];
+        if (voice->stage != MOL_VOICE_IDLE && voice->note == command->payload.note.note &&
+            (command->gesture_id == 0u || voice->gesture_id == command->gesture_id)) {
+          voice->velocity = command->payload.note.velocity;
+          voice->velocity_gain = mol_patch_velocity_gain(&voice->patch, voice->velocity);
+        }
+      }
+      break;
+    case MOL_COMMAND_PITCH_BEND:
+      engine->pitch_bend = command->payload.scalar.value;
+      engine->pitch_bend_ratio = powf(2.0f, engine->pitch_bend / 6.0f);
+      break;
     case MOL_COMMAND_SUSTAIN: {
       float previous = engine->sustain;
       engine->sustain = command->payload.scalar.value;
@@ -1259,11 +1510,129 @@ static void mol_process_command(mol_engine_t* engine, const mol_command_t* comma
       engine->metronome_remaining = 0u;
       mol_reschedule_metronome(engine);
       break;
+    case MOL_COMMAND_RECORD_START:
+      if (engine->playback != 0u) {
+        engine->playback = 0u;
+        mol_push_mode_event(engine, MOL_EVENT_PLAYBACK_CHANGED, 0u, 0u);
+      }
+      engine->recording_event_count = 0u;
+      engine->loaded_sequence_event_count = 0u;
+      engine->sequence_loaded = 0u;
+      engine->recording_available = 0u;
+      engine->recording_gesture_serial = 0u;
+      engine->recording_start_frame = engine->current_frame;
+      mol_capture_sequence_initial_state(engine);
+      engine->recording = 1u;
+      mol_push_mode_event(engine, MOL_EVENT_RECORDING_CHANGED, 1u, 0u);
+      mol_record_initial_parameters(engine);
+      break;
+    case MOL_COMMAND_RECORD_STOP:
+      if (engine->recording != 0u) {
+        engine->recording = 0u;
+        engine->loaded_sequence_event_count = engine->recording_event_count;
+        engine->sequence_loaded = 1u;
+        engine->recording_available = 1u;
+        mol_push_mode_event(engine, MOL_EVENT_RECORDING_CHANGED, 0u, 0u);
+      }
+      break;
+    case MOL_COMMAND_PLAYBACK_START:
+      if (engine->sequence_loaded != 0u) {
+        if (engine->recording != 0u) {
+          engine->recording = 0u;
+          mol_push_mode_event(engine, MOL_EVENT_RECORDING_CHANGED, 0u, 0u);
+        }
+        mol_apply_sequence_initial_state(engine);
+        engine->playback_event_index = 0u;
+        engine->playback_start_frame = engine->current_frame;
+        engine->playback = 1u;
+        mol_push_mode_event(engine, MOL_EVENT_PLAYBACK_CHANGED, 1u, 0u);
+      }
+      break;
+    case MOL_COMMAND_PLAYBACK_STOP:
+      if (engine->playback != 0u) {
+        engine->playback = 0u;
+        mol_push_mode_event(engine, MOL_EVENT_PLAYBACK_CHANGED, 0u, 0u);
+      }
+      break;
+    case MOL_COMMAND_LOAD_SEQUENCE:
+      engine->playback = 0u;
+      engine->playback_event_index = 0u;
+      break;
     case MOL_COMMAND_RESET_ENGINE:
       mol_engine_reset(engine);
       break;
     default:
       break;
+  }
+}
+
+static void mol_process_playback_note_on(mol_engine_t* engine, const mol_sequence_event_t* event) {
+  mol_gesture_t* gesture;
+  mol_command_t command;
+  if (mol_find_gesture(engine, event->gesture_id) != NULL) return;
+  gesture = mol_allocate_gesture(engine);
+  if (gesture == NULL) {
+    memset(&command, 0, sizeof(command));
+    command.source_id = event->source_id;
+    command.gesture_id = event->gesture_id;
+    command.payload.note = event->payload.note;
+    mol_push_music_error(engine, &command, MOL_MUSIC_ERROR_GESTURE_CAPACITY);
+    return;
+  }
+  memset(gesture, 0, sizeof(*gesture));
+  gesture->gesture_id = event->gesture_id;
+  gesture->order = engine->gesture_serial++;
+  gesture->source_id = event->source_id;
+  gesture->velocity = event->payload.note.velocity;
+  gesture->notes[0] = event->payload.note.note;
+  gesture->note_count = 1u;
+  gesture->input_note = event->payload.note.note;
+  gesture->key_down = 1u;
+  gesture->active = 1u;
+  mol_start_voice(engine, gesture, gesture->notes[0], 0u);
+}
+
+static void mol_process_playback_note_off(mol_engine_t* engine, const mol_sequence_event_t* event) {
+  mol_gesture_t* gesture = mol_find_gesture(engine, event->gesture_id);
+  if (gesture == NULL) return;
+  gesture->key_down = 0u;
+  gesture->active = 0u;
+  mol_release_gesture_voices(engine, event->gesture_id);
+}
+
+static void mol_process_playback_event(mol_engine_t* engine, const mol_sequence_event_t* event) {
+  mol_command_t command;
+  if (event->command_type == MOL_COMMAND_NOTE_ON) {
+    mol_process_playback_note_on(engine, event);
+    return;
+  }
+  if (event->command_type == MOL_COMMAND_NOTE_OFF) {
+    mol_process_playback_note_off(engine, event);
+    return;
+  }
+  memset(&command, 0, sizeof(command));
+  command.struct_size = (uint32_t)sizeof(command);
+  command.api_version = MOL_API_VERSION;
+  command.command_type = event->command_type;
+  command.source_id = event->source_id;
+  command.target_frame = engine->current_frame;
+  command.gesture_id = event->gesture_id;
+  command.payload = event->payload;
+  mol_process_command(engine, &command);
+}
+
+static void mol_process_playback(mol_engine_t* engine) {
+  mol_frame_index_t relative_frame = engine->current_frame - engine->playback_start_frame;
+  engine->playback_dispatch = 1u;
+  while (engine->playback_event_index < engine->loaded_sequence_event_count &&
+         engine->sequence_events[engine->playback_event_index].frame <= relative_frame) {
+    mol_process_playback_event(engine, &engine->sequence_events[engine->playback_event_index]);
+    ++engine->playback_event_index;
+  }
+  engine->playback_dispatch = 0u;
+  if (engine->playback_event_index == engine->loaded_sequence_event_count) {
+    engine->playback = 0u;
+    mol_push_mode_event(engine, MOL_EVENT_PLAYBACK_CHANGED, 0u, 0u);
   }
 }
 
@@ -1382,7 +1751,8 @@ static float mol_render_voice(mol_engine_t* engine, mol_voice_t* voice) {
   }
   if (voice->stage != MOL_VOICE_IDLE) {
     float vibrato = mol_dsp_lfo_process(&voice->vibrato) * (float)voice->patch.vibrato_depth_cents;
-    float increment = voice->phase_increment * powf(2.0f, vibrato / 1200.0f);
+    float increment =
+        voice->phase_increment * engine->pitch_bend_ratio * powf(2.0f, vibrato / 1200.0f);
     voice->envelope = mol_dsp_adsr_process(&voice->amplitude);
     sample = mol_render_voice_source(voice, increment) * voice->envelope * voice->velocity_gain *
              voice->instrument_gain;
@@ -1424,12 +1794,16 @@ static mol_stereo_frame_t mol_render_frame(mol_engine_t* engine) {
   float delay_send = 0.0f;
   float reverb_send = 0.0f;
   uint32_t index;
+  uint8_t playback_was_active;
   while (engine->command_count != 0u &&
          engine->commands[0].command.target_frame <= engine->current_frame) {
     mol_scheduled_command_t scheduled = mol_command_heap_pop(engine);
     mol_process_command(engine, &scheduled.command);
   }
-  if (engine->transport_running != 0u && engine->arpeggiator_mode != MOL_ARPEGGIATOR_OFF) {
+  playback_was_active = engine->playback;
+  if (engine->playback != 0u) mol_process_playback(engine);
+  if (playback_was_active == 0u && engine->transport_running != 0u &&
+      engine->arpeggiator_mode != MOL_ARPEGGIATOR_OFF) {
     if (engine->arpeggiator_voice_active != 0u &&
         engine->transport_frame >= engine->arpeggiator_gate_off_frame) {
       mol_release_arpeggiated_voices(engine);
@@ -1570,6 +1944,7 @@ mol_engine_config_t mol_engine_config_default(void) {
   config.command_capacity = 256u;
   config.event_capacity = 256u;
   config.random_seed = UINT32_C(0x4D4F4C31);
+  config.sequence_capacity = MOL_PROFILE_SEQUENCE_EVENTS;
   return config;
 }
 
@@ -1579,6 +1954,7 @@ size_t mol_engine_memory_alignment(void) {
   alignment = mol_max_size(alignment, _Alignof(mol_gesture_t));
   alignment = mol_max_size(alignment, _Alignof(mol_scheduled_command_t));
   alignment = mol_max_size(alignment, _Alignof(mol_event_t));
+  alignment = mol_max_size(alignment, _Alignof(mol_sequence_event_t));
   return mol_max_size(alignment, _Alignof(float));
 }
 
@@ -1603,7 +1979,9 @@ size_t mol_engine_query_memory(const mol_engine_config_t* config) {
       !mol_size_add_array(&size, _Alignof(mol_scheduled_command_t), sizeof(mol_scheduled_command_t),
                           config->command_capacity) ||
       !mol_size_add_array(&size, _Alignof(mol_event_t), sizeof(mol_event_t),
-                          config->event_capacity)) {
+                          config->event_capacity) ||
+      !mol_size_add_array(&size, _Alignof(mol_sequence_event_t), sizeof(mol_sequence_event_t),
+                          config->sequence_capacity)) {
     return 0u;
   }
   return size;
@@ -1665,6 +2043,9 @@ mol_result_t mol_engine_init(void* memory, size_t memory_size, const mol_engine_
       config->command_capacity);
   engine->events = (mol_event_t*)mol_arena_take(bytes, &offset, _Alignof(mol_event_t),
                                                 sizeof(mol_event_t), config->event_capacity);
+  engine->sequence_events = (mol_sequence_event_t*)mol_arena_take(
+      bytes, &offset, _Alignof(mol_sequence_event_t), sizeof(mol_sequence_event_t),
+      config->sequence_capacity);
   engine->config = *config;
   engine->gesture_capacity = config->command_capacity;
   engine->memory_size = required;
@@ -1698,6 +2079,18 @@ void mol_engine_reset(mol_engine_t* engine) {
     engine->command_count = 0u;
     engine->event_head = 0u;
     engine->event_count = 0u;
+    engine->sequence_config = mol_sequence_config_default(engine->config.sample_rate);
+    engine->recording_start_frame = 0u;
+    engine->playback_start_frame = 0u;
+    engine->recording_gesture_serial = 0u;
+    engine->recording_event_count = 0u;
+    engine->loaded_sequence_event_count = 0u;
+    engine->playback_event_index = 0u;
+    engine->recording = 0u;
+    engine->playback = 0u;
+    engine->playback_dispatch = 0u;
+    engine->sequence_loaded = 0u;
+    engine->recording_available = 0u;
     mol_dsp_smoother_configure(&engine->master_gain, engine->config.sample_rate, 0.01f,
                                MOL_MASTER_GAIN_DEFAULT);
     mol_dsp_dc_blocker_configure(&engine->dc_blocker[0], 0.995f);
@@ -1721,12 +2114,15 @@ void mol_engine_reset(mol_engine_t* engine) {
 #endif
     engine->delay_time_ms = 240.0f;
     engine->delay_sync_beats = 0.0f;
+    engine->limiter_ceiling_db = -1.0f;
     engine->last_output[0] = previous_left;
     engine->last_output[1] = previous_right;
     engine->transition_tail[0] = previous_left;
     engine->transition_tail[1] = previous_right;
     engine->output_ramp_remaining = MOL_OUTPUT_RAMP_FRAMES;
     engine->sustain = 0.0f;
+    engine->pitch_bend = 0.0f;
+    engine->pitch_bend_ratio = 1.0f;
     engine->octave_shift = 0;
     engine->transpose = 0;
     engine->scale_type = MOL_SCALE_CHROMATIC;
@@ -1833,6 +2229,77 @@ static mol_result_t mol_validate_parameter(const mol_engine_t* engine, mol_param
   }
 }
 
+static int mol_scale_sequence_frame(mol_frame_index_t frame, uint32_t source_time_base,
+                                    uint32_t target_sample_rate, mol_frame_index_t* out_frame) {
+  uint64_t whole = frame / source_time_base;
+  uint64_t remainder = frame % source_time_base;
+  if (whole > UINT64_MAX / target_sample_rate) return 0;
+  whole *= target_sample_rate;
+  remainder = remainder * target_sample_rate / source_time_base;
+  if (whole > UINT64_MAX - remainder) return 0;
+  *out_frame = whole + remainder;
+  return 1;
+}
+
+mol_result_t mol_engine_load_sequence(mol_engine_t* engine, const mol_sequence_config_t* config,
+                                      const mol_sequence_event_t* events, uint32_t event_count) {
+  mol_frame_index_t previous_frame = 0u;
+  if (!mol_engine_is_valid(engine) || mol_sequence_validate_config(config) != MOL_OK ||
+      event_count > engine->config.sequence_capacity || (event_count != 0u && events == NULL)) {
+    return event_count > 0u && mol_engine_is_valid(engine) &&
+                   event_count > engine->config.sequence_capacity
+               ? MOL_ERROR_BUFFER_TOO_SMALL
+               : MOL_ERROR_INVALID_ARGUMENT;
+  }
+  if (engine->recording != 0u || engine->playback != 0u) return MOL_ERROR_INVALID_STATE;
+  for (uint32_t index = 0u; index < event_count; ++index) {
+    mol_frame_index_t normalized_frame;
+    if (mol_sequence_validate_event(&events[index]) != MOL_OK ||
+        (index != 0u && events[index].frame < previous_frame)) {
+      return MOL_ERROR_CORRUPT_DATA;
+    }
+    if (!mol_scale_sequence_frame(events[index].frame, config->time_base,
+                                  engine->config.sample_rate, &normalized_frame)) {
+      return MOL_ERROR_OVERFLOW;
+    }
+    previous_frame = events[index].frame;
+  }
+  for (uint32_t index = 0u; index < event_count; ++index) {
+    engine->sequence_events[index] = events[index];
+    (void)mol_scale_sequence_frame(events[index].frame, config->time_base,
+                                   engine->config.sample_rate,
+                                   &engine->sequence_events[index].frame);
+  }
+  engine->sequence_config = *config;
+  engine->sequence_config.sample_rate = engine->config.sample_rate;
+  engine->sequence_config.time_base = engine->config.sample_rate;
+  engine->recording_event_count = 0u;
+  engine->loaded_sequence_event_count = event_count;
+  engine->playback_event_index = 0u;
+  engine->sequence_loaded = 1u;
+  engine->recording_available = 0u;
+  return MOL_OK;
+}
+
+mol_result_t mol_engine_copy_recording(const mol_engine_t* engine,
+                                       mol_sequence_config_t* out_config,
+                                       mol_sequence_event_t* events, uint32_t capacity,
+                                       uint32_t* out_event_count) {
+  if (!mol_engine_is_valid(engine) || out_config == NULL ||
+      out_config->struct_size < sizeof(*out_config) || out_config->api_version != MOL_API_VERSION ||
+      out_event_count == NULL || (capacity != 0u && events == NULL)) {
+    return MOL_ERROR_INVALID_ARGUMENT;
+  }
+  if (engine->recording != 0u || engine->recording_available == 0u) return MOL_ERROR_INVALID_STATE;
+  *out_event_count = engine->recording_event_count;
+  if (capacity < engine->recording_event_count) return MOL_ERROR_BUFFER_TOO_SMALL;
+  *out_config = engine->sequence_config;
+  if (engine->recording_event_count != 0u) {
+    memcpy(events, engine->sequence_events, sizeof(*events) * engine->recording_event_count);
+  }
+  return MOL_OK;
+}
+
 mol_result_t mol_engine_submit(mol_engine_t* engine, const mol_command_t* command) {
   mol_scheduled_command_t scheduled;
   if (!mol_engine_is_valid(engine) || command == NULL || command->struct_size < sizeof(*command)) {
@@ -1851,6 +2318,18 @@ mol_result_t mol_engine_submit(mol_engine_t* engine, const mol_command_t* comman
       break;
     case MOL_COMMAND_NOTE_OFF:
       if (command->gesture_id == 0u) {
+        return MOL_ERROR_INVALID_ARGUMENT;
+      }
+      break;
+    case MOL_COMMAND_POLY_PRESSURE:
+      if (command->payload.note.note > 127u || !isfinite(command->payload.note.velocity) ||
+          command->payload.note.velocity < 0.0f || command->payload.note.velocity > 1.0f) {
+        return MOL_ERROR_INVALID_ARGUMENT;
+      }
+      break;
+    case MOL_COMMAND_PITCH_BEND:
+      if (!isfinite(command->payload.scalar.value) || command->payload.scalar.value < -1.0f ||
+          command->payload.scalar.value > 1.0f) {
         return MOL_ERROR_INVALID_ARGUMENT;
       }
       break;
@@ -1942,6 +2421,11 @@ mol_result_t mol_engine_submit(mol_engine_t* engine, const mol_command_t* comman
     case MOL_COMMAND_TRANSPORT_START:
     case MOL_COMMAND_TRANSPORT_STOP:
     case MOL_COMMAND_TRANSPORT_SEEK:
+    case MOL_COMMAND_RECORD_START:
+    case MOL_COMMAND_RECORD_STOP:
+    case MOL_COMMAND_PLAYBACK_START:
+    case MOL_COMMAND_PLAYBACK_STOP:
+    case MOL_COMMAND_LOAD_SEQUENCE:
       break;
     case MOL_COMMAND_ALL_NOTES_OFF:
     case MOL_COMMAND_ALL_SOUND_OFF:
@@ -2071,6 +2555,11 @@ mol_result_t mol_engine_get_state(const mol_engine_t* engine, mol_engine_state_t
   state->portamento_time_ms =
       (float)engine->portamento_frames * 1000.0f / (float)engine->config.sample_rate;
   state->preset = engine->current_preset;
+  state->pitch_bend = engine->pitch_bend;
+  state->recording_event_count = engine->recording_event_count;
+  state->loaded_sequence_event_count = engine->loaded_sequence_event_count;
+  state->recording = engine->recording;
+  state->playback = engine->playback;
   return MOL_OK;
 }
 
@@ -2079,13 +2568,13 @@ mol_capability_flags_t mol_engine_get_capabilities(const mol_engine_t* engine) {
   if (!mol_engine_is_valid(engine)) {
     return 0u;
   }
-  capabilities = MOL_CAPABILITY_CALLER_MEMORY | MOL_CAPABILITY_INTERLEAVED_F32 |
-                 MOL_CAPABILITY_PLANAR_F32 | MOL_CAPABILITY_POLYPHONIC_SYNTH |
-                 MOL_CAPABILITY_SAMPLE_ACCURATE_COMMANDS | MOL_CAPABILITY_SCALE_LOCK |
-                 MOL_CAPABILITY_CHORD_MODE | MOL_CAPABILITY_CONTINUOUS_SUSTAIN |
-                 MOL_CAPABILITY_TRANSPORT | MOL_CAPABILITY_METRONOME | MOL_CAPABILITY_ARPEGGIATOR |
-                 MOL_CAPABILITY_MONOPHONIC_PORTAMENTO | MOL_CAPABILITY_BUILTIN_PATCHES |
-                 MOL_CAPABILITY_LIMITER;
+  capabilities =
+      MOL_CAPABILITY_CALLER_MEMORY | MOL_CAPABILITY_INTERLEAVED_F32 | MOL_CAPABILITY_PLANAR_F32 |
+      MOL_CAPABILITY_POLYPHONIC_SYNTH | MOL_CAPABILITY_SAMPLE_ACCURATE_COMMANDS |
+      MOL_CAPABILITY_SCALE_LOCK | MOL_CAPABILITY_CHORD_MODE | MOL_CAPABILITY_CONTINUOUS_SUSTAIN |
+      MOL_CAPABILITY_TRANSPORT | MOL_CAPABILITY_METRONOME | MOL_CAPABILITY_ARPEGGIATOR |
+      MOL_CAPABILITY_MONOPHONIC_PORTAMENTO | MOL_CAPABILITY_BUILTIN_PATCHES |
+      MOL_CAPABILITY_LIMITER | MOL_CAPABILITY_EVENT_RECORDING | MOL_CAPABILITY_SEQUENCE_PLAYBACK;
 #if MOL_ENABLE_CHORUS
   capabilities |= MOL_CAPABILITY_CHORUS | MOL_CAPABILITY_STEREO_EFFECTS;
 #endif

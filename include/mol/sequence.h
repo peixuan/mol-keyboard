@@ -103,6 +103,12 @@ mol_sequence_initial_state_t mol_sequence_initial_state_default(void);
 /** Returns a deterministic v1 sequence configuration for a sample rate. */
 mol_sequence_config_t mol_sequence_config_default(uint32_t sample_rate);
 
+/** Validates versioned configuration fields and fixed v1 bounds. */
+mol_result_t mol_sequence_validate_config(const mol_sequence_config_t* config);
+
+/** Validates one canonical event without writing it. */
+mol_result_t mol_sequence_validate_event(const mol_sequence_event_t* event);
+
 /** Starts a forward-only stream. A valid file exists only after finalize succeeds. */
 mol_result_t mol_sequence_writer_init(mol_sequence_writer_t* writer,
                                       const mol_sequence_config_t* config,

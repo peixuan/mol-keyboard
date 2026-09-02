@@ -54,6 +54,13 @@ mol_enable_warnings(mol_sequence_tests)
 mol_enable_optional_instrumentation(mol_sequence_tests)
 add_test(NAME mol_sequence_tests COMMAND mol_sequence_tests)
 
+add_executable(mol_recording_tests unit/test_recording.c)
+target_link_libraries(mol_recording_tests PRIVATE mol::core)
+set_target_properties(mol_recording_tests PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_recording_tests)
+mol_enable_optional_instrumentation(mol_recording_tests)
+add_test(NAME mol_recording_tests COMMAND mol_recording_tests)
+
 add_executable(mol_instrument_tests integration/test_instruments.c)
 target_link_libraries(mol_instrument_tests PRIVATE mol::core)
 set_target_properties(mol_instrument_tests PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
