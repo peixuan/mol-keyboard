@@ -69,6 +69,25 @@
       "usage": "Web development server and production bundler",
       "distributed": false,
       "local_patches": []
+    },
+    {
+      "name": "Playwright",
+      "version": "1.62.1",
+      "revision": "npm:1.62.1",
+      "source": "https://registry.npmjs.org/@playwright/test/-/test-1.62.1.tgz",
+      "integrity": "sha512-DTcUc8qii+cpHvtOwggMtBRMjKZHXYWdw8syRYu2vtzuq4Wxphqq4NfCs5Zt44L6mA8rfDfj+PHnxFc/FeK6mQ==",
+      "license": "Apache-2.0",
+      "license_file": "third_party/licenses/playwright-LICENSE.txt",
+      "license_file_sha256": "abd8d316b1b2b35fae3bebd3d3d65c5ee7805152f9432640c69cd404cc00f313",
+      "usage": "Pinned Chrome, Edge, Firefox, WebKit, desktop, mobile, PWA, and service-controller automation",
+      "distributed": false,
+      "build_options": [
+        "Chromium 151.0.7922.34",
+        "Firefox 153.0",
+        "WebKit 26.5",
+        "browser binaries stored outside Git"
+      ],
+      "local_patches": []
     }
   ],
   "dependencies": [

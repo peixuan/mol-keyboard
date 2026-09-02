@@ -14,11 +14,14 @@ set(_typescript_license
 set(_typescript_notice
     "${MOL_SOURCE_DIR}/third_party/licenses/typescript-NOTICE.txt")
 set(_vite_license "${MOL_SOURCE_DIR}/third_party/licenses/vite-LICENSE.md")
+set(_playwright_license
+    "${MOL_SOURCE_DIR}/third_party/licenses/playwright-LICENSE.txt")
 set(_web_lock "${MOL_SOURCE_DIR}/apps/web/package-lock.json")
 set(_sbom "${MOL_SOURCE_DIR}/sbom/mol-keyboard.spdx.json")
 foreach(_required_file "${_manifest}" "${_miniaudio_license}"
                        "${_oboe_license}" "${_typescript_license}"
                        "${_typescript_notice}" "${_vite_license}"
+                       "${_playwright_license}"
                        "${_web_lock}" "${_sbom}")
   if(NOT EXISTS "${_required_file}")
     message(FATAL_ERROR "Missing dependency audit file: ${_required_file}")
@@ -46,6 +49,10 @@ string(JSON _vite_version GET "${_manifest_json}" components 4 version)
 string(JSON _vite_revision GET "${_manifest_json}" components 4 revision)
 string(JSON _vite_license_hash GET "${_manifest_json}" components 4
        license_file_sha256)
+string(JSON _playwright_name GET "${_manifest_json}" components 5 name)
+string(JSON _playwright_version GET "${_manifest_json}" components 5 version)
+string(JSON _playwright_license_hash GET "${_manifest_json}" components 5
+       license_file_sha256)
 string(JSON _name GET "${_manifest_json}" dependencies 0 name)
 string(JSON _version GET "${_manifest_json}" dependencies 0 version)
 string(JSON _commit GET "${_manifest_json}" dependencies 0 commit)
@@ -59,7 +66,7 @@ string(JSON _oboe_archive_hash GET "${_manifest_json}" dependencies 1 archive_sh
 string(JSON _oboe_license_hash GET "${_manifest_json}" dependencies 1 license_file_sha256)
 string(JSON _oboe_patch_count LENGTH "${_manifest_json}" dependencies 1 local_modifications)
 
-if(NOT _schema EQUAL 1 OR NOT _component_count EQUAL 5 OR
+if(NOT _schema EQUAL 1 OR NOT _component_count EQUAL 6 OR
    NOT _dependency_count EQUAL 2 OR NOT _ci_name STREQUAL "actions/checkout" OR
    NOT _ci_revision STREQUAL "de0fac2e4500dabe0009e67214ff5f5447ce83dd" OR
    NOT _emsdk_name STREQUAL "Emscripten SDK" OR
@@ -72,6 +79,8 @@ if(NOT _schema EQUAL 1 OR NOT _component_count EQUAL 5 OR
    NOT _typescript_version STREQUAL "7.0.2" OR
    NOT _vite_name STREQUAL "Vite" OR NOT _vite_version STREQUAL "8.2.2" OR
    NOT _vite_revision STREQUAL "2bd066d87f5bafd315be9f40889d0a60b9e58e0b" OR
+   NOT _playwright_name STREQUAL "Playwright" OR
+   NOT _playwright_version STREQUAL "1.62.1" OR
    NOT _name STREQUAL "miniaudio" OR NOT _version STREQUAL "0.11.25" OR
    NOT _commit STREQUAL "9634bedb5b5a2ca38c1ee7108a9358a4e233f14d" OR
    NOT _archive_hash STREQUAL
@@ -105,6 +114,11 @@ file(SHA256 "${_vite_license}" _actual_vite_license_hash)
 if(NOT _actual_vite_license_hash STREQUAL _vite_license_hash)
   message(FATAL_ERROR "The Vite license snapshot hash does not match the lock")
 endif()
+file(SHA256 "${_playwright_license}" _actual_playwright_license_hash)
+if(NOT _actual_playwright_license_hash STREQUAL _playwright_license_hash)
+  message(FATAL_ERROR
+          "The Playwright license snapshot hash does not match the lock")
+endif()
 
 file(READ "${_web_lock}" _web_lock_json)
 string(JSON _web_lock_version GET "${_web_lock_json}" lockfileVersion)
@@ -117,11 +131,29 @@ string(JSON _web_vite_version GET "${_web_lock_json}" packages
        "node_modules/vite" version)
 string(JSON _web_vite_license GET "${_web_lock_json}" packages
        "node_modules/vite" license)
-if(NOT _web_lock_version EQUAL 3 OR NOT _web_package_count EQUAL 62 OR
+string(JSON _web_playwright_test_version GET "${_web_lock_json}" packages
+       "node_modules/@playwright/test" version)
+string(JSON _web_playwright_test_license GET "${_web_lock_json}" packages
+       "node_modules/@playwright/test" license)
+string(JSON _web_playwright_version GET "${_web_lock_json}" packages
+       "node_modules/playwright" version)
+string(JSON _web_playwright_license GET "${_web_lock_json}" packages
+       "node_modules/playwright" license)
+string(JSON _web_playwright_core_version GET "${_web_lock_json}" packages
+       "node_modules/playwright-core" version)
+string(JSON _web_playwright_core_license GET "${_web_lock_json}" packages
+       "node_modules/playwright-core" license)
+if(NOT _web_lock_version EQUAL 3 OR NOT _web_package_count EQUAL 66 OR
    NOT _web_typescript_version STREQUAL "7.0.2" OR
    NOT _web_typescript_license STREQUAL "Apache-2.0" OR
    NOT _web_vite_version STREQUAL "8.2.2" OR
-   NOT _web_vite_license STREQUAL "MIT")
+   NOT _web_vite_license STREQUAL "MIT" OR
+   NOT _web_playwright_test_version STREQUAL "1.62.1" OR
+   NOT _web_playwright_test_license STREQUAL "Apache-2.0" OR
+   NOT _web_playwright_version STREQUAL "1.62.1" OR
+   NOT _web_playwright_license STREQUAL "Apache-2.0" OR
+   NOT _web_playwright_core_version STREQUAL "1.62.1" OR
+   NOT _web_playwright_core_license STREQUAL "Apache-2.0")
   message(FATAL_ERROR "The audited Web package lock is incomplete or unexpected")
 endif()
 
@@ -132,11 +164,13 @@ string(JSON _dependency_name GET "${_sbom_json}" packages 1 name)
 string(JSON _oboe_package_name GET "${_sbom_json}" packages 3 name)
 string(JSON _typescript_package_name GET "${_sbom_json}" packages 6 name)
 string(JSON _vite_package_name GET "${_sbom_json}" packages 7 name)
-if(NOT _spdx_version STREQUAL "SPDX-2.3" OR NOT _package_count EQUAL 8 OR
+string(JSON _playwright_package_name GET "${_sbom_json}" packages 8 name)
+if(NOT _spdx_version STREQUAL "SPDX-2.3" OR NOT _package_count EQUAL 9 OR
    NOT _dependency_name STREQUAL "miniaudio" OR
    NOT _oboe_package_name STREQUAL "Oboe" OR
    NOT _typescript_package_name STREQUAL "TypeScript" OR
-   NOT _vite_package_name STREQUAL "Vite")
+   NOT _vite_package_name STREQUAL "Vite" OR
+   NOT _playwright_package_name STREQUAL "Playwright")
   message(FATAL_ERROR "The SPDX SBOM is incomplete")
 endif()
 

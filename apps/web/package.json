@@ -8,9 +8,12 @@
     "dev": "node scripts/stage-worklet.mjs && vite --host 127.0.0.1",
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --check public/sw.js && node --experimental-strip-types --test tests/*.test.ts",
+    "test:browser": "npm run build && node scripts/run-browser-tests.mjs test",
+    "test:browser:install": "node scripts/run-browser-tests.mjs install chromium firefox webkit",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@playwright/test": "1.62.1",
     "typescript": "7.0.2",
     "vite": "8.2.2"
   }

@@ -107,6 +107,17 @@
       "licenseDeclared": "MIT",
       "copyrightText": "Copyright (c) 2019-present, VoidZero Inc. and Vite contributors",
       "primaryPackagePurpose": "BUILD_TOOL"
+    },
+    {
+      "name": "Playwright",
+      "SPDXID": "SPDXRef-Package-Playwright",
+      "versionInfo": "1.62.1",
+      "downloadLocation": "https://registry.npmjs.org/@playwright/test/-/test-1.62.1.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "Portions Copyright (c) Microsoft Corporation",
+      "primaryPackagePurpose": "BUILD_TOOL"
     }
   ],
   "relationships": [
@@ -147,6 +158,11 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-Vite",
+      "relationshipType": "BUILD_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-MoL-Keyboard"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Playwright",
       "relationshipType": "BUILD_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-MoL-Keyboard"
     }

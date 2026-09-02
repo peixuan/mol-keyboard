@@ -17,3 +17,12 @@ MoL Keyboard uses Oboe for Android low-latency output. The exact upstream
 commit is `a81bb9f87d4105b84b682685d3bfbb5beca371d1` and no local patches are
 applied. Oboe is licensed under Apache License 2.0; the complete upstream
 license is preserved at `third_party/licenses/oboe-LICENSE.txt`.
+
+## Playwright 1.62.1
+
+MoL Keyboard uses Playwright and `@playwright/test` only as development-time
+browser automation. The npm packages and browser revisions are exact-lock
+dependencies; downloaded browser binaries remain outside Git and are not part
+of application distributions. Playwright is licensed under Apache License 2.0.
+The complete upstream license and Microsoft notice are preserved at
+`third_party/licenses/playwright-LICENSE.txt`. No local patches are applied.
