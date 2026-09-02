@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>RUNNING</title>
+  </head>
+  <body>
+    <main id="result">RUNNING</main>
+    <script type="module">
+      const result = document.querySelector("#result");
+      try {
+        const context = new OfflineAudioContext(2, 48000, 48000);
+        await context.audioWorklet.addModule("./mol_audio_worklet_core.js");
+        const node = new AudioWorkletNode(context, "mol-keyboard", {
+          numberOfInputs: 0,
+          numberOfOutputs: 1,
+          outputChannelCount: [2],
+          processorOptions: { initialNote: 60 },
+        });
+        node.connect(context.destination);
+        const rendered = await context.startRendering();
+        const left = rendered.getChannelData(0);
+        const right = rendered.getChannelData(1);
+        let crossings = 0;
+        let peak = 0.0;
+        let previous = 0.0;
+        for (let frame = 0; frame < left.length; frame += 1) {
+          const sample = left[frame];
+          if (!Number.isFinite(sample) || sample !== right[frame]) {
+            throw new Error(`invalid stereo sample at frame ${frame}`);
+          }
+          peak = Math.max(peak, Math.abs(sample));
+          if (frame >= 4800 && frame < 43200 && previous <= 0.0 && sample > 0.0) {
+            crossings += 1;
+          }
+          previous = sample;
+        }
+        const frequency = crossings / 0.8;
+        if (peak <= 0.1 || Math.abs(frequency - 261.6256) >= 1.0) {
+          throw new Error(`C4 analysis failed: frequency=${frequency}, peak=${peak}`);
+        }
+        result.textContent = `PASS frequency=${frequency.toFixed(4)} peak=${peak.toFixed(8)}`;
+        document.title = "PASS";
+      } catch (error) {
+        result.textContent = `FAIL ${error.stack ?? error}`;
+        document.title = "FAIL";
+      }
+    </script>
+  </body>
+</html>

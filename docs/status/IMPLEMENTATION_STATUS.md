@@ -6,9 +6,9 @@ M0 portability baseline and M1 portable sound path.
 
 ## Last verified commit
 
-`6eb914f` (`feat(web): verify core WebAssembly synthesis`) is the last verified
-commit. The ESP-IDF implementation below was verified in the current worktree
-and will be committed atomically.
+`f788bd1` (`feat(esp32): verify portable core component`) is the last verified
+commit. The AudioWorklet implementation below was verified in the current
+worktree and will be committed atomically.
 
 ## Completed requirements
 
@@ -33,6 +33,10 @@ and will be committed atomically.
 - A fixed-memory ES module exposes the engine to workers and passed a Node.js
   Wasm C4 conformance test at 261.25 Hz with peak 0.24512254.
 - The LTO Release Web artifacts are 3,897-byte Wasm and 9,862-byte JS loader files.
+- A separate fixed-memory, single-file AudioWorklet artifact runs the same core
+  without asynchronous module setup in the render scope. Node conformance and
+  a real Chromium `OfflineAudioContext` both measured C4 at 261.25 Hz; the
+  Release worklet artifact is 15,089 bytes.
 - ESP-IDF 6.1 builds the exact core source as a Tiny-profile component for both
   ESP32 and ESP32-S3 with independently generated target configuration.
 - Both firmware images contain a bounded static-memory C4 startup self-test;
@@ -41,7 +45,7 @@ and will be committed atomically.
 
 ## In-progress work
 
-- Web AudioWorklet and ESP32 I2S minimum realtime output paths.
+- ESP32 I2S minimum realtime output and desktop realtime output paths.
 
 ## Blocked platform checks
 
@@ -76,7 +80,11 @@ cmake --build --preset wasm-release
 ctest --preset wasm-release
 ```
 
-Both configurations passed 5/5 tests on 2026-09-02.
+Both configurations passed 6/6 tests on 2026-09-02. The sixth test loads the
+single-file worklet artifact in a mocked worklet global and verifies stereo C4,
+finite output, message-driven note control, and release to silence. The browser
+smoke page additionally passed in the Codex in-app Chromium browser with
+`frequency=261.2500` and `peak=0.24512254`.
 
 With the pinned ESP-IDF environment active:
 
@@ -100,5 +108,5 @@ The build-local `sdkconfig` files allow the two configurations to coexist.
 
 ## Next highest-priority task
 
-Implement and test a Web AudioWorklet bridge and the ESP32 I2S output task to
-complete the next M1 portability gate.
+Implement and build-test the ESP32 I2S output task, then add the desktop
+realtime host required to complete the next M1 portability gate.

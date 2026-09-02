@@ -30,3 +30,32 @@ ctest --preset wasm-release
 
 The repository ignores `.cache/`; no local SDK archive, generated cache, or
 absolute machine path enters source control.
+
+## Web artifacts
+
+The Emscripten build deliberately produces two integration shapes from the same
+`mol_core` target:
+
+- `mol_core_wasm.mjs` plus `mol_core_wasm.wasm` is the asynchronous ES-module
+  bridge for workers, Node.js, and future application code.
+- `mol_audio_worklet_core.js` is a fixed-memory single-file worklet module. It
+  uses synchronous Wasm compilation because an AudioWorklet module cannot wait
+  for a top-level asynchronous factory before calling `registerProcessor`.
+
+Both artifacts disable memory growth. The worklet render method processes the
+browser's 128-frame render quantum, copies from the core's interleaved stereo
+buffer into caller-owned channel arrays, and performs no allocation, logging,
+blocking call, or message post in `process()`.
+
+The automated conformance test runs as part of each Wasm CTest preset. To run
+the additional real-browser smoke page, serve the Release output directory so
+that the `.js` module has a JavaScript MIME type, then open the page in a browser:
+
+```powershell
+cd build/wasm-release/platforms/web/emscripten
+python -m http.server 8765 --bind 127.0.0.1
+```
+
+Open `http://127.0.0.1:8765/test_audio_worklet_browser.html`. A successful
+one-second offline render changes both the page title and result text to
+`PASS`, followed by the measured frequency and peak.

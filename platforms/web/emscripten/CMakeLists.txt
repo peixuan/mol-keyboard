@@ -21,6 +21,37 @@ target_link_options(
           "-sEXPORTED_FUNCTIONS=['_mol_wasm_initialize','_mol_wasm_note_on','_mol_wasm_note_off','_mol_wasm_render']"
           "-sEXPORTED_RUNTIME_METHODS=['cwrap','HEAPF32']")
 
+add_executable(mol_audio_worklet_core wasm_exports.c)
+target_link_libraries(mol_audio_worklet_core PRIVATE mol::core)
+set_target_properties(
+  mol_audio_worklet_core
+  PROPERTIES C_EXTENSIONS OFF
+             C_STANDARD_REQUIRED ON
+             OUTPUT_NAME mol_audio_worklet_core
+             SUFFIX .js)
+mol_enable_warnings(mol_audio_worklet_core)
+set_property(
+  TARGET mol_audio_worklet_core
+  APPEND
+  PROPERTY LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/mol_audio_worklet.mjs)
+target_link_options(
+  mol_audio_worklet_core
+  PRIVATE --no-entry
+          -sWASM=1
+          -sMODULARIZE=1
+          -sEXPORT_ES6=1
+          -sENVIRONMENT=worker
+          -sSINGLE_FILE=1
+          -sWASM_ASYNC_COMPILATION=0
+          -sASSERTIONS=0
+          -sALLOW_MEMORY_GROWTH=0
+          -sINITIAL_MEMORY=16777216
+          "--extern-post-js=${CMAKE_CURRENT_SOURCE_DIR}/mol_audio_worklet.mjs"
+          "-sEXPORTED_FUNCTIONS=['_mol_wasm_initialize','_mol_wasm_note_on','_mol_wasm_note_off','_mol_wasm_render']"
+          "-sEXPORTED_RUNTIME_METHODS=['cwrap','HEAPF32']")
+
+configure_file(test_audio_worklet_browser.html test_audio_worklet_browser.html COPYONLY)
+
 if(MOL_BUILD_TESTS)
   if(DEFINED ENV{EMSDK_NODE})
     set(MOL_NODE_EXECUTABLE "$ENV{EMSDK_NODE}")
@@ -31,4 +62,8 @@ if(MOL_BUILD_TESTS)
     NAME mol_wasm_c4_conformance
     COMMAND ${MOL_NODE_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_wasm.mjs
             $<TARGET_FILE:mol_core_wasm>)
+  add_test(
+    NAME mol_audio_worklet_conformance
+    COMMAND ${MOL_NODE_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_audio_worklet.mjs
+            $<TARGET_FILE:mol_audio_worklet_core>)
 endif()

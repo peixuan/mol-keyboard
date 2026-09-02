@@ -10,7 +10,7 @@ toolchain result recorded here.
 | Linux x86_64 | planned | — | Not available on this host | Pending CI or Linux host |
 | Linux aarch64 | planned | — | Not available on this host | Pending CI or device |
 | macOS arm64/x64 | planned | — | Apple SDK not available on this host | Pending macOS host |
-| WebAssembly | runtime-verified (M1 core) | 2026-09-02 | Emscripten 6.0.5; Node.js 22.16.0 | Debug/Release 5/5 tests; C4 261.25 Hz; Release Wasm 3,897 bytes |
+| WebAssembly | runtime-verified (M1 core/worklet) | 2026-09-02 | Emscripten 6.0.5; Node.js 22.16.0; Chromium | Debug/Release 6/6 tests; real AudioWorklet C4 261.25 Hz; Release worklet 15,089 bytes |
 | Android arm64 | planned | — | Android NDK not discovered | Pending SDK discovery |
 | iOS arm64 | planned | — | Apple SDK not available on this host | Pending macOS host/device |
 | HarmonyOS arm64 | planned | — | DevEco SDK not discovered | Pending SDK and device |
