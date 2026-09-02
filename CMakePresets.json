@@ -78,6 +78,7 @@
         "MOL_BUILD_FUZZERS": "ON",
         "MOL_BUILD_TOOLS": "OFF",
         "MOL_BUILD_DESKTOP_AUDIO": "OFF",
+        "MOL_BUILD_DAEMON": "OFF",
         "MOL_VALIDATE_MOBILE_SOURCES": "OFF",
         "MOL_ENABLE_SANITIZERS": "ON"
       }
