@@ -245,6 +245,9 @@ endif()
 
 if(APPLE)
   add_subdirectory(platforms/apple)
+  if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    add_subdirectory(platforms/ios)
+  endif()
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "OHOS")

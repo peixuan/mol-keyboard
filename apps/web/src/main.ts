@@ -74,7 +74,7 @@ template.innerHTML = `
       <label><span data-en="Backend" data-zh="后端">Backend</span>
         <select data-backend aria-label="Audio backend">
           <option value="standalone" data-en="This browser" data-zh="当前浏览器">This browser</option>
-          <option value="native" data-native-backend hidden data-en="Android native" data-zh="Android 原生">Android native</option>
+          <option value="native" data-native-backend hidden data-en="Native mobile" data-zh="移动端原生">Native mobile</option>
           <option value="service" data-en="Desktop service" data-zh="桌面服务">Desktop service</option>
           <option value="esp32" data-en="ESP32 device" data-zh="ESP32 设备">ESP32 device</option>
         </select>
@@ -336,7 +336,7 @@ class MolKeyboardApp extends HTMLElement {
       this.engine === this.serviceEngine
         ? "desktop service"
         : this.engine === this.nativeEngine
-          ? "native Oboe"
+          ? "native mobile audio"
           : "worklet";
     const rateLabel =
       sampleRate === undefined
@@ -484,7 +484,7 @@ class MolKeyboardApp extends HTMLElement {
       this.engine = this.nativeEngine;
       if (panel !== null) panel.hidden = true;
       await this.serviceEngine.close();
-      this.setStatus("Android native Oboe selected", "ready");
+      this.setStatus("Native mobile audio selected", "ready");
       if (this.startButton !== undefined) this.startButton.disabled = false;
     } else if (value === "standalone") {
       this.engine = this.standaloneEngine;
@@ -858,7 +858,7 @@ class MolKeyboardApp extends HTMLElement {
     if (fastPath !== null) {
       fastPath.textContent =
         this.engine.commandTransport === "native-bridge"
-          ? "Versioned native Oboe bridge"
+          ? "Versioned native audio bridge"
           : this.engine.commandTransport === "websocket-jsonrpc"
           ? this.serviceEngine.connected
             ? "Authenticated loopback WebSocket"
@@ -919,11 +919,11 @@ class MolKeyboardApp extends HTMLElement {
     const nativeOption = this.querySelector<HTMLOptionElement>("[data-native-backend]");
     if (nativeOption !== null) nativeOption.hidden = false;
     const values: ReadonlyArray<readonly [string, string]> = [
-      ["[data-edition]", "Native Android · Android 原生"],
+      ["[data-edition]", "Native mobile · 移动端原生"],
       ["[data-core-runtime]", "ISO C11"],
-      ["[data-audio-runtime]", "Oboe callback"],
-      ["[data-input-runtime]", "Keyboard + Pointer + Android hardware keys"],
-      ["[data-output-runtime]", "Android system route · Oboe"],
+      ["[data-audio-runtime]", "Platform low-latency callback"],
+      ["[data-input-runtime]", "Keyboard + Pointer + foreground hardware keys"],
+      ["[data-output-runtime]", "System-managed audio route"],
     ];
     for (const [selector, value] of values) {
       const element = this.querySelector<HTMLElement>(selector);
@@ -970,7 +970,7 @@ class MolKeyboardApp extends HTMLElement {
     if (this.startButton !== undefined) this.startButton.disabled = true;
     this.setStatus(
       this.engine === this.nativeEngine
-        ? "Starting the native Oboe audio runtime…"
+        ? "Starting the native mobile audio runtime…"
         : "Loading the WebAssembly audio core…",
       "loading",
     );
