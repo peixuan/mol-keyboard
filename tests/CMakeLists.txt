@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: Apache-2.0
+
+add_executable(mol_core_tests unit/test_engine.c)
+target_link_libraries(mol_core_tests PRIVATE mol::core)
+set_target_properties(mol_core_tests PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_core_tests)
+mol_enable_optional_instrumentation(mol_core_tests)
+add_test(NAME mol_core_tests COMMAND mol_core_tests)
+
+add_executable(mol_c_consumer consumers/c_consumer.c)
+target_link_libraries(mol_c_consumer PRIVATE mol::core)
+set_target_properties(mol_c_consumer PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_c_consumer)
+add_test(NAME mol_c_consumer COMMAND mol_c_consumer)
+
+add_executable(mol_cpp_consumer consumers/cpp_consumer.cpp)
+target_link_libraries(mol_cpp_consumer PRIVATE mol::core)
+target_compile_features(mol_cpp_consumer PRIVATE cxx_std_17)
+set_target_properties(mol_cpp_consumer PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_cpp_consumer)
+add_test(NAME mol_cpp_consumer COMMAND mol_cpp_consumer)

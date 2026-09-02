@@ -1,0 +1,167 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 24,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "MOL_BUILD_TESTS": "ON",
+        "MOL_PROFILE_TINY": "OFF",
+        "MOL_PROFILE_STANDARD": "ON",
+        "MOL_PROFILE_FULL": "OFF"
+      }
+    },
+    {
+      "name": "dev-debug",
+      "inherits": "base",
+      "displayName": "Developer Debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "MOL_ENABLE_ASSERTIONS": "ON"
+      }
+    },
+    {
+      "name": "dev-release",
+      "inherits": "base",
+      "displayName": "Developer Release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "MOL_ENABLE_ASSERTIONS": "OFF",
+        "MOL_ENABLE_LTO": "ON"
+      }
+    },
+    {
+      "name": "ci-linux-gcc",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "ci-linux-clang",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "ci-windows-msvc",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "cl",
+        "CMAKE_CXX_COMPILER": "cl"
+      }
+    },
+    {
+      "name": "ci-macos",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "wasm-base",
+      "hidden": true,
+      "inherits": "base",
+      "toolchainFile": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+      "cacheVariables": {
+        "MOL_BUILD_TESTS": "OFF",
+        "MOL_BUILD_DAEMON": "OFF",
+        "MOL_BUILD_WEB_SERVER": "OFF"
+      }
+    },
+    {
+      "name": "wasm-debug",
+      "inherits": "wasm-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "wasm-release",
+      "inherits": "wasm-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "MinSizeRel",
+        "MOL_ENABLE_ASSERTIONS": "OFF",
+        "MOL_ENABLE_LTO": "ON"
+      }
+    },
+    {
+      "name": "android-arm64",
+      "inherits": "base",
+      "toolchainFile": "$env{ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ANDROID_ABI": "arm64-v8a",
+        "ANDROID_PLATFORM": "android-26",
+        "MOL_BUILD_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "ios-base",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_SYSTEM_NAME": "iOS",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "15.0",
+        "MOL_BUILD_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "ios-simulator",
+      "inherits": "ios-base",
+      "cacheVariables": {
+        "CMAKE_OSX_SYSROOT": "iphonesimulator",
+        "CMAKE_OSX_ARCHITECTURES": "arm64;x86_64"
+      }
+    },
+    {
+      "name": "ios-device",
+      "inherits": "ios-base",
+      "cacheVariables": {
+        "CMAKE_OSX_SYSROOT": "iphoneos",
+        "CMAKE_OSX_ARCHITECTURES": "arm64"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "dev-debug", "configurePreset": "dev-debug" },
+    { "name": "dev-release", "configurePreset": "dev-release" },
+    { "name": "ci-linux-gcc", "configurePreset": "ci-linux-gcc" },
+    { "name": "ci-linux-clang", "configurePreset": "ci-linux-clang" },
+    { "name": "ci-windows-msvc", "configurePreset": "ci-windows-msvc" },
+    { "name": "ci-macos", "configurePreset": "ci-macos" },
+    { "name": "wasm-debug", "configurePreset": "wasm-debug" },
+    { "name": "wasm-release", "configurePreset": "wasm-release" },
+    { "name": "android-arm64", "configurePreset": "android-arm64" },
+    { "name": "ios-simulator", "configurePreset": "ios-simulator" },
+    { "name": "ios-device", "configurePreset": "ios-device" }
+  ],
+  "testPresets": [
+    { "name": "dev-debug", "configurePreset": "dev-debug", "output": { "outputOnFailure": true } },
+    { "name": "dev-release", "configurePreset": "dev-release", "output": { "outputOnFailure": true } },
+    { "name": "ci-linux-gcc", "configurePreset": "ci-linux-gcc", "output": { "outputOnFailure": true } },
+    { "name": "ci-linux-clang", "configurePreset": "ci-linux-clang", "output": { "outputOnFailure": true } },
+    { "name": "ci-windows-msvc", "configurePreset": "ci-windows-msvc", "output": { "outputOnFailure": true } },
+    { "name": "ci-macos", "configurePreset": "ci-macos", "output": { "outputOnFailure": true } }
+  ],
+  "vendor": {
+    "mol.keyboard/license": "Apache-2.0"
+  }
+}

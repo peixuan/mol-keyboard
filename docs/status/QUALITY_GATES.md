@@ -2,7 +2,7 @@
 
 | Gate | State | Evidence |
 |---|---|---|
-| M0 engineering baseline | in progress | Native lifecycle build pending |
+| M0 engineering baseline | in progress | Windows x64 Debug/Release core and C/C++ consumers verified; Wasm and ESP-IDF pending |
 | M1 portable sound path | not started | Depends on M0 |
 | M2 music semantics | not started | Depends on M1 |
 | M3 instruments and DSP | not started | Depends on M2 |

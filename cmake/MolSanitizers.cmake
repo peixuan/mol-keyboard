@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: Apache-2.0
+include_guard(GLOBAL)
+
+include(CheckIPOSupported)
+
+function(mol_enable_optional_instrumentation target)
+  if(MOL_ENABLE_SANITIZERS)
+    if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+      target_compile_options(${target} PRIVATE -fno-omit-frame-pointer -fsanitize=address,undefined)
+      target_link_options(${target} PRIVATE -fno-omit-frame-pointer -fsanitize=address,undefined)
+    else()
+      message(FATAL_ERROR "MOL_ENABLE_SANITIZERS requires Clang or GCC")
+    endif()
+  endif()
+
+  if(MOL_ENABLE_COVERAGE)
+    if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+      target_compile_options(${target} PRIVATE --coverage)
+      target_link_options(${target} PRIVATE --coverage)
+    else()
+      message(FATAL_ERROR "MOL_ENABLE_COVERAGE requires Clang or GCC")
+    endif()
+  endif()
+
+  if(MOL_ENABLE_LTO)
+    check_ipo_supported(RESULT _mol_ipo_supported OUTPUT _mol_ipo_error)
+    if(NOT _mol_ipo_supported)
+      message(FATAL_ERROR "LTO is unavailable: ${_mol_ipo_error}")
+    endif()
+    set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+  endif()
+endfunction()

@@ -5,7 +5,7 @@ toolchain result recorded here.
 
 | Platform | Status | Verified | Toolchain / device | Command and evidence |
 |---|---|---|---|---|
-| Windows x64 | planned | — | VS 2026 discovered; not yet built | Native M0 build pending |
+| Windows x64 | build-verified (M0 core) | 2026-09-02 | VS 2026 18.8.0; MSVC 19.51.36248; Ninja 1.13.2 | Debug/Release `mol_core`; 3/3 CTest tests passed in each build |
 | Windows arm64 | planned | — | Not evaluated | Pending |
 | Linux x86_64 | planned | — | Not available on this host | Pending CI or Linux host |
 | Linux aarch64 | planned | — | Not available on this host | Pending CI or device |
