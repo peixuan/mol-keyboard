@@ -130,3 +130,8 @@ mol_result_t mol_chord_expand(uint8_t root, mol_chord_mode_t chord, uint8_t* out
   *out_count = produced;
   return MOL_OK;
 }
+
+uint32_t mol_arpeggiator_steps_per_quarter(mol_arpeggiator_rate_t rate) {
+  static const uint8_t steps[MOL_ARPEGGIATOR_RATE_COUNT] = {1u, 2u, 3u, 4u, 6u, 8u};
+  return rate < MOL_ARPEGGIATOR_RATE_COUNT ? steps[rate] : 0u;
+}

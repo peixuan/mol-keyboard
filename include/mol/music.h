@@ -46,6 +46,32 @@ enum {
   MOL_CHORD_MODE_COUNT = 10u
 };
 
+typedef uint32_t mol_arpeggiator_mode_t;
+enum {
+  MOL_ARPEGGIATOR_OFF = 0u,
+  MOL_ARPEGGIATOR_UP = 1u,
+  MOL_ARPEGGIATOR_DOWN = 2u,
+  MOL_ARPEGGIATOR_UP_DOWN = 3u,
+  MOL_ARPEGGIATOR_DOWN_UP = 4u,
+  MOL_ARPEGGIATOR_AS_PLAYED = 5u,
+  MOL_ARPEGGIATOR_RANDOM_DETERMINISTIC = 6u,
+  MOL_ARPEGGIATOR_MODE_COUNT = 7u
+};
+
+typedef uint32_t mol_arpeggiator_rate_t;
+enum {
+  MOL_ARPEGGIATOR_RATE_QUARTER = 0u,
+  MOL_ARPEGGIATOR_RATE_EIGHTH = 1u,
+  MOL_ARPEGGIATOR_RATE_EIGHTH_TRIPLET = 2u,
+  MOL_ARPEGGIATOR_RATE_SIXTEENTH = 3u,
+  MOL_ARPEGGIATOR_RATE_SIXTEENTH_TRIPLET = 4u,
+  MOL_ARPEGGIATOR_RATE_THIRTY_SECOND = 5u,
+  MOL_ARPEGGIATOR_RATE_COUNT = 6u
+};
+
+/** Returns the exact number of steps per quarter note for an arpeggiator rate. */
+uint32_t mol_arpeggiator_steps_per_quarter(mol_arpeggiator_rate_t rate);
+
 /** Maps one USB HID keyboard usage to the default C4-F6 MIDI-note range. */
 mol_result_t mol_keyboard_note_from_hid_usage(uint16_t usage, uint8_t* out_note);
 

@@ -74,6 +74,14 @@ typedef union mol_command_payload {
     uint8_t enabled;
     uint8_t reserved[3];
   } metronome;
+  struct {
+    uint32_t mode;
+    uint32_t rate;
+    float gate;
+    uint32_t random_seed;
+    uint8_t octaves;
+    uint8_t reserved[3];
+  } arpeggiator;
   uint8_t bytes[64];
 } mol_command_payload_t;
 

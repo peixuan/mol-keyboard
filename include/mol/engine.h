@@ -49,6 +49,12 @@ typedef struct mol_engine_state {
   uint8_t time_signature_denominator;
   uint8_t transport_running;
   uint8_t metronome_enabled;
+  uint32_t active_gestures;
+  uint32_t arpeggiator_mode;
+  uint32_t arpeggiator_rate;
+  float arpeggiator_gate;
+  uint32_t arpeggiator_random_seed;
+  uint8_t arpeggiator_octaves;
 } mol_engine_state_t;
 
 /** Returns a portable default Standard-profile configuration. */
