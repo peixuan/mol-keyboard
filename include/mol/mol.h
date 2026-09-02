@@ -6,6 +6,7 @@
 #include "mol/command.h"
 #include "mol/engine.h"
 #include "mol/event.h"
+#include "mol/music.h"
 #include "mol/result.h"
 #include "mol/version.h"
 

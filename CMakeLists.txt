@@ -12,7 +12,7 @@ include(cmake/MolOptions.cmake)
 include(cmake/MolWarnings.cmake)
 include(cmake/MolSanitizers.cmake)
 
-add_library(mol_core src/c_api/mol_engine.c)
+add_library(mol_core src/c_api/mol_engine.c src/music/mol_music.c)
 add_library(mol::core ALIAS mol_core)
 
 target_include_directories(
