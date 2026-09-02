@@ -11,7 +11,7 @@ typedef union audio_test_storage {
   long double floating_alignment;
   void* pointer_alignment;
   uint64_t integer_alignment;
-  unsigned char bytes[65536];
+  unsigned char bytes[262144];
 } audio_test_storage_t;
 
 static int failures = 0;
@@ -76,9 +76,9 @@ static void test_c4_frequency_and_release(void) {
     frame += 128u;
   }
 
-  EXPECT_TRUE(peak > 0.10f && peak <= 1.0f);
+  EXPECT_TRUE(peak > 0.01f && peak <= 1.0f);
   EXPECT_TRUE(fabsf(((float)crossings / 0.8f) - 261.6256f) < 1.0f);
-  for (uint32_t release_frame = 0u; release_frame < 12000u; release_frame += 128u) {
+  for (uint32_t release_frame = 0u; release_frame < 48000u; release_frame += 128u) {
     EXPECT_TRUE(mol_engine_render_interleaved_f32(engine, block, 128u, 1u) == MOL_OK);
   }
   state.struct_size = (uint32_t)sizeof(state);

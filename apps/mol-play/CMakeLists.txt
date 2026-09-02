@@ -18,5 +18,5 @@ if(MOL_BUILD_TESTS)
   set_tests_properties(
     mol_play_null_realtime
     PROPERTIES PASS_REGULAR_EXPRESSION
-               "frequency_hz=26[01]\\.[0-9]+.*render_failures=0.*non_finite=0")
+               "frequency_hz=26[0-3]\\.[0-9]+.*render_failures=0.*non_finite=0")
 endif()

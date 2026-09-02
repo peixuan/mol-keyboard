@@ -11,10 +11,10 @@ typedef union portamento_test_storage {
   long double floating_alignment;
   void* pointer_alignment;
   uint64_t integer_alignment;
-  unsigned char bytes[65536];
+  unsigned char bytes[262144];
 } portamento_test_storage_t;
 
-static float audio[30000];
+static float audio[60000];
 static int failures = 0;
 
 #define EXPECT_TRUE(condition)                                                                  \
@@ -145,7 +145,7 @@ static void test_last_note_ownership_and_sustain(void) {
     }
   }
   EXPECT_TRUE(first_starts == 2u && second_starts == 1u);
-  render(engine, audio, 10000u);
+  render(engine, audio, 48000u);
   EXPECT_TRUE(mol_engine_get_state(engine, &state) == MOL_OK);
   EXPECT_TRUE(state.active_voices == 0u);
   mol_engine_shutdown(engine);

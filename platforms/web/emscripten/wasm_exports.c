@@ -12,7 +12,7 @@ typedef union mol_wasm_storage {
   long double floating_alignment;
   void* pointer_alignment;
   uint64_t integer_alignment;
-  unsigned char bytes[65536];
+  unsigned char bytes[262144];
 } mol_wasm_storage_t;
 
 static mol_wasm_storage_t mol_wasm_memory;

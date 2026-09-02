@@ -57,11 +57,17 @@ mol_enable_warnings(mol_core)
 mol_enable_optional_instrumentation(mol_core)
 
 if(MOL_PROFILE_TINY)
-  target_compile_definitions(mol_core PUBLIC MOL_BUILD_PROFILE=1 MOL_PROFILE_MAX_VOICES=12)
+  target_compile_definitions(
+    mol_core PUBLIC MOL_BUILD_PROFILE=1 MOL_PROFILE_MAX_VOICES=12
+                    MOL_PROFILE_PLUCK_FRAMES=384)
 elseif(MOL_PROFILE_STANDARD)
-  target_compile_definitions(mol_core PUBLIC MOL_BUILD_PROFILE=2 MOL_PROFILE_MAX_VOICES=32)
+  target_compile_definitions(
+    mol_core PUBLIC MOL_BUILD_PROFILE=2 MOL_PROFILE_MAX_VOICES=32
+                    MOL_PROFILE_PLUCK_FRAMES=384)
 else()
-  target_compile_definitions(mol_core PUBLIC MOL_BUILD_PROFILE=3 MOL_PROFILE_MAX_VOICES=64)
+  target_compile_definitions(
+    mol_core PUBLIC MOL_BUILD_PROFILE=3 MOL_PROFILE_MAX_VOICES=64
+                    MOL_PROFILE_PLUCK_FRAMES=512)
 endif()
 
 add_library(mol_platform_audio_runtime platforms/common/mol_audio_runtime.c)

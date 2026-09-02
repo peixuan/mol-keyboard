@@ -87,6 +87,11 @@ typedef union mol_command_payload {
     uint32_t mode;
     float time_ms;
   } portamento;
+  struct {
+    uint32_t preset;
+    uint8_t hard_switch;
+    uint8_t reserved[3];
+  } preset;
   uint8_t bytes[64];
 } mol_command_payload_t;
 

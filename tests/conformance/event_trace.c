@@ -12,7 +12,7 @@ typedef union trace_storage {
   long double floating_alignment;
   void* pointer_alignment;
   uint64_t integer_alignment;
-  unsigned char bytes[65536];
+  unsigned char bytes[262144];
 } trace_storage_t;
 
 static trace_storage_t storage;
@@ -146,8 +146,8 @@ int main(void) {
     return 1;
   }
 
-  while (rendered < 60000u) {
-    uint32_t block = 60000u - rendered;
+  while (rendered < 100000u) {
+    uint32_t block = 100000u - rendered;
     if (block > 113u) {
       block = 113u;
     }

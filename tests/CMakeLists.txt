@@ -38,6 +38,13 @@ if(MOL_BUILD_TOOLS AND NOT CMAKE_CROSSCOMPILING)
       ${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_patch_compiler.cmake)
 endif()
 
+add_executable(mol_instrument_tests integration/test_instruments.c)
+target_link_libraries(mol_instrument_tests PRIVATE mol::core)
+set_target_properties(mol_instrument_tests PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_instrument_tests)
+mol_enable_optional_instrumentation(mol_instrument_tests)
+add_test(NAME mol_instrument_tests COMMAND mol_instrument_tests)
+
 add_executable(mol_music_tests unit/test_music.c)
 target_link_libraries(mol_music_tests PRIVATE mol::core)
 set_target_properties(mol_music_tests PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)

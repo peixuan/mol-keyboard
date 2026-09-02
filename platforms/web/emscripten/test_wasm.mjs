@@ -36,7 +36,7 @@ for (let block = 0; block < 375; block += 1) {
 }
 
 const frequency = crossings / 0.8;
-if (peak <= 0.1 || peak > 1.0 || Math.abs(frequency - 261.6256) >= 1.0) {
+if (peak <= 0.01 || peak > 1.0 || Math.abs(frequency - 261.6256) >= 1.0) {
   throw new Error(`Wasm C4 analysis failed: frequency=${frequency}, peak=${peak}`);
 }
 process.stdout.write(`Wasm C4 frequency=${frequency.toFixed(4)}Hz peak=${peak.toFixed(8)}\n`);

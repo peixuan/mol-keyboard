@@ -11,7 +11,7 @@ typedef union semantics_test_storage {
   long double floating_alignment;
   void* pointer_alignment;
   uint64_t integer_alignment;
-  unsigned char bytes[65536];
+  unsigned char bytes[262144];
 } semantics_test_storage_t;
 
 static int failures = 0;
@@ -174,7 +174,7 @@ static void test_sustain_and_all_sound_off(void) {
     }
   }
   EXPECT_TRUE(release_seen);
-  render_frames(engine, 10000u);
+  render_frames(engine, 48000u);
   EXPECT_TRUE(mol_engine_get_state(engine, &state) == MOL_OK);
   EXPECT_TRUE(state.active_voices == 0u);
 
