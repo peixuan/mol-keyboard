@@ -11,6 +11,13 @@ install(TARGETS molctl RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 if(MOL_BUILD_TESTS)
   add_test(NAME molctl_help COMMAND molctl --help)
   set_tests_properties(molctl_help PROPERTIES PASS_REGULAR_EXPRESSION "Commands:")
+  add_test(NAME molctl_reject_negative_gesture COMMAND molctl note off --gesture -1)
+  set_tests_properties(molctl_reject_negative_gesture PROPERTIES WILL_FAIL TRUE)
+  add_test(NAME molctl_reject_unknown_option COMMAND molctl arpeggiator up --bogus 1)
+  set_tests_properties(molctl_reject_unknown_option PROPERTIES WILL_FAIL TRUE)
+  add_test(NAME molctl_reject_duplicate_option
+           COMMAND molctl note on 60 --velocity 0.5 --velocity 0.6)
+  set_tests_properties(molctl_reject_duplicate_option PROPERTIES WILL_FAIL TRUE)
   if(TARGET mol-render)
     add_dependencies(molctl mol-render)
     add_test(

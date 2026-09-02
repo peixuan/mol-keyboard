@@ -208,6 +208,13 @@ int main() {
     dispatch(dispatcher, "audio.selectDevice", "{\"id\":\"bluetooth\"}");
     dispatch(dispatcher, "audio.getLatency");
     dispatch(dispatcher, "recording.start");
+    const molseq::Json first_automatic_gesture =
+        dispatch(dispatcher, "performance.noteOn", "{\"note\":58}");
+    const molseq::Json second_automatic_gesture =
+        dispatch(dispatcher, "performance.noteOn", "{\"note\":59}");
+    if (molseq::json_u64(molseq::require_member(first_automatic_gesture, "gesture"), UINT64_MAX) ==
+        molseq::json_u64(molseq::require_member(second_automatic_gesture, "gesture"), UINT64_MAX))
+      return 1;
     dispatch(dispatcher, "performance.noteOn", "{\"note\":60,\"velocity\":0.8,\"gesture\":42}");
     dispatch(dispatcher, "performance.control", "{\"control\":\"sustain\",\"value\":1}");
     dispatch(dispatcher, "performance.control",

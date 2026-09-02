@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+#include <algorithm>
 #include <array>
 #include <cerrno>
 #include <chrono>
@@ -7,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <initializer_list>
 #include <limits>
 #include <string>
 #include <string_view>
@@ -88,6 +90,9 @@ bool parse_global_options(int argc, char** argv, Options& options) {
 
 bool parse_u64(const std::string& text, std::uint64_t minimum, std::uint64_t maximum,
                std::uint64_t& value) {
+  if (text.empty()) return false;
+  for (const char character : text)
+    if (character < '0' || character > '9') return false;
   char* end = nullptr;
   errno = 0;
   const unsigned long long parsed = std::strtoull(text.c_str(), &end, 10);
@@ -126,6 +131,28 @@ bool flag_value(const std::vector<std::string>& arguments, const std::string& fl
   return false;
 }
 
+bool validate_flags(const std::vector<std::string>& arguments, std::size_t first,
+                    std::initializer_list<std::string_view> allowed, std::string& error) {
+  if ((arguments.size() - first) % 2u != 0u) {
+    error = "every option requires a value";
+    return false;
+  }
+  std::vector<std::string_view> seen;
+  for (std::size_t index = first; index < arguments.size(); index += 2u) {
+    const std::string_view flag = arguments[index];
+    if (std::find(allowed.begin(), allowed.end(), flag) == allowed.end()) {
+      error = "unknown option: " + arguments[index];
+      return false;
+    }
+    if (std::find(seen.begin(), seen.end(), flag) != seen.end()) {
+      error = "duplicate option: " + arguments[index];
+      return false;
+    }
+    seen.push_back(flag);
+  }
+  return true;
+}
+
 int named_value(const std::string& name, const std::vector<std::string_view>& names) {
   for (std::size_t index = 0u; index < names.size(); ++index)
     if (name == names[index]) return static_cast<int>(index);
@@ -155,6 +182,7 @@ bool build_invocation(const Options& options, Invocation& invocation, std::strin
     invocation.method = "preset.select";
     invocation.params = object({{"preset", Json::string(args[2])}});
   } else if (command == "note" && args.size() >= 3u && args[1] == "on") {
+    if (!validate_flags(args, 3u, {"--velocity", "--gesture"}, error)) return false;
     std::uint64_t note = 0u;
     if (!parse_u64(args[2], 0u, 127u, note)) {
       error = "note must be a MIDI note from 0 through 127";
@@ -179,6 +207,7 @@ bool build_invocation(const Options& options, Invocation& invocation, std::strin
                                 {"note", Json::number(note)},
                                 {"velocity", Json::number(velocity)}});
   } else if (command == "note" && args.size() >= 2u && args[1] == "off") {
+    if (!validate_flags(args, 2u, {"--gesture"}, error)) return false;
     std::string value;
     std::uint64_t gesture = 0u;
     if (!flag_value(args, "--gesture", value) ||
@@ -210,6 +239,7 @@ bool build_invocation(const Options& options, Invocation& invocation, std::strin
     invocation.method = "performance.control";
     invocation.params = object({{"control", Json::string("chord")}, {"value", Json::number(mode)}});
   } else if (command == "arpeggiator" && args.size() >= 2u) {
+    if (!validate_flags(args, 2u, {"--rate", "--gate", "--octaves"}, error)) return false;
     const int mode =
         named_value(args[1], {"off", "up", "down", "up-down", "down-up", "as-played", "random"});
     if (mode < 0) {
@@ -243,6 +273,7 @@ bool build_invocation(const Options& options, Invocation& invocation, std::strin
   } else if (command == "record" && args.size() == 2u && args[1] == "start") {
     invocation.method = "recording.start";
   } else if (command == "record" && args.size() >= 2u && args[1] == "stop") {
+    if (!validate_flags(args, 2u, {"--output"}, error)) return false;
     invocation.method = "recording.stop";
     std::string output;
     if (flag_value(args, "--output", output)) {

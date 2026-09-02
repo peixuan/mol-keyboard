@@ -16,6 +16,7 @@
 #include <poll.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/un.h>
 #include <unistd.h>
 
@@ -62,7 +63,20 @@ bool read_exact(HANDLE handle, void* output, std::size_t size) {
     DWORD received = 0u;
     const DWORD chunk = static_cast<DWORD>(
         size > static_cast<std::size_t>(MAXDWORD) ? MAXDWORD : static_cast<DWORD>(size));
-    if (ReadFile(handle, bytes, chunk, &received, nullptr) == FALSE || received == 0u) return false;
+    OVERLAPPED overlapped{};
+    overlapped.hEvent = CreateEventA(nullptr, TRUE, FALSE, nullptr);
+    if (overlapped.hEvent == nullptr) return false;
+    bool success = ReadFile(handle, bytes, chunk, &received, &overlapped) != FALSE;
+    if (!success && GetLastError() == ERROR_IO_PENDING) {
+      if (WaitForSingleObject(overlapped.hEvent, 2000u) == WAIT_OBJECT_0)
+        success = GetOverlappedResult(handle, &overlapped, &received, FALSE) != FALSE;
+      else {
+        (void)CancelIoEx(handle, &overlapped);
+        (void)WaitForSingleObject(overlapped.hEvent, INFINITE);
+      }
+    }
+    CloseHandle(overlapped.hEvent);
+    if (!success || received == 0u) return false;
     bytes += received;
     size -= received;
   }
@@ -75,7 +89,20 @@ bool write_exact(HANDLE handle, const void* input, std::size_t size) {
     DWORD sent = 0u;
     const DWORD chunk = static_cast<DWORD>(
         size > static_cast<std::size_t>(MAXDWORD) ? MAXDWORD : static_cast<DWORD>(size));
-    if (WriteFile(handle, bytes, chunk, &sent, nullptr) == FALSE || sent == 0u) return false;
+    OVERLAPPED overlapped{};
+    overlapped.hEvent = CreateEventA(nullptr, TRUE, FALSE, nullptr);
+    if (overlapped.hEvent == nullptr) return false;
+    bool success = WriteFile(handle, bytes, chunk, &sent, &overlapped) != FALSE;
+    if (!success && GetLastError() == ERROR_IO_PENDING) {
+      if (WaitForSingleObject(overlapped.hEvent, 2000u) == WAIT_OBJECT_0)
+        success = GetOverlappedResult(handle, &overlapped, &sent, FALSE) != FALSE;
+      else {
+        (void)CancelIoEx(handle, &overlapped);
+        (void)WaitForSingleObject(overlapped.hEvent, INFINITE);
+      }
+    }
+    CloseHandle(overlapped.hEvent);
+    if (!success || sent == 0u) return false;
     bytes += sent;
     size -= sent;
   }
@@ -200,14 +227,10 @@ bool LocalIpcServer::serve(const std::string& endpoint, const Handler& handler,
       std::string request;
       if (read_message(pipe, request)) {
         const std::string response = handler(request);
-        if (!write_message(pipe, response)) {
-          error = windows_error("named pipe response");
-          FlushFileBuffers(pipe);
-          DisconnectNamedPipe(pipe);
-          CloseHandle(pipe);
-          return false;
+        if (write_message(pipe, response)) {
+          unsigned char client_closed = 0u;
+          (void)read_exact(pipe, &client_closed, 1u);
         }
-        (void)FlushFileBuffers(pipe);
       }
       (void)DisconnectNamedPipe(pipe);
     }
@@ -268,14 +291,14 @@ bool LocalIpcServer::serve(const std::string& endpoint, const Handler& handler,
       error = posix_error("accept local IPC client");
       return false;
     }
+    timeval timeout{2, 0};
+    (void)::setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    (void)::setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
     std::string request;
     bool success = read_message(client, request);
     if (success) success = write_message(client, handler(request));
     (void)::close(client);
-    if (!success) {
-      error = "local IPC client disconnected during an incomplete frame";
-      return false;
-    }
+    (void)success;
   }
   return true;
 #endif
@@ -294,7 +317,7 @@ bool send_local_ipc_request(const std::string& endpoint, const std::string& requ
   while (GetTickCount64() < deadline) {
     if (WaitNamedPipeA(endpoint.c_str(), 50u) != FALSE) {
       pipe = CreateFileA(endpoint.c_str(), GENERIC_READ | GENERIC_WRITE, 0u, nullptr, OPEN_EXISTING,
-                         0u, nullptr);
+                         FILE_FLAG_OVERLAPPED, nullptr);
       if (pipe != INVALID_HANDLE_VALUE) break;
     }
     Sleep(5u);
@@ -314,6 +337,9 @@ bool send_local_ipc_request(const std::string& endpoint, const std::string& requ
     return false;
   }
   sockaddr_un address{};
+  timeval timeout{2, 0};
+  (void)::setsockopt(descriptor, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+  (void)::setsockopt(descriptor, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
   address.sun_family = AF_UNIX;
   std::memcpy(address.sun_path, endpoint.c_str(), endpoint.size() + 1u);
   bool success =

@@ -673,7 +673,13 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
     value.payload.note.velocity = static_cast<float>(
         velocity == nullptr ? 0.8 : real_value(*velocity, "velocity", 0.000001, 1.0));
     const Json* gesture = molseq::optional_member(params, "gesture");
-    value.gesture_id = gesture == nullptr ? 1u : u64_value(*gesture, "gesture", UINT64_MAX);
+    if (gesture == nullptr) {
+      value.gesture_id = next_gesture_id_++;
+      if (next_gesture_id_ > UINT64_C(9007199254740991))
+        next_gesture_id_ = UINT64_C(0x535256000001);
+    } else {
+      value.gesture_id = u64_value(*gesture, "gesture", UINT64_MAX);
+    }
     const Json* source = molseq::optional_member(params, "source");
     value.source_id = source == nullptr
                           ? kServiceSourceId

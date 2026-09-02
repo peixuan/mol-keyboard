@@ -2,6 +2,7 @@
 #ifndef MOL_CONTROL_SERVICE_BACKEND_HPP_
 #define MOL_CONTROL_SERVICE_BACKEND_HPP_
 
+#include <cstdint>
 #include <filesystem>
 #include <string_view>
 
@@ -27,6 +28,7 @@ class ServiceBackend final : public RpcBackend {
   std::filesystem::path state_directory_;
   std::filesystem::path recordings_directory_;
   std::filesystem::path config_path_;
+  std::uint64_t next_gesture_id_ = UINT64_C(0x535256000001);
 };
 
 }  // namespace molcontrol
