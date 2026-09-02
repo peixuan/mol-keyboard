@@ -51,6 +51,15 @@ typedef union mol_command_payload {
   struct {
     float value;
   } scalar;
+  struct {
+    int32_t value;
+  } integer;
+  struct {
+    uint32_t type;
+    uint8_t tonic;
+    uint8_t mapping;
+    uint8_t reserved[2];
+  } scale;
   uint8_t bytes[64];
 } mol_command_payload_t;
 
@@ -64,4 +73,4 @@ typedef struct mol_command {
   mol_command_payload_t payload;
 } mol_command_t;
 
-#endif  /* MOL_COMMAND_H_ */
+#endif /* MOL_COMMAND_H_ */

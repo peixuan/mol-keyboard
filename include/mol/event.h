@@ -23,6 +23,19 @@ enum {
   MOL_EVENT_ERROR_REPORTED = 12u
 };
 
+enum {
+  MOL_EVENT_PAYLOAD_NOTE = 0u,
+  MOL_EVENT_PAYLOAD_INPUT_NOTE = 1u,
+  MOL_EVENT_PAYLOAD_MAPPED_INDEX = 2u,
+  MOL_EVENT_PAYLOAD_MAPPED_COUNT = 3u
+};
+
+enum {
+  MOL_MUSIC_ERROR_NOTE_OUT_OF_RANGE = 1u,
+  MOL_MUSIC_ERROR_SCALE_MAPPING = 2u,
+  MOL_MUSIC_ERROR_DUPLICATE_GESTURE = 3u
+};
+
 typedef struct mol_event {
   uint32_t struct_size;
   uint32_t api_version;
@@ -33,4 +46,4 @@ typedef struct mol_event {
   uint8_t payload[32];
 } mol_event_t;
 
-#endif  /* MOL_EVENT_H_ */
+#endif /* MOL_EVENT_H_ */

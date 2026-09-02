@@ -1,13 +1,15 @@
 /* SPDX-License-Identifier: Apache-2.0 */
-#include "mol/engine.h"
-
 #include <math.h>
 #include <stdint.h>
 #include <string.h>
 
+#include "mol/engine.h"
+#include "mol/music.h"
+
 #define MOL_ENGINE_MAGIC UINT32_C(0x4D4F4C45)
 #define MOL_MASTER_GAIN_DEFAULT 0.25f
 #define MOL_SUSTAIN_LEVEL 0.70f
+#define MOL_SUSTAIN_ON_THRESHOLD (64.0f / 127.0f)
 
 typedef enum mol_voice_stage {
   MOL_VOICE_IDLE = 0,
@@ -26,7 +28,10 @@ typedef struct mol_voice {
   float release_step;
   float velocity;
   mol_voice_stage_t stage;
+  uint32_t source_id;
   uint8_t note;
+  uint8_t input_note;
+  uint8_t key_down;
 } mol_voice_t;
 
 typedef struct mol_scheduled_command {
@@ -47,6 +52,13 @@ struct mol_engine {
   uint32_t event_head;
   uint32_t event_count;
   float master_gain;
+  float sustain;
+  int32_t octave_shift;
+  int32_t transpose;
+  mol_scale_type_t scale_type;
+  mol_scale_mapping_t scale_mapping;
+  mol_chord_mode_t chord_mode;
+  uint8_t scale_tonic;
 };
 
 static int mol_engine_config_is_valid(const mol_engine_config_t* config) {
@@ -58,9 +70,9 @@ static int mol_engine_config_is_valid(const mol_engine_config_t* config) {
       config->sample_rate != 48000u) {
     return 0;
   }
-  if ((config->channel_count != 1u && config->channel_count != 2u) ||
-      config->max_voices < 8u || config->max_voices > MOL_PROFILE_MAX_VOICES ||
-      config->command_capacity == 0u || config->event_capacity == 0u) {
+  if ((config->channel_count != 1u && config->channel_count != 2u) || config->max_voices < 8u ||
+      config->max_voices > MOL_PROFILE_MAX_VOICES || config->command_capacity == 0u ||
+      config->event_capacity == 0u) {
     return 0;
   }
   return 1;
@@ -72,8 +84,7 @@ static int mol_engine_is_valid(const mol_engine_t* engine) {
 
 static size_t mol_max_size(size_t left, size_t right) { return left > right ? left : right; }
 
-static int mol_size_add_array(size_t* size, size_t alignment, size_t element_size,
-                              size_t count) {
+static int mol_size_add_array(size_t* size, size_t alignment, size_t element_size, size_t count) {
   size_t padding;
   size_t bytes;
   if (size == NULL || alignment == 0u || element_size == 0u || count == 0u) {
@@ -107,8 +118,7 @@ static int mol_command_precedes(const mol_scheduled_command_t* left,
   return left->serial < right->serial;
 }
 
-static void mol_command_heap_push(mol_engine_t* engine,
-                                  const mol_scheduled_command_t* scheduled) {
+static void mol_command_heap_push(mol_engine_t* engine, const mol_scheduled_command_t* scheduled) {
   uint32_t child = engine->command_count++;
   engine->commands[child] = *scheduled;
   while (child != 0u) {
@@ -169,9 +179,55 @@ static void mol_push_note_event(mol_engine_t* engine, mol_event_type_t event_typ
   event->struct_size = (uint32_t)sizeof(*event);
   event->api_version = MOL_API_VERSION;
   event->event_type = event_type;
+  event->source_id = voice->source_id;
   event->frame = engine->current_frame;
   event->gesture_id = voice->gesture_id;
-  event->payload[0] = voice->note;
+  event->payload[MOL_EVENT_PAYLOAD_NOTE] = voice->note;
+  event->payload[MOL_EVENT_PAYLOAD_INPUT_NOTE] = voice->input_note;
+  ++engine->event_count;
+}
+
+static void mol_push_mapping_event(mol_engine_t* engine, const mol_command_t* command,
+                                   uint8_t mapped_note, uint8_t index, uint8_t count) {
+  mol_event_t* event;
+  uint32_t tail;
+  if (engine->event_count >= engine->config.event_capacity) {
+    return;
+  }
+  tail = (engine->event_head + engine->event_count) % engine->config.event_capacity;
+  event = &engine->events[tail];
+  memset(event, 0, sizeof(*event));
+  event->struct_size = (uint32_t)sizeof(*event);
+  event->api_version = MOL_API_VERSION;
+  event->event_type = MOL_EVENT_GESTURE_MAPPED;
+  event->source_id = command->source_id;
+  event->frame = engine->current_frame;
+  event->gesture_id = command->gesture_id;
+  event->payload[MOL_EVENT_PAYLOAD_NOTE] = mapped_note;
+  event->payload[MOL_EVENT_PAYLOAD_INPUT_NOTE] = command->payload.note.note;
+  event->payload[MOL_EVENT_PAYLOAD_MAPPED_INDEX] = index;
+  event->payload[MOL_EVENT_PAYLOAD_MAPPED_COUNT] = count;
+  ++engine->event_count;
+}
+
+static void mol_push_music_error(mol_engine_t* engine, const mol_command_t* command,
+                                 uint8_t error) {
+  mol_event_t* event;
+  uint32_t tail;
+  if (engine->event_count >= engine->config.event_capacity) {
+    return;
+  }
+  tail = (engine->event_head + engine->event_count) % engine->config.event_capacity;
+  event = &engine->events[tail];
+  memset(event, 0, sizeof(*event));
+  event->struct_size = (uint32_t)sizeof(*event);
+  event->api_version = MOL_API_VERSION;
+  event->event_type = MOL_EVENT_ERROR_REPORTED;
+  event->source_id = command->source_id;
+  event->frame = engine->current_frame;
+  event->gesture_id = command->gesture_id;
+  event->payload[0] = error;
+  event->payload[1] = command->payload.note.note;
   ++engine->event_count;
 }
 
@@ -203,17 +259,65 @@ static mol_voice_t* mol_allocate_voice(mol_engine_t* engine) {
   return selected;
 }
 
-static void mol_process_note_on(mol_engine_t* engine, const mol_command_t* command) {
+static int mol_gesture_has_voice(const mol_engine_t* engine, mol_gesture_id_t gesture_id) {
+  uint32_t index;
+  for (index = 0u; index < engine->config.max_voices; ++index) {
+    if (engine->voices[index].stage != MOL_VOICE_IDLE &&
+        engine->voices[index].gesture_id == gesture_id) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+static void mol_start_voice(mol_engine_t* engine, const mol_command_t* command, uint8_t note,
+                            uint8_t input_note) {
   mol_voice_t* voice = mol_allocate_voice(engine);
   memset(voice, 0, sizeof(*voice));
   voice->gesture_id = command->gesture_id;
   voice->started_at = engine->current_frame;
-  voice->phase_increment = mol_note_frequency(command->payload.note.note) /
-                           (float)engine->config.sample_rate;
+  voice->phase_increment = mol_note_frequency(note) / (float)engine->config.sample_rate;
   voice->velocity = command->payload.note.velocity;
   voice->stage = MOL_VOICE_ATTACK;
-  voice->note = command->payload.note.note;
+  voice->source_id = command->source_id;
+  voice->note = note;
+  voice->input_note = input_note;
+  voice->key_down = 1u;
   mol_push_note_event(engine, MOL_EVENT_NOTE_STARTED, voice);
+}
+
+static void mol_process_note_on(mol_engine_t* engine, const mol_command_t* command) {
+  uint8_t chord_notes[4];
+  uint8_t mapped_note;
+  uint32_t chord_count = 0u;
+  uint32_t index;
+  int shifted_note;
+  mol_result_t result;
+  if (mol_gesture_has_voice(engine, command->gesture_id)) {
+    mol_push_music_error(engine, command, MOL_MUSIC_ERROR_DUPLICATE_GESTURE);
+    return;
+  }
+  shifted_note = (int)command->payload.note.note + (engine->octave_shift * 12) + engine->transpose;
+  if (shifted_note < 0 || shifted_note > 127) {
+    mol_push_music_error(engine, command, MOL_MUSIC_ERROR_NOTE_OUT_OF_RANGE);
+    return;
+  }
+  result = mol_scale_map_note((uint8_t)shifted_note, engine->scale_tonic, engine->scale_type,
+                              engine->scale_mapping, &mapped_note);
+  if (result != MOL_OK) {
+    mol_push_music_error(engine, command, MOL_MUSIC_ERROR_SCALE_MAPPING);
+    return;
+  }
+  result = mol_chord_expand(mapped_note, engine->chord_mode, chord_notes, 4u, &chord_count);
+  if (result != MOL_OK || chord_count == 0u) {
+    mol_push_music_error(engine, command, MOL_MUSIC_ERROR_NOTE_OUT_OF_RANGE);
+    return;
+  }
+  for (index = 0u; index < chord_count; ++index) {
+    mol_push_mapping_event(engine, command, chord_notes[index], (uint8_t)index,
+                           (uint8_t)chord_count);
+    mol_start_voice(engine, command, chord_notes[index], command->payload.note.note);
+  }
 }
 
 static void mol_process_command(mol_engine_t* engine, const mol_command_t* command) {
@@ -226,20 +330,57 @@ static void mol_process_command(mol_engine_t* engine, const mol_command_t* comma
       for (index = 0u; index < engine->config.max_voices; ++index) {
         if (engine->voices[index].stage != MOL_VOICE_IDLE &&
             engine->voices[index].gesture_id == command->gesture_id) {
+          engine->voices[index].key_down = 0u;
+          if (engine->sustain < MOL_SUSTAIN_ON_THRESHOLD) {
+            mol_voice_release(engine, &engine->voices[index]);
+          }
+        }
+      }
+      break;
+    case MOL_COMMAND_SUSTAIN: {
+      float previous = engine->sustain;
+      engine->sustain = command->payload.scalar.value;
+      if (previous >= MOL_SUSTAIN_ON_THRESHOLD && engine->sustain < MOL_SUSTAIN_ON_THRESHOLD) {
+        for (index = 0u; index < engine->config.max_voices; ++index) {
+          if (engine->voices[index].key_down == 0u) {
+            mol_voice_release(engine, &engine->voices[index]);
+          }
+        }
+      }
+      break;
+    }
+    case MOL_COMMAND_ALL_NOTES_OFF:
+      for (index = 0u; index < engine->config.max_voices; ++index) {
+        engine->voices[index].key_down = 0u;
+        if (engine->sustain < MOL_SUSTAIN_ON_THRESHOLD) {
           mol_voice_release(engine, &engine->voices[index]);
         }
       }
       break;
-    case MOL_COMMAND_ALL_NOTES_OFF:
-      for (index = 0u; index < engine->config.max_voices; ++index) {
-        mol_voice_release(engine, &engine->voices[index]);
-      }
-      break;
     case MOL_COMMAND_ALL_SOUND_OFF:
+      for (index = 0u; index < engine->config.max_voices; ++index) {
+        if (engine->voices[index].stage != MOL_VOICE_IDLE) {
+          mol_push_note_event(engine, MOL_EVENT_NOTE_ENDED, &engine->voices[index]);
+        }
+      }
       memset(engine->voices, 0, sizeof(*engine->voices) * engine->config.max_voices);
       break;
     case MOL_COMMAND_SET_MASTER_GAIN:
       engine->master_gain = command->payload.scalar.value;
+      break;
+    case MOL_COMMAND_SET_OCTAVE_SHIFT:
+      engine->octave_shift = command->payload.integer.value;
+      break;
+    case MOL_COMMAND_SET_TRANSPOSE:
+      engine->transpose = command->payload.integer.value;
+      break;
+    case MOL_COMMAND_SET_SCALE:
+      engine->scale_type = command->payload.scale.type;
+      engine->scale_tonic = command->payload.scale.tonic;
+      engine->scale_mapping = command->payload.scale.mapping;
+      break;
+    case MOL_COMMAND_SET_CHORD_MODE:
+      engine->chord_mode = (mol_chord_mode_t)command->payload.integer.value;
       break;
     case MOL_COMMAND_RESET_ENGINE:
       mol_engine_reset(engine);
@@ -281,8 +422,7 @@ static float mol_render_voice(mol_engine_t* engine, mol_voice_t* voice) {
       }
       break;
     case MOL_VOICE_DECAY:
-      voice->envelope -=
-          (1.0f - MOL_SUSTAIN_LEVEL) / (0.10f * (float)engine->config.sample_rate);
+      voice->envelope -= (1.0f - MOL_SUSTAIN_LEVEL) / (0.10f * (float)engine->config.sample_rate);
       if (voice->envelope <= MOL_SUSTAIN_LEVEL) {
         voice->envelope = MOL_SUSTAIN_LEVEL;
         voice->stage = MOL_VOICE_SUSTAIN;
@@ -396,10 +536,9 @@ size_t mol_engine_query_memory(const mol_engine_config_t* config) {
   size_t size = 0u;
   if (!mol_engine_config_is_valid(config) ||
       !mol_size_add_array(&size, _Alignof(mol_engine_t), sizeof(mol_engine_t), 1u) ||
-      !mol_size_add_array(&size, _Alignof(mol_voice_t), sizeof(mol_voice_t),
-                          config->max_voices) ||
-      !mol_size_add_array(&size, _Alignof(mol_scheduled_command_t),
-                          sizeof(mol_scheduled_command_t), config->command_capacity) ||
+      !mol_size_add_array(&size, _Alignof(mol_voice_t), sizeof(mol_voice_t), config->max_voices) ||
+      !mol_size_add_array(&size, _Alignof(mol_scheduled_command_t), sizeof(mol_scheduled_command_t),
+                          config->command_capacity) ||
       !mol_size_add_array(&size, _Alignof(mol_event_t), sizeof(mol_event_t),
                           config->event_capacity)) {
     return 0u;
@@ -407,8 +546,7 @@ size_t mol_engine_query_memory(const mol_engine_config_t* config) {
   return size;
 }
 
-mol_result_t mol_engine_init(void* memory, size_t memory_size,
-                             const mol_engine_config_t* config,
+mol_result_t mol_engine_init(void* memory, size_t memory_size, const mol_engine_config_t* config,
                              mol_engine_t** out_engine) {
   unsigned char* bytes = (unsigned char*)memory;
   size_t offset = 0u;
@@ -471,13 +609,19 @@ void mol_engine_reset(mol_engine_t* engine) {
     engine->event_head = 0u;
     engine->event_count = 0u;
     engine->master_gain = MOL_MASTER_GAIN_DEFAULT;
+    engine->sustain = 0.0f;
+    engine->octave_shift = 0;
+    engine->transpose = 0;
+    engine->scale_type = MOL_SCALE_CHROMATIC;
+    engine->scale_tonic = 0u;
+    engine->scale_mapping = MOL_SCALE_MAP_NEAREST;
+    engine->chord_mode = MOL_CHORD_OFF;
   }
 }
 
 mol_result_t mol_engine_submit(mol_engine_t* engine, const mol_command_t* command) {
   mol_scheduled_command_t scheduled;
-  if (!mol_engine_is_valid(engine) || command == NULL ||
-      command->struct_size < sizeof(*command)) {
+  if (!mol_engine_is_valid(engine) || command == NULL || command->struct_size < sizeof(*command)) {
     return MOL_ERROR_INVALID_ARGUMENT;
   }
   if (command->api_version != MOL_API_VERSION) {
@@ -502,6 +646,35 @@ mol_result_t mol_engine_submit(mol_engine_t* engine, const mol_command_t* comman
         return MOL_ERROR_INVALID_ARGUMENT;
       }
       break;
+    case MOL_COMMAND_SUSTAIN:
+      if (!isfinite(command->payload.scalar.value) || command->payload.scalar.value < 0.0f ||
+          command->payload.scalar.value > 1.0f) {
+        return MOL_ERROR_INVALID_ARGUMENT;
+      }
+      break;
+    case MOL_COMMAND_SET_OCTAVE_SHIFT:
+      if (command->payload.integer.value < -3 || command->payload.integer.value > 3) {
+        return MOL_ERROR_INVALID_ARGUMENT;
+      }
+      break;
+    case MOL_COMMAND_SET_TRANSPOSE:
+      if (command->payload.integer.value < -24 || command->payload.integer.value > 24) {
+        return MOL_ERROR_INVALID_ARGUMENT;
+      }
+      break;
+    case MOL_COMMAND_SET_SCALE:
+      if (command->payload.scale.type >= MOL_SCALE_TYPE_COUNT ||
+          command->payload.scale.tonic > 11u ||
+          command->payload.scale.mapping >= MOL_SCALE_MAPPING_COUNT) {
+        return MOL_ERROR_INVALID_ARGUMENT;
+      }
+      break;
+    case MOL_COMMAND_SET_CHORD_MODE:
+      if (command->payload.integer.value < 0 ||
+          (uint32_t)command->payload.integer.value >= MOL_CHORD_MODE_COUNT) {
+        return MOL_ERROR_INVALID_ARGUMENT;
+      }
+      break;
     case MOL_COMMAND_ALL_NOTES_OFF:
     case MOL_COMMAND_ALL_SOUND_OFF:
     case MOL_COMMAND_RESET_ENGINE:
@@ -523,8 +696,7 @@ mol_result_t mol_engine_submit(mol_engine_t* engine, const mol_command_t* comman
 }
 
 mol_result_t mol_engine_render_interleaved_f32(mol_engine_t* engine, float* output,
-                                                uint32_t frame_count,
-                                                uint32_t channel_count) {
+                                               uint32_t frame_count, uint32_t channel_count) {
   uint32_t frame;
   uint32_t channel;
   mol_result_t result = mol_validate_render(engine, frame_count, channel_count);
@@ -544,10 +716,8 @@ mol_result_t mol_engine_render_interleaved_f32(mol_engine_t* engine, float* outp
   return MOL_OK;
 }
 
-mol_result_t mol_engine_render_planar_f32(mol_engine_t* engine,
-                                          float* const* output_channels,
-                                          uint32_t frame_count,
-                                          uint32_t channel_count) {
+mol_result_t mol_engine_render_planar_f32(mol_engine_t* engine, float* const* output_channels,
+                                          uint32_t frame_count, uint32_t channel_count) {
   uint32_t frame;
   uint32_t channel;
   mol_result_t result = mol_validate_render(engine, frame_count, channel_count);
@@ -568,8 +738,7 @@ mol_result_t mol_engine_render_planar_f32(mol_engine_t* engine,
   return MOL_OK;
 }
 
-uint32_t mol_engine_poll_events(mol_engine_t* engine, mol_event_t* events,
-                                uint32_t capacity) {
+uint32_t mol_engine_poll_events(mol_engine_t* engine, mol_event_t* events, uint32_t capacity) {
   uint32_t copied = 0u;
   if (!mol_engine_is_valid(engine) || (events == NULL && capacity != 0u)) {
     return 0u;
@@ -600,6 +769,13 @@ mol_result_t mol_engine_get_state(const mol_engine_t* engine, mol_engine_state_t
   state->channel_count = engine->config.channel_count;
   state->max_voices = engine->config.max_voices;
   state->active_voices = active_voices;
+  state->octave_shift = engine->octave_shift;
+  state->transpose = engine->transpose;
+  state->scale_type = engine->scale_type;
+  state->scale_tonic = engine->scale_tonic;
+  state->scale_mapping = engine->scale_mapping;
+  state->chord_mode = engine->chord_mode;
+  state->sustain = engine->sustain;
   return MOL_OK;
 }
 
@@ -607,7 +783,7 @@ mol_capability_flags_t mol_engine_get_capabilities(const mol_engine_t* engine) {
   if (!mol_engine_is_valid(engine)) {
     return 0u;
   }
-  return MOL_CAPABILITY_CALLER_MEMORY | MOL_CAPABILITY_INTERLEAVED_F32 |
-         MOL_CAPABILITY_PLANAR_F32 | MOL_CAPABILITY_POLYPHONIC_SYNTH |
-         MOL_CAPABILITY_SAMPLE_ACCURATE_COMMANDS;
+  return MOL_CAPABILITY_CALLER_MEMORY | MOL_CAPABILITY_INTERLEAVED_F32 | MOL_CAPABILITY_PLANAR_F32 |
+         MOL_CAPABILITY_POLYPHONIC_SYNTH | MOL_CAPABILITY_SAMPLE_ACCURATE_COMMANDS |
+         MOL_CAPABILITY_SCALE_LOCK | MOL_CAPABILITY_CHORD_MODE | MOL_CAPABILITY_CONTINUOUS_SUSTAIN;
 }

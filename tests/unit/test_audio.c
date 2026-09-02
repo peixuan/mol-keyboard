@@ -117,7 +117,7 @@ static void test_eight_voice_polyphony(void) {
   mol_engine_config_t config = mol_engine_config_default();
   mol_engine_t* engine = NULL;
   mol_engine_state_t state = {0};
-  mol_event_t events[16];
+  mol_event_t events[32];
   float sample = 0.0f;
   int found_steal = 0;
 
@@ -141,7 +141,7 @@ static void test_eight_voice_polyphony(void) {
   }
   EXPECT_TRUE(mol_engine_render_interleaved_f32(engine, &sample, 1u, 1u) == MOL_OK);
   {
-    uint32_t count = mol_engine_poll_events(engine, events, 16u);
+    uint32_t count = mol_engine_poll_events(engine, events, 32u);
     for (uint32_t index = 0u; index < count; ++index) {
       if (events[index].event_type == MOL_EVENT_VOICE_STOLEN) {
         found_steal = 1;
