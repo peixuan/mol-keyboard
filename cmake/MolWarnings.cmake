@@ -3,7 +3,8 @@ include_guard(GLOBAL)
 
 function(mol_enable_warnings target)
   if(MSVC)
-    target_compile_options(${target} PRIVATE /W4 /WX /permissive- /utf-8)
+    target_compile_options(${target} PRIVATE /W4 /WX /permissive- /utf-8
+                                              $<$<COMPILE_LANGUAGE:CXX>:/EHsc>)
   else()
     target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Werror)
   endif()
