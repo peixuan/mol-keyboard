@@ -12,14 +12,15 @@ include(cmake/MolOptions.cmake)
 include(cmake/MolWarnings.cmake)
 include(cmake/MolSanitizers.cmake)
 
-add_library(mol_core src/c_api/mol_engine.c src/music/mol_music.c
-                     src/transport/mol_transport.c)
+add_library(mol_core src/c_api/mol_engine.c src/dsp/mol_dsp.c
+                     src/music/mol_music.c src/transport/mol_transport.c)
 add_library(mol::core ALIAS mol_core)
 
 target_include_directories(
   mol_core
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/dsp)
 target_compile_features(mol_core PUBLIC c_std_11)
 if(UNIX AND NOT APPLE)
   target_link_libraries(mol_core PRIVATE m)
