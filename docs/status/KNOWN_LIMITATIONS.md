@@ -1,11 +1,11 @@
 # Known Limitations
 
-The repository has completed the M0 and M1 architecture gates and is
-implementing M2. The native core and
-PCM16 WAV renderer produce a single polyBLEP saw instrument with ADSR and fixed
-polyphony, and the same core runs in a verified browser AudioWorklet and Windows
-WASAPI callback. There is not yet a service, complete PWA, or end-user
-application.
+The repository has completed the M0, M1, and M2 architecture and music-semantics
+gates and is implementing M3. The native core and PCM16 WAV renderer still
+produce a single polyBLEP saw instrument with ADSR and fixed polyphony; the 18
+data-driven instruments and Chorus, Delay, Reverb, and Limiter are not complete.
+The same core runs in a verified browser AudioWorklet and Windows WASAPI
+callback. There is not yet a service, complete PWA, or end-user application.
 The ESP-IDF firmware now contains a compile-verified I2S host and startup C4
 analysis, but has not run on a physical board; I2S signal, sound, timing
 counters, and sustained operation are therefore not device verified. PCM24 and

@@ -4,8 +4,8 @@
 |---|---|---|
 | M0 engineering baseline | passed | Windows x64 and Wasm Debug/Release tests pass; C/C++ consumers link; ESP32 and ESP32-S3 firmware compile the same ISO C11 core with ESP-IDF 6.1 |
 | M1 portable sound path | passed | Same C4 sequence is 261.25 Hz with finite output in Native, Wasm, and the ESP32 32 kHz core path; allocation-free desktop/worklet/I2S callbacks and Android Oboe, Apple AudioUnit, and Harmony OHAudio call entries exist |
-| M2 music semantics | in progress | Highest unmet gate after M1 |
-| M3 instruments and DSP | not started | Depends on M2 |
+| M2 music semantics | passed | All required transforms, gesture ownership, sustain, portamento, transport, metronome, and six arpeggiator modes pass 17 Native and 15 Wasm tests; both targets match the 35-event golden digest; exact transport math reaches the two-hour frame with zero drift |
+| M3 instruments and DSP | in progress | Highest unmet gate after M2 |
 | M4 recording and tools | not started | Depends on M3 |
 | M5 desktop headless product | not started | Depends on M4 |
 | M6 Web/PWA | not started | Depends on portable core gates |

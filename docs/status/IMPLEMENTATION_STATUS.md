@@ -2,13 +2,13 @@
 
 ## Current milestone
 
-M2 complete music semantics. M0 and M1 are complete.
+M3 instruments, DSP, and effects. M0, M1, and M2 are complete.
 
 ## Last verified commit
 
-`c28512c` (`feat(harmony): add OHAudio Node-API entry`) is the last verified
-commit. Native Debug/Release and WebAssembly Debug/Release were rebuilt and
-tested after that change on 2026-09-02.
+`56b00f8` (`test(music): lock cross-target event semantics`) is the last
+verified commit. Native Debug/Release and WebAssembly Debug/Release were rebuilt
+and tested after that change on 2026-09-02.
 
 ## Completed requirements
 
@@ -79,12 +79,26 @@ tested after that change on 2026-09-02.
 - The M1 gate is complete: the same C4 sequence measures 261.25 Hz in Native,
   Wasm, and the ESP32 32 kHz core path, all analyzed samples are finite, the
   callbacks are allocation-free, and every required platform call entry exists.
+- The M2 gate is complete: the default 30-key HID map, octave/transpose, all 8
+  scales and 12 tonics, all 10 chord modes, continuous sustain, gesture-owned
+  releases, sample-accurate commands, monophonic linear portamento, unified
+  transport, accented metronome, six arpeggiator modes and six rates, including
+  seeded deterministic random selection, are implemented in the portable core.
+- Native and WebAssembly produce the same checked-in 35-event conformance digest
+  (`83658a826364c67e`), transport frame, and final zero-voice/zero-gesture state.
+  The test never rewrites its golden file.
+- Property tests require sample-for-sample and event-for-event equality across
+  unrelated render block sizes, run 2,000 deterministic random legal operations
+  without NaN/Inf, and prove eventual sound/gesture cleanup.
+- Absolute rational transport tests cover every quarter-note step through two
+  hours at 48 kHz/120 BPM and reach frame 345,600,000 with zero cumulative
+  rounding drift.
 
 ## In-progress work
 
-- M2 music semantics: 30-key mapping, octave/transpose, scale lock, chord mode,
-  sustain, portamento, transport, metronome, arpeggiator, gesture ownership,
-  sample-accurate scheduling, and property tests.
+- M3 DSP modules, 18 data-driven instruments, Patch compiler, Chorus, Delay,
+  Reverb, master mixer/limiter, loudness calibration, golden audio, and automated
+  audio analysis.
 
 ## Blocked platform checks
 
@@ -111,9 +125,10 @@ build/dev-release/apps/mol-play/mol-play --duration 1.05 --note 60 --velocity 0.
 
 The evidence render was 384,044 bytes with peak 0.19609803, RMS 0.06978670,
 zero clipped samples, zero non-finite samples, and zero underruns.
-Both native configurations pass 10/10 CTest tests, including dependency audit,
-device enumeration, and the one-second null-backend realtime callback test.
-They also compile the Android and Harmony native entries under warnings-as-errors.
+Both native configurations pass 17/17 CTest tests, including dependency audit,
+M2 unit/property/event conformance, device enumeration, and the one-second
+null-backend realtime callback test. They also compile the Android and Harmony
+native entries under warnings-as-errors.
 
 With the pinned Emscripten SDK environment active:
 
@@ -126,12 +141,13 @@ cmake --build --preset wasm-release
 ctest --preset wasm-release
 ```
 
-Both configurations passed 8/8 tests on 2026-09-02. One test audits the locked
-dependencies and license snapshot. The worklet conformance test loads the
-single-file worklet artifact in a mocked worklet global and verifies stereo C4,
-finite output, message-driven note control, and release to silence. The browser
-smoke page additionally passed in the Codex in-app Chromium browser with
-`frequency=261.2500` and `peak=0.24512254`.
+Both configurations passed 15/15 tests on 2026-09-02. One test audits the locked
+dependencies and license snapshot. M2 tests include the same exact event golden
+used by Native and deterministic block-size/property checks. The worklet
+conformance test loads the single-file worklet artifact in a mocked worklet
+global and verifies stereo C4, finite output, message-driven note control, and
+release to silence. The browser smoke page additionally passed in the Codex
+in-app Chromium browser with `frequency=261.2500` and `peak=0.24512254`.
 
 With the pinned ESP-IDF environment active:
 
@@ -159,5 +175,5 @@ above. Physical I2S playback and sustained-run counters remain unverified.
 
 ## Next highest-priority task
 
-Implement M2's complete deterministic music-command semantics and cross-Native/
-Wasm event-stream conformance before expanding platform product shells.
+Implement M3's complete DSP graph and 18 data-driven instruments, beginning with
+the oscillator/envelope/filter building blocks and Patch schema/compiler.
