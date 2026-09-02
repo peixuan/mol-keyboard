@@ -5,6 +5,7 @@ set(MOL_REPOSITORY_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../../..")
 idf_component_register(
   SRCS
     "${MOL_REPOSITORY_ROOT}/src/c_api/mol_engine.c"
+    "${MOL_REPOSITORY_ROOT}/src/control/mol_wire.c"
     "${MOL_REPOSITORY_ROOT}/src/dsp/mol_dsp.c"
     "${MOL_REPOSITORY_ROOT}/src/effects/mol_effects.c"
     "${MOL_REPOSITORY_ROOT}/src/music/mol_music.c"

@@ -13,5 +13,6 @@
 #include "mol/sequence.h"
 #include "mol/transport.h"
 #include "mol/version.h"
+#include "mol/wire.h"
 
 #endif /* MOL_MOL_H_ */
