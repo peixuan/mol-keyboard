@@ -8,6 +8,13 @@ set_target_properties(mol_daemon_runtime PROPERTIES CXX_EXTENSIONS OFF CXX_STAND
 mol_enable_warnings(mol_daemon_runtime)
 mol_enable_optional_instrumentation(mol_daemon_runtime)
 
+add_executable(mol-keyboardd main.cpp)
+target_link_libraries(mol-keyboardd PRIVATE mol_daemon_runtime mol::local_ipc)
+set_target_properties(mol-keyboardd PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol-keyboardd)
+mol_enable_optional_instrumentation(mol-keyboardd)
+install(TARGETS mol-keyboardd RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
 if(MOL_BUILD_TESTS)
   add_executable(mol_daemon_runtime_tests test_audio_runtime.cpp)
   target_link_libraries(mol_daemon_runtime_tests PRIVATE mol_daemon_runtime)
