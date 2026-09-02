@@ -72,6 +72,10 @@ static void test_validation(void) {
   EXPECT_TRUE(engine == NULL);
   config = mol_engine_config_default();
   config.sample_rate = 12345u;
+  EXPECT_TRUE(mol_engine_query_memory(&config) > 0u);
+  config.sample_rate = 7999u;
+  EXPECT_TRUE(mol_engine_query_memory(&config) == 0u);
+  config.sample_rate = 192001u;
   EXPECT_TRUE(mol_engine_query_memory(&config) == 0u);
 }
 

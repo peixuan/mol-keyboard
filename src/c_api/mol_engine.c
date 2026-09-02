@@ -185,8 +185,7 @@ static int mol_engine_config_is_valid(const mol_engine_config_t* config) {
       config->api_version != MOL_API_VERSION) {
     return 0;
   }
-  if (config->sample_rate != 32000u && config->sample_rate != 44100u &&
-      config->sample_rate != 48000u) {
+  if (config->sample_rate < 8000u || config->sample_rate > 192000u) {
     return 0;
   }
   if ((config->channel_count != 1u && config->channel_count != 2u) || config->max_voices < 8u ||

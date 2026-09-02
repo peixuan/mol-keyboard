@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: Apache-2.0
+
+foreach(_mol_required WAV_PATH REPORT_PATH FORMAT_HEX CHANNELS_HEX SAMPLE_RATE_HEX BITS_HEX)
+  if(NOT DEFINED ${_mol_required})
+    message(FATAL_ERROR "Missing required verification argument: ${_mol_required}")
+  endif()
+endforeach()
+
+if(NOT EXISTS "${WAV_PATH}")
+  message(FATAL_ERROR "Expected WAV output does not exist: ${WAV_PATH}")
+endif()
+if(NOT EXISTS "${REPORT_PATH}")
+  message(FATAL_ERROR "Expected JSON report does not exist: ${REPORT_PATH}")
+endif()
+
+file(SIZE "${WAV_PATH}" _mol_wav_size)
+if(_mol_wav_size LESS_EQUAL 44)
+  message(FATAL_ERROR "WAV output is too small: ${_mol_wav_size} bytes")
+endif()
+
+file(READ "${WAV_PATH}" _mol_riff OFFSET 0 LIMIT 12 HEX)
+string(SUBSTRING "${_mol_riff}" 0 8 _mol_riff_magic)
+string(SUBSTRING "${_mol_riff}" 16 8 _mol_wave_magic)
+if(NOT _mol_riff_magic STREQUAL "52494646" OR NOT _mol_wave_magic STREQUAL "57415645")
+  message(FATAL_ERROR "WAV output has an invalid RIFF/WAVE header: ${_mol_riff}")
+endif()
+file(READ "${WAV_PATH}" _mol_format OFFSET 20 LIMIT 2 HEX)
+file(READ "${WAV_PATH}" _mol_channels OFFSET 22 LIMIT 2 HEX)
+file(READ "${WAV_PATH}" _mol_sample_rate OFFSET 24 LIMIT 4 HEX)
+file(READ "${WAV_PATH}" _mol_bits OFFSET 34 LIMIT 2 HEX)
+if(NOT _mol_format STREQUAL FORMAT_HEX OR NOT _mol_channels STREQUAL CHANNELS_HEX OR
+   NOT _mol_sample_rate STREQUAL SAMPLE_RATE_HEX OR NOT _mol_bits STREQUAL BITS_HEX)
+  message(
+    FATAL_ERROR
+      "Unexpected WAV format: format=${_mol_format}, channels=${_mol_channels}, rate=${_mol_sample_rate}, bits=${_mol_bits}")
+endif()
+
+file(READ "${WAV_PATH}" _mol_audio OFFSET 44 LIMIT 512 HEX)
+if(_mol_audio MATCHES "^0+$")
+  message(FATAL_ERROR "WAV output contains only silence in its first audio block")
+endif()
+
+file(SHA256 "${WAV_PATH}" _mol_actual_sha)
+file(READ "${REPORT_PATH}" _mol_report)
+string(JSON _mol_report_sha GET "${_mol_report}" sha256)
+string(JSON _mol_peak GET "${_mol_report}" peak)
+string(JSON _mol_rms GET "${_mol_report}" rms)
+string(JSON _mol_nan_inf GET "${_mol_report}" nan_inf_count)
+string(JSON _mol_underruns GET "${_mol_report}" underrun_count)
+if(NOT _mol_report_sha STREQUAL _mol_actual_sha)
+  message(FATAL_ERROR "JSON SHA-256 does not match the WAV: ${_mol_report_sha} != ${_mol_actual_sha}")
+endif()
+if(NOT _mol_peak GREATER 0 OR NOT _mol_rms GREATER 0)
+  message(FATAL_ERROR "Expected non-zero peak and RMS: peak=${_mol_peak}, rms=${_mol_rms}")
+endif()
+if(NOT _mol_nan_inf EQUAL 0 OR NOT _mol_underruns EQUAL 0)
+  message(FATAL_ERROR "Unexpected render errors: NaN/Inf=${_mol_nan_inf}, underruns=${_mol_underruns}")
+endif()
+
+message(STATUS "Verified WAV and JSON report: ${WAV_PATH} (${_mol_wav_size} bytes, ${_mol_actual_sha})")
