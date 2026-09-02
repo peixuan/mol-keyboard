@@ -42,6 +42,21 @@ else()
   target_compile_definitions(mol_core PUBLIC MOL_BUILD_PROFILE=3 MOL_PROFILE_MAX_VOICES=64)
 endif()
 
+add_library(mol_platform_audio_runtime platforms/common/mol_audio_runtime.c)
+add_library(mol::platform_audio_runtime ALIAS mol_platform_audio_runtime)
+target_include_directories(
+  mol_platform_audio_runtime
+  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/platforms/common/include>)
+target_compile_features(mol_platform_audio_runtime PUBLIC c_std_11)
+target_link_libraries(mol_platform_audio_runtime PUBLIC mol::core)
+set_target_properties(
+  mol_platform_audio_runtime
+  PROPERTIES C_EXTENSIONS OFF
+             C_STANDARD_REQUIRED ON
+             POSITION_INDEPENDENT_CODE ON)
+mol_enable_warnings(mol_platform_audio_runtime)
+mol_enable_optional_instrumentation(mol_platform_audio_runtime)
+
 install(
   TARGETS mol_core
   EXPORT mol_keyboardTargets
