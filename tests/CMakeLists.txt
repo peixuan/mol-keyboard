@@ -22,6 +22,15 @@ mol_enable_warnings(mol_dsp_tests)
 mol_enable_optional_instrumentation(mol_dsp_tests)
 add_test(NAME mol_dsp_tests COMMAND mol_dsp_tests)
 
+add_executable(mol_effect_tests unit/test_effects.c)
+target_link_libraries(mol_effect_tests PRIVATE mol::core)
+target_include_directories(mol_effect_tests PRIVATE ${PROJECT_SOURCE_DIR}/src/dsp
+                                                    ${PROJECT_SOURCE_DIR}/src/effects)
+set_target_properties(mol_effect_tests PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_effect_tests)
+mol_enable_optional_instrumentation(mol_effect_tests)
+add_test(NAME mol_effect_tests COMMAND mol_effect_tests)
+
 add_executable(mol_patch_tests unit/test_patch.c)
 target_link_libraries(mol_patch_tests PRIVATE mol::core)
 set_target_properties(mol_patch_tests PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)

@@ -12,7 +12,7 @@ include(cmake/MolOptions.cmake)
 include(cmake/MolWarnings.cmake)
 include(cmake/MolSanitizers.cmake)
 
-add_library(mol_core src/c_api/mol_engine.c src/dsp/mol_dsp.c
+add_library(mol_core src/c_api/mol_engine.c src/dsp/mol_dsp.c src/effects/mol_effects.c
                      src/music/mol_music.c src/patch/mol_patch.c
                      src/patch/mol_builtin_patches.c
                      src/patch/generated/mol_patch_grand_piano.c
@@ -40,7 +40,8 @@ target_include_directories(
   mol_core
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
          $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/dsp)
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/dsp
+          ${CMAKE_CURRENT_SOURCE_DIR}/src/effects)
 target_compile_features(mol_core PUBLIC c_std_11)
 if(UNIX AND NOT APPLE)
   target_link_libraries(mol_core PRIVATE m)
