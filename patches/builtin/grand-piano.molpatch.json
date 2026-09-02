@@ -5,7 +5,7 @@
   "name_en": "Grand Piano",
   "synthesis": "modal",
   "waveform": "triangle",
-  "gain_millidb": -7600,
+  "gain_millidb": -5800,
   "attack_ms": 4,
   "decay_ms": 1100,
   "sustain_milli": 180,

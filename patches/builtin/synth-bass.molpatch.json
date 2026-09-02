@@ -5,7 +5,7 @@
   "name_en": "Synth Bass",
   "synthesis": "subtractive",
   "waveform": "square",
-  "gain_millidb": -9000,
+  "gain_millidb": -12900,
   "attack_ms": 5,
   "decay_ms": 240,
   "sustain_milli": 680,

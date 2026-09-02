@@ -5,7 +5,7 @@
   "name_en": "Harpsichord",
   "synthesis": "subtractive",
   "waveform": "pulse",
-  "gain_millidb": -9200,
+  "gain_millidb": -6500,
   "attack_ms": 1,
   "decay_ms": 720,
   "sustain_milli": 80,

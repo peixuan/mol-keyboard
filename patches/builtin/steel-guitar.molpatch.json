@@ -5,7 +5,7 @@
   "name_en": "Steel Guitar",
   "synthesis": "pluck",
   "waveform": "saw",
-  "gain_millidb": -9000,
+  "gain_millidb": 2300,
   "attack_ms": 1,
   "decay_ms": 1350,
   "sustain_milli": 90,

@@ -5,7 +5,7 @@
   "name_en": "Cello",
   "synthesis": "subtractive",
   "waveform": "saw",
-  "gain_millidb": -9800,
+  "gain_millidb": -10900,
   "attack_ms": 105,
   "decay_ms": 310,
   "sustain_milli": 850,

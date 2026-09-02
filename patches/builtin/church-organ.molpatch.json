@@ -5,7 +5,7 @@
   "name_en": "Church Organ",
   "synthesis": "additive",
   "waveform": "sine",
-  "gain_millidb": -11200,
+  "gain_millidb": -12800,
   "attack_ms": 45,
   "decay_ms": 180,
   "sustain_milli": 920,

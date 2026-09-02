@@ -5,7 +5,7 @@
   "name_en": "Violin",
   "synthesis": "subtractive",
   "waveform": "saw",
-  "gain_millidb": -10500,
+  "gain_millidb": -10100,
   "attack_ms": 85,
   "decay_ms": 260,
   "sustain_milli": 820,

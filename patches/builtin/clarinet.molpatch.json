@@ -5,7 +5,7 @@
   "name_en": "Clarinet",
   "synthesis": "subtractive",
   "waveform": "square",
-  "gain_millidb": -10100,
+  "gain_millidb": -12800,
   "attack_ms": 55,
   "decay_ms": 160,
   "sustain_milli": 900,

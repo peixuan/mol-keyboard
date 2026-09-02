@@ -5,7 +5,7 @@
   "name_en": "Choir",
   "synthesis": "formant",
   "waveform": "sine",
-  "gain_millidb": -13200,
+  "gain_millidb": -12700,
   "attack_ms": 480,
   "decay_ms": 720,
   "sustain_milli": 840,

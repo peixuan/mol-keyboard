@@ -5,7 +5,7 @@
   "name_en": "Nylon Guitar",
   "synthesis": "pluck",
   "waveform": "triangle",
-  "gain_millidb": -7800,
+  "gain_millidb": 4000,
   "attack_ms": 2,
   "decay_ms": 1050,
   "sustain_milli": 100,

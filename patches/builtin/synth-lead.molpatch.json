@@ -5,7 +5,7 @@
   "name_en": "Synth Lead",
   "synthesis": "subtractive",
   "waveform": "pulse",
-  "gain_millidb": -11800,
+  "gain_millidb": -13200,
   "attack_ms": 8,
   "decay_ms": 140,
   "sustain_milli": 760,

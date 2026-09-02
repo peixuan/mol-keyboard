@@ -5,7 +5,7 @@
   "name_en": "Flute",
   "synthesis": "formant",
   "waveform": "sine",
-  "gain_millidb": -7600,
+  "gain_millidb": -10300,
   "attack_ms": 75,
   "decay_ms": 180,
   "sustain_milli": 880,

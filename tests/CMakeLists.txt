@@ -102,6 +102,21 @@ add_test(
     -DMOL_EXPECTED=${CMAKE_CURRENT_SOURCE_DIR}/golden/m2_event_trace.txt -P
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_event_trace.cmake)
 
+add_executable(mol_audio_metrics conformance/audio_metrics.c)
+target_link_libraries(mol_audio_metrics PRIVATE mol::core)
+set_target_properties(mol_audio_metrics PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_audio_metrics)
+mol_enable_optional_instrumentation(mol_audio_metrics)
+if(MOL_PROFILE_STANDARD AND MOL_ENABLE_CHORUS AND MOL_ENABLE_DELAY AND MOL_ENABLE_REVERB)
+  add_test(
+    NAME mol_audio_metrics_conformance
+    COMMAND
+      ${CMAKE_COMMAND} -DMOL_EXECUTABLE=$<TARGET_FILE:mol_audio_metrics>
+      -DMOL_EMULATOR=${CMAKE_CROSSCOMPILING_EMULATOR}
+      -DMOL_EXPECTED=${CMAKE_CURRENT_SOURCE_DIR}/golden/m3_audio_metrics.txt -P
+      ${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_audio_metrics.cmake)
+endif()
+
 add_executable(mol_property_tests property/test_properties.c)
 target_link_libraries(mol_property_tests PRIVATE mol::core)
 set_target_properties(mol_property_tests PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)

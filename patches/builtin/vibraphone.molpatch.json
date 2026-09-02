@@ -5,7 +5,7 @@
   "name_en": "Vibraphone",
   "synthesis": "fm2",
   "waveform": "sine",
-  "gain_millidb": -9000,
+  "gain_millidb": -8900,
   "attack_ms": 3,
   "decay_ms": 1650,
   "sustain_milli": 160,

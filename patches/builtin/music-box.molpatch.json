@@ -5,7 +5,7 @@
   "name_en": "Music Box",
   "synthesis": "modal",
   "waveform": "sine",
-  "gain_millidb": -11600,
+  "gain_millidb": -14000,
   "attack_ms": 1,
   "decay_ms": 1350,
   "sustain_milli": 35,

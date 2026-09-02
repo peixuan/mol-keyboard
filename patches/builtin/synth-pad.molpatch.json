@@ -5,7 +5,7 @@
   "name_en": "Synth Pad",
   "synthesis": "additive",
   "waveform": "triangle",
-  "gain_millidb": -13800,
+  "gain_millidb": -12700,
   "attack_ms": 620,
   "decay_ms": 900,
   "sustain_milli": 780,

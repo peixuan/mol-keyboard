@@ -5,7 +5,7 @@
   "name_en": "Jazz Organ",
   "synthesis": "additive",
   "waveform": "square",
-  "gain_millidb": -10400,
+  "gain_millidb": -14600,
   "attack_ms": 18,
   "decay_ms": 90,
   "sustain_milli": 950,
