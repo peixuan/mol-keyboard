@@ -48,6 +48,23 @@ if (batchResult?.accepted !== 1 || batchResult?.rejected !== 1) {
   throw new Error(`AudioWorklet batch validation failed: ${JSON.stringify(batchResult)}`);
 }
 
+processor.port.onmessage({
+  data: { type: "control", requestId: 7, control: "preset", value: 0 },
+});
+const acceptedControl = processor.port.messages.at(-1);
+processor.port.onmessage({
+  data: { type: "control", requestId: 8, control: "preset", value: 99 },
+});
+const rejectedControl = processor.port.messages.at(-1);
+if (
+  acceptedControl?.requestId !== 7 ||
+  acceptedControl?.accepted !== true ||
+  rejectedControl?.requestId !== 8 ||
+  rejectedControl?.accepted !== false
+) {
+  throw new Error("AudioWorklet control validation failed");
+}
+
 const left = new Float32Array(128);
 const right = new Float32Array(128);
 let previous = 0.0;
@@ -71,6 +88,16 @@ for (let block = 0; block < 375; block += 1) {
     }
     previous = sample;
   }
+}
+
+const engineEventBatch = processor.port.messages.find((message) => message.type === "engine-events");
+if (
+  engineEventBatch?.count < 1 ||
+  !Array.from(engineEventBatch.words.slice(0, engineEventBatch.count * 4)).some(
+    (word, index, words) => index % 4 === 0 && word === 1 && words[index + 3] === 60,
+  )
+) {
+  throw new Error("AudioWorklet did not report the core note-started event");
 }
 
 const frequency = crossings / 0.8;

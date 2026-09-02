@@ -18,8 +18,8 @@ target_link_options(
           -sENVIRONMENT=web,worker,node
           -sALLOW_MEMORY_GROWTH=0
           -sINITIAL_MEMORY=16777216
-          "-sEXPORTED_FUNCTIONS=['_mol_wasm_initialize','_mol_wasm_note_on','_mol_wasm_note_off','_mol_wasm_render']"
-          "-sEXPORTED_RUNTIME_METHODS=['cwrap','HEAPF32']")
+          "-sEXPORTED_FUNCTIONS=['_mol_wasm_initialize','_mol_wasm_note_on','_mol_wasm_note_off','_mol_wasm_submit_scalar','_mol_wasm_submit_integer','_mol_wasm_submit_parameter','_mol_wasm_submit_preset','_mol_wasm_submit_scale','_mol_wasm_submit_arpeggiator','_mol_wasm_submit_time_signature','_mol_wasm_submit_metronome','_mol_wasm_submit_portamento','_mol_wasm_submit_action','_mol_wasm_poll_events','_mol_wasm_event_buffer','_mol_wasm_render']"
+          "-sEXPORTED_RUNTIME_METHODS=['cwrap','HEAPF32','HEAPU32']")
 
 add_executable(mol_audio_worklet_core wasm_exports.c)
 target_link_libraries(mol_audio_worklet_core PRIVATE mol::core)
@@ -47,8 +47,8 @@ target_link_options(
           -sALLOW_MEMORY_GROWTH=0
           -sINITIAL_MEMORY=16777216
           "--extern-post-js=${CMAKE_CURRENT_SOURCE_DIR}/mol_audio_worklet.mjs"
-          "-sEXPORTED_FUNCTIONS=['_mol_wasm_initialize','_mol_wasm_note_on','_mol_wasm_note_off','_mol_wasm_render']"
-          "-sEXPORTED_RUNTIME_METHODS=['cwrap','HEAPF32']")
+          "-sEXPORTED_FUNCTIONS=['_mol_wasm_initialize','_mol_wasm_note_on','_mol_wasm_note_off','_mol_wasm_submit_scalar','_mol_wasm_submit_integer','_mol_wasm_submit_parameter','_mol_wasm_submit_preset','_mol_wasm_submit_scale','_mol_wasm_submit_arpeggiator','_mol_wasm_submit_time_signature','_mol_wasm_submit_metronome','_mol_wasm_submit_portamento','_mol_wasm_submit_action','_mol_wasm_poll_events','_mol_wasm_event_buffer','_mol_wasm_render']"
+          "-sEXPORTED_RUNTIME_METHODS=['cwrap','HEAPF32','HEAPU32']")
 
 configure_file(test_audio_worklet_browser.html test_audio_worklet_browser.html COPYONLY)
 
