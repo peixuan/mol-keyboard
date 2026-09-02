@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
-add_executable(mol-seq main.cpp json.cpp midi.cpp operations.cpp sequence_document.cpp)
-target_link_libraries(mol-seq PRIVATE mol::core)
+add_executable(mol-seq main.cpp midi.cpp operations.cpp sequence_document.cpp)
+target_link_libraries(mol-seq PRIVATE mol::core mol::json)
 set_target_properties(mol-seq PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD 17
                                          CXX_STANDARD_REQUIRED ON)
 mol_enable_warnings(mol-seq)
