@@ -24,6 +24,7 @@ typedef struct mol_render_options {
   double duration_seconds;
   uint32_t sample_rate;
   uint32_t channel_count;
+  mol_preset_id_t preset;
   uint8_t note;
   float velocity;
 } mol_render_options_t;
@@ -90,10 +91,28 @@ static int mol_parse_double(const char* text, double* value) {
   return 1;
 }
 
+static int mol_parse_preset(const char* text, mol_preset_id_t* preset) {
+  uint32_t numeric;
+  if (mol_parse_u32(text, &numeric)) {
+    if (numeric < MOL_PRESET_COUNT) {
+      *preset = numeric;
+      return 1;
+    }
+    return 0;
+  }
+  for (uint32_t index = 0u; index < MOL_PRESET_COUNT; ++index) {
+    if (strcmp(text, mol_preset_stable_id(index)) == 0) {
+      *preset = index;
+      return 1;
+    }
+  }
+  return 0;
+}
+
 static void mol_print_usage(const char* executable) {
   (void)printf(
       "Usage: %s [--output PATH] [--duration SECONDS] [--sample-rate RATE]\n"
-      "          [--channels 1|2] [--note 0..127] [--velocity 0..1]\n",
+      "          [--channels 1|2] [--preset ID|NAME] [--note 0..127] [--velocity 0..1]\n",
       executable);
 }
 
@@ -103,6 +122,7 @@ static int mol_parse_options(int argc, char** argv, mol_render_options_t* option
   options->duration_seconds = 2.0;
   options->sample_rate = 48000u;
   options->channel_count = 2u;
+  options->preset = MOL_PRESET_GRAND_PIANO;
   options->note = 60u;
   options->velocity = 0.8f;
   for (index = 1; index < argc; ++index) {
@@ -128,6 +148,10 @@ static int mol_parse_options(int argc, char** argv, mol_render_options_t* option
       }
     } else if (strcmp(name, "--channels") == 0) {
       if (!mol_parse_u32(argv[index], &options->channel_count)) {
+        return -1;
+      }
+    } else if (strcmp(name, "--preset") == 0) {
+      if (!mol_parse_preset(argv[index], &options->preset)) {
         return -1;
       }
     } else if (strcmp(name, "--note") == 0) {
@@ -212,6 +236,7 @@ static int mol_render_file(const mol_render_options_t* options) {
   mol_render_stats_t stats = {0};
   mol_command_t note_on;
   mol_command_t note_off;
+  mol_command_t preset;
   uint64_t total_frames = (uint64_t)(options->duration_seconds * options->sample_rate + 0.5);
   uint64_t data_bytes_64 = total_frames * options->channel_count * 2u;
   uint64_t rendered_frames = 0u;
@@ -237,11 +262,19 @@ static int mol_render_file(const mol_render_options_t* options) {
     return 1;
   }
 
+  memset(&preset, 0, sizeof(preset));
+  preset.struct_size = (uint32_t)sizeof(preset);
+  preset.api_version = MOL_API_VERSION;
+  preset.command_type = MOL_COMMAND_SET_PRESET;
+  preset.target_frame = 0u;
+  preset.payload.preset.preset = options->preset;
+  preset.payload.preset.hard_switch = 1u;
   note_on = mol_make_note_command(MOL_COMMAND_NOTE_ON, 0u, options->note, options->velocity);
   note_off = mol_make_note_command(MOL_COMMAND_NOTE_OFF,
                                    (mol_frame_index_t)((total_frames * 7u) / 10u),
                                    options->note, options->velocity);
-  if (mol_engine_submit(engine, &note_on) != MOL_OK ||
+  if (mol_engine_submit(engine, &preset) != MOL_OK ||
+      mol_engine_submit(engine, &note_on) != MOL_OK ||
       mol_engine_submit(engine, &note_off) != MOL_OK) {
     (void)fprintf(stderr, "Could not schedule the render sequence\n");
     mol_engine_shutdown(engine);
@@ -285,6 +318,7 @@ static int mol_render_file(const mol_render_options_t* options) {
   }
   mol_engine_shutdown(engine);
   (void)printf("output=%s\n", options->output_path);
+  (void)printf("preset=%s\n", mol_preset_stable_id(options->preset));
   (void)printf("duration_seconds=%.6f\n", (double)total_frames / options->sample_rate);
   (void)printf("peak=%.8f\n", stats.peak);
   (void)printf("rms=%.8f\n", sqrt(stats.square_sum / (double)stats.sample_count));
