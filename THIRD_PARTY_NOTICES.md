@@ -10,3 +10,10 @@ Copyright 2025 David Reid
 
 The complete upstream dual-license notice is preserved at
 `third_party/licenses/miniaudio-LICENSE.txt`. No local patches are applied.
+
+## Oboe 1.10.0
+
+MoL Keyboard uses Oboe for Android low-latency output. The exact upstream
+commit is `a81bb9f87d4105b84b682685d3bfbb5beca371d1` and no local patches are
+applied. Oboe is licensed under Apache License 2.0; the complete upstream
+license is preserved at `third_party/licenses/oboe-LICENSE.txt`.

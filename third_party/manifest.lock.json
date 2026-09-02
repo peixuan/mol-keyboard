@@ -63,6 +63,26 @@
         "null backend for conformance tests",
         "decoding/encoding/resource manager/node graph/engine/generators disabled"
       ]
+    },
+    {
+      "name": "Oboe",
+      "version": "1.10.0",
+      "commit": "a81bb9f87d4105b84b682685d3bfbb5beca371d1",
+      "source": "https://github.com/google/oboe",
+      "archive": "https://github.com/google/oboe/archive/refs/tags/1.10.0.tar.gz",
+      "archive_sha256": "0e4245f8860c4287040a5d76501c588490bcc9cb57614c486c0c201a5dde3e9f",
+      "license_expression": "Apache-2.0",
+      "selected_license": "Apache-2.0",
+      "license_file": "third_party/licenses/oboe-LICENSE.txt",
+      "license_file_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "local_modifications": [],
+      "build_options": [
+        "Android output device I/O only",
+        "AAudio preferred by platform on API 27 and newer",
+        "OpenSL ES compatibility fallback retained",
+        "data conversion retained for device compatibility",
+        "upstream examples and applications excluded"
+      ]
     }
   ]
 }

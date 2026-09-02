@@ -8,6 +8,11 @@ set(MOL_MINIAUDIO_COMMIT "9634bedb5b5a2ca38c1ee7108a9358a4e233f14d")
 set(MOL_MINIAUDIO_ARCHIVE_SHA256
     "1a3a79b80fc6f0b0cc155e28b954a598e0ddfa2db64e2afa8466be88c476fa55")
 
+set(MOL_OBOE_VERSION "1.10.0")
+set(MOL_OBOE_COMMIT "a81bb9f87d4105b84b682685d3bfbb5beca371d1")
+set(MOL_OBOE_ARCHIVE_SHA256
+    "0e4245f8860c4287040a5d76501c588490bcc9cb57614c486c0c201a5dde3e9f")
+
 function(mol_add_miniaudio)
   if(TARGET mol_miniaudio)
     return()
@@ -78,4 +83,27 @@ function(mol_add_miniaudio)
   target_link_libraries(mol_miniaudio INTERFACE miniaudio)
   target_compile_definitions(mol_miniaudio INTERFACE ${_mol_miniaudio_definitions})
   set_property(TARGET miniaudio PROPERTY FOLDER third_party)
+endfunction()
+
+function(mol_add_oboe)
+  if(TARGET mol_oboe)
+    return()
+  endif()
+  if(NOT ANDROID)
+    message(FATAL_ERROR "Oboe is only available for Android builds")
+  endif()
+
+  set(OBOE_DISABLE_CONVERSION OFF CACHE BOOL "" FORCE)
+  set(OBOE_DO_NOT_DEFINE_OPENSL_ES_CONSTANTS OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(
+    oboe
+    URL "https://github.com/google/oboe/archive/refs/tags/${MOL_OBOE_VERSION}.tar.gz"
+    URL_HASH "SHA256=${MOL_OBOE_ARCHIVE_SHA256}"
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+  FetchContent_MakeAvailable(oboe)
+
+  add_library(mol_oboe INTERFACE)
+  add_library(mol::oboe ALIAS mol_oboe)
+  target_link_libraries(mol_oboe INTERFACE oboe)
+  set_property(TARGET oboe PROPERTY FOLDER third_party)
 endfunction()

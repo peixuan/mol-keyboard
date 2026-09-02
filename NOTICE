@@ -6,3 +6,7 @@ This product includes software developed by the MoL Keyboard contributors.
 The optional desktop realtime host includes miniaudio 0.11.25, copyright 2025
 David Reid, used under the MIT No Attribution (MIT-0) license option. See
 THIRD_PARTY_NOTICES.md for the complete record.
+
+The optional Android audio host includes Oboe 1.10.0, developed by the Android
+Open Source Project and used under Apache License 2.0. See
+THIRD_PARTY_NOTICES.md for the complete record.

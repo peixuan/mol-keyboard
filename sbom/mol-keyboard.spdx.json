@@ -49,6 +49,22 @@
       "primaryPackagePurpose": "BUILD_TOOL"
     },
     {
+      "name": "Oboe",
+      "SPDXID": "SPDXRef-Package-Oboe",
+      "versionInfo": "1.10.0",
+      "downloadLocation": "https://github.com/google/oboe/archive/refs/tags/1.10.0.tar.gz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "0e4245f8860c4287040a5d76501c588490bcc9cb57614c486c0c201a5dde3e9f"
+        }
+      ],
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION"
+    },
+    {
       "name": "Emscripten SDK",
       "SPDXID": "SPDXRef-Package-emsdk",
       "versionInfo": "6.0.5",
@@ -81,6 +97,11 @@
       "spdxElementId": "SPDXRef-Package-MoL-Keyboard",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Package-miniaudio"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-MoL-Keyboard",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-Oboe"
     },
     {
       "spdxElementId": "SPDXRef-Package-actions-checkout",
