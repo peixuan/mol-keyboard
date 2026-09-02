@@ -8,7 +8,7 @@ export interface WebSettings {
   readonly version: 1;
   readonly language: "en" | "zh";
   readonly mode: "explore" | "studio";
-  readonly backend: "standalone" | "service" | "esp32";
+  readonly backend: "standalone" | "service" | "esp32" | "native";
   readonly preset: number;
   readonly scale: number;
   readonly tonic: number;
@@ -96,7 +96,10 @@ export function validateSettings(value: unknown): value is WebSettings {
     value.version === 1 &&
     (value.language === "en" || value.language === "zh") &&
     (value.mode === "explore" || value.mode === "studio") &&
-    (value.backend === "standalone" || value.backend === "service" || value.backend === "esp32") &&
+    (value.backend === "standalone" ||
+      value.backend === "service" ||
+      value.backend === "esp32" ||
+      value.backend === "native") &&
     integerInRange(value.preset, 0, 17) &&
     integerInRange(value.scale, 0, 7) &&
     integerInRange(value.tonic, 0, 11) &&

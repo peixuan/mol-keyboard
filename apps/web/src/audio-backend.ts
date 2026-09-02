@@ -1,7 +1,11 @@
 export interface AudioBackend extends EventTarget {
   readonly state: AudioContextState | "idle";
   readonly sampleRate: number | undefined;
-  readonly commandTransport: "message-port" | "shared-array-buffer" | "websocket-jsonrpc";
+  readonly commandTransport:
+    | "message-port"
+    | "shared-array-buffer"
+    | "websocket-jsonrpc"
+    | "native-bridge";
   readonly droppedCommandCount: number;
   start(): Promise<void>;
   close(): Promise<void>;

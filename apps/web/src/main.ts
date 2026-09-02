@@ -22,6 +22,7 @@ import {
   noteAtPoint,
   noteName,
 } from "./keyboard";
+import { hasAndroidNativeBridge, NativeAudioEngine } from "./native-engine";
 
 interface ActiveGesture {
   readonly id: number;
@@ -36,7 +37,7 @@ template.innerHTML = `
         <span class="wordmark-mark" aria-hidden="true">M</span>
         <span>MoL Keyboard</span>
       </a>
-      <p class="edition">Web instrument · 浏览器乐器</p>
+      <p class="edition" data-edition>Web instrument · 浏览器乐器</p>
     </header>
 
     <section class="hero" aria-labelledby="hero-title">
@@ -58,8 +59,8 @@ template.innerHTML = `
           <span data-status role="status" aria-live="polite">Waiting for a gesture</span>
         </div>
         <dl class="spec-list">
-          <div><dt>Core</dt><dd>WebAssembly</dd></div>
-          <div><dt>Thread</dt><dd>AudioWorklet</dd></div>
+          <div><dt>Core</dt><dd data-core-runtime>WebAssembly</dd></div>
+          <div><dt>Thread</dt><dd data-audio-runtime>AudioWorklet</dd></div>
           <div><dt>Voices</dt><dd>32 polyphonic</dd></div>
         </dl>
       </div>
@@ -73,6 +74,7 @@ template.innerHTML = `
       <label><span data-en="Backend" data-zh="后端">Backend</span>
         <select data-backend aria-label="Audio backend">
           <option value="standalone" data-en="This browser" data-zh="当前浏览器">This browser</option>
+          <option value="native" data-native-backend hidden data-en="Android native" data-zh="Android 原生">Android native</option>
           <option value="service" data-en="Desktop service" data-zh="桌面服务">Desktop service</option>
           <option value="esp32" data-en="ESP32 device" data-zh="ESP32 设备">ESP32 device</option>
         </select>
@@ -213,8 +215,8 @@ template.innerHTML = `
         <div class="studio-section diagnostics">
           <h3 data-en="Runtime facts" data-zh="运行时事实">Runtime facts</h3>
           <dl>
-            <div><dt data-en="Input" data-zh="输入">Input</dt><dd>Keyboard + Pointer Events</dd></div>
-            <div><dt data-en="Output" data-zh="输出">Output</dt><dd>Web Audio system default</dd></div>
+            <div><dt data-en="Input" data-zh="输入">Input</dt><dd data-input-runtime>Keyboard + Pointer Events</dd></div>
+            <div><dt data-en="Output" data-zh="输出">Output</dt><dd data-output-runtime>Web Audio system default</dd></div>
             <div><dt data-en="Fast path" data-zh="快速路径">Fast path</dt><dd data-fast-path>MessagePort baseline</dd></div>
             <div><dt data-en="Persistence" data-zh="持久化">Persistence</dt><dd data-storage-state>Checking…</dd></div>
             <div><dt data-en="Core events" data-zh="核心事件">Core events</dt><dd data-event-count>0</dd></div>
@@ -234,7 +236,8 @@ template.innerHTML = `
 class MolKeyboardApp extends HTMLElement {
   private readonly standaloneEngine = new MolAudioEngine();
   private readonly serviceEngine = new ServiceAudioEngine();
-  private engine: AudioBackend = this.standaloneEngine;
+  private readonly nativeEngine = hasAndroidNativeBridge() ? new NativeAudioEngine() : undefined;
+  private engine: AudioBackend = this.nativeEngine ?? this.standaloneEngine;
   private readonly activeKeys = new Map<string, ActiveGesture>();
   private readonly activePointers = new Map<number, ActiveGesture>();
   private readonly activeAccessible = new Map<number, ActiveGesture>();
@@ -261,6 +264,7 @@ class MolKeyboardApp extends HTMLElement {
     this.context = this.canvas?.getContext("2d") ?? undefined;
     this.statusElement = this.querySelector<HTMLElement>("[data-status]") ?? undefined;
     this.startButton = this.querySelector<HTMLButtonElement>("[data-action='start']") ?? undefined;
+    this.configureNativeShell();
     this.configureCanvas();
     this.createAccessibleKeys();
     this.bindEvents();
@@ -276,6 +280,7 @@ class MolKeyboardApp extends HTMLElement {
     this.releaseAll();
     void this.standaloneEngine.close();
     void this.serviceEngine.close();
+    void this.nativeEngine?.close();
   }
 
   private bindEvents(): void {
@@ -299,7 +304,9 @@ class MolKeyboardApp extends HTMLElement {
         if (this.engine === this.standaloneEngine) void this.standaloneEngine.suspend();
       }
     });
-    for (const backend of [this.standaloneEngine, this.serviceEngine]) {
+    const backends: AudioBackend[] = [this.standaloneEngine, this.serviceEngine];
+    if (this.nativeEngine !== undefined) backends.push(this.nativeEngine);
+    for (const backend of backends) {
       backend.addEventListener("engineevents", (event) => {
         if (backend !== this.engine) return;
         const engineEvent = event as CustomEvent<readonly EngineEvent[]>;
@@ -308,6 +315,15 @@ class MolKeyboardApp extends HTMLElement {
       backend.addEventListener("statechange", () => this.onEngineStateChanged(backend));
       backend.addEventListener("devicechange", () => {
         if (backend === this.engine) {
+          if (backend === this.nativeEngine && backend.state === "running") {
+            this.configurationPromise = this.applyCurrentSettings();
+            void this.configurationPromise.catch((error: unknown) => {
+              this.setStatus(
+                error instanceof Error ? error.message : "Could not restore the native route",
+                "error",
+              );
+            });
+          }
           this.setStatus("Audio output route changed · system default active", "ready");
         }
       });
@@ -316,7 +332,12 @@ class MolKeyboardApp extends HTMLElement {
 
   private onAudioReady(): void {
     const sampleRate = this.engine.sampleRate;
-    const backendLabel = this.engine === this.serviceEngine ? "desktop service" : "worklet";
+    const backendLabel =
+      this.engine === this.serviceEngine
+        ? "desktop service"
+        : this.engine === this.nativeEngine
+          ? "native Oboe"
+          : "worklet";
     const rateLabel =
       sampleRate === undefined
         ? backendLabel
@@ -459,6 +480,12 @@ class MolKeyboardApp extends HTMLElement {
         this.serviceEngine.connected ? "ready" : "loading",
       );
       if (this.startButton !== undefined) this.startButton.disabled = !this.serviceEngine.connected;
+    } else if (value === "native" && this.nativeEngine !== undefined) {
+      this.engine = this.nativeEngine;
+      if (panel !== null) panel.hidden = true;
+      await this.serviceEngine.close();
+      this.setStatus("Android native Oboe selected", "ready");
+      if (this.startButton !== undefined) this.startButton.disabled = false;
     } else if (value === "standalone") {
       this.engine = this.standaloneEngine;
       if (panel !== null) panel.hidden = true;
@@ -702,8 +729,9 @@ class MolKeyboardApp extends HTMLElement {
     const metronome = this.querySelector<HTMLInputElement>("[data-control='metronome']");
     if (metronome !== null) metronome.checked = settings.metronome;
     const backend = this.querySelector<HTMLSelectElement>("[data-backend]");
-    if (backend !== null) backend.value = settings.backend;
-    await this.selectBackend(settings.backend);
+    const selectedBackend = this.nativeEngine === undefined ? settings.backend : "native";
+    if (backend !== null) backend.value = selectedBackend;
+    await this.selectBackend(selectedBackend);
     this.setMode(settings.mode === "studio");
     this.applyLanguage(settings.language);
     for (const control of ["volume", "chorus", "delay", "reverb", "gate", "portamento-time"]) {
@@ -735,7 +763,10 @@ class MolKeyboardApp extends HTMLElement {
       version: 1,
       language: this.language,
       mode: mode === "true" ? "studio" : "explore",
-      backend: backendValue === "service" || backendValue === "esp32" ? backendValue : "standalone",
+      backend:
+        backendValue === "service" || backendValue === "esp32" || backendValue === "native"
+          ? backendValue
+          : "standalone",
       preset: this.controlNumber("preset"),
       scale: this.controlNumber("scale"),
       tonic: this.controlNumber("tonic"),
@@ -826,7 +857,9 @@ class MolKeyboardApp extends HTMLElement {
     const fastPath = this.querySelector<HTMLElement>("[data-fast-path]");
     if (fastPath !== null) {
       fastPath.textContent =
-        this.engine.commandTransport === "websocket-jsonrpc"
+        this.engine.commandTransport === "native-bridge"
+          ? "Versioned native Oboe bridge"
+          : this.engine.commandTransport === "websocket-jsonrpc"
           ? this.serviceEngine.connected
             ? "Authenticated loopback WebSocket"
             : "WebSocket disconnected"
@@ -881,6 +914,23 @@ class MolKeyboardApp extends HTMLElement {
     status.dataset.state = state;
   }
 
+  private configureNativeShell(): void {
+    if (this.nativeEngine === undefined) return;
+    const nativeOption = this.querySelector<HTMLOptionElement>("[data-native-backend]");
+    if (nativeOption !== null) nativeOption.hidden = false;
+    const values: ReadonlyArray<readonly [string, string]> = [
+      ["[data-edition]", "Native Android · Android 原生"],
+      ["[data-core-runtime]", "ISO C11"],
+      ["[data-audio-runtime]", "Oboe callback"],
+      ["[data-input-runtime]", "Keyboard + Pointer + Android hardware keys"],
+      ["[data-output-runtime]", "Android system route · Oboe"],
+    ];
+    for (const [selector, value] of values) {
+      const element = this.querySelector<HTMLElement>(selector);
+      if (element !== null) element.textContent = value;
+    }
+  }
+
   private configureCanvas(): void {
     if (this.canvas === undefined) return;
     const scale = Math.max(1, Math.min(window.devicePixelRatio, 3));
@@ -918,7 +968,12 @@ class MolKeyboardApp extends HTMLElement {
 
   private async startAudio(): Promise<void> {
     if (this.startButton !== undefined) this.startButton.disabled = true;
-    this.setStatus("Loading the WebAssembly audio core…", "loading");
+    this.setStatus(
+      this.engine === this.nativeEngine
+        ? "Starting the native Oboe audio runtime…"
+        : "Loading the WebAssembly audio core…",
+      "loading",
+    );
     try {
       await this.ensureConfigured();
       if (this.engine.state === "running") this.onAudioReady();
