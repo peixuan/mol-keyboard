@@ -5,13 +5,24 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <filesystem>
+#include <fstream>
+#include <initializer_list>
 #include <limits>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <system_error>
 #include <utility>
 #include <vector>
+
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#else
+#include <sys/stat.h>
+#endif
 
 namespace molcontrol {
 namespace {
@@ -22,6 +33,7 @@ constexpr int kInvalidParams = -32602;
 constexpr int kRuntimeError = -32000;
 constexpr std::uint32_t kServiceSourceId = 1u;
 constexpr std::uint64_t kMaximumBenchmarkFrames = UINT64_C(1920000);
+constexpr std::uintmax_t kMaximumConfigBytes = 65536u;
 
 void require_object(const Json& value) {
   if (value.type != Json::Type::Object) throw RpcError(kInvalidParams, "params must be an object");
@@ -211,6 +223,8 @@ Json make_default_config() {
   config["bpm"] = Json::number(100);
   config["chord_mode"] = Json::number(0);
   config["default_preset"] = Json::string("grand-piano");
+  config["esp32_board_config"] = Json::string("none");
+  config["input_device_id"] = Json::string("programmatic");
   config["input_mapping"] = Json::object_value(std::move(mapping));
   config["ipc"] = Json::object_value(std::move(ipc));
   config["log_level"] = Json::string("info");
@@ -224,6 +238,114 @@ Json make_default_config() {
   config["schema_version"] = Json::number(1);
   config["web_ui"] = Json::boolean_value(false);
   return Json::object_value(std::move(config));
+}
+
+void validate_config(const Json& config) {
+  require_object(config);
+  static const std::set<std::string> expected = {"bpm",
+                                                 "chord_mode",
+                                                 "default_preset",
+                                                 "esp32_board_config",
+                                                 "input_device_id",
+                                                 "input_mapping",
+                                                 "ipc",
+                                                 "log_level",
+                                                 "master_gain",
+                                                 "max_voices",
+                                                 "output_device_id",
+                                                 "sample_rate_policy",
+                                                 "scale_mapping",
+                                                 "scale_tonic",
+                                                 "scale_type",
+                                                 "schema_version",
+                                                 "web_ui"};
+  if (config.object.size() != expected.size())
+    throw RpcError(kInvalidParams, "configuration fields do not match schema version 1");
+  for (const auto& member : config.object)
+    if (expected.find(member.first) == expected.end())
+      throw RpcError(kInvalidParams, "unknown configuration field: " + member.first);
+  if (u64_value(required(config, "schema_version"), "schema_version", 1u) != 1u)
+    throw RpcError(kInvalidParams, "schema_version must be 1");
+  (void)parse_preset(
+      Json::string(string_value(required(config, "default_preset"), "default_preset", 64u)));
+  (void)real_value(required(config, "master_gain"), "master_gain", 0.0, 2.0);
+  (void)real_value(required(config, "bpm"), "bpm", MOL_TEMPO_MIN, MOL_TEMPO_MAX);
+  const std::uint64_t max_voices = u64_value(required(config, "max_voices"), "max_voices", 64u);
+  if (max_voices < 8u) throw RpcError(kInvalidParams, "max_voices must be 8..64");
+  (void)u64_value(required(config, "scale_type"), "scale_type", MOL_SCALE_TYPE_COUNT - 1u);
+  (void)u64_value(required(config, "scale_tonic"), "scale_tonic", 11u);
+  (void)u64_value(required(config, "scale_mapping"), "scale_mapping", MOL_SCALE_MAPPING_COUNT - 1u);
+  (void)u64_value(required(config, "chord_mode"), "chord_mode", MOL_CHORD_MODE_COUNT - 1u);
+  const std::string sample_rate =
+      string_value(required(config, "sample_rate_policy"), "sample_rate_policy", 16u);
+  if (sample_rate != "device" && sample_rate != "44100" && sample_rate != "48000" &&
+      sample_rate != "96000")
+    throw RpcError(kInvalidParams, "sample_rate_policy must be device, 44100, 48000, or 96000");
+  (void)string_value(required(config, "input_device_id"), "input_device_id", 512u);
+  (void)string_value(required(config, "output_device_id"), "output_device_id", 512u);
+  (void)string_value(required(config, "esp32_board_config"), "esp32_board_config", 256u);
+  const std::string log_level = string_value(required(config, "log_level"), "log_level", 16u);
+  if (log_level != "error" && log_level != "warning" && log_level != "info" && log_level != "debug")
+    throw RpcError(kInvalidParams, "log_level must be error, warning, info, or debug");
+  (void)bool_value(required(config, "web_ui"), "web_ui");
+  const Json& mapping = required(config, "input_mapping");
+  if (mapping.type != Json::Type::Object || mapping.object.size() > 128u)
+    throw RpcError(kInvalidParams, "input_mapping must contain at most 128 entries");
+  for (const auto& entry : mapping.object) {
+    if (entry.first.empty() || entry.first.size() > 32u)
+      throw RpcError(kInvalidParams, "input_mapping contains an invalid key");
+    (void)u64_value(entry.second, "input_mapping note", 127u);
+  }
+  const Json& ipc = required(config, "ipc");
+  allow_members(ipc, {"transport"});
+  if (string_value(required(ipc, "transport"), "ipc.transport", 32u) != "platform-local")
+    throw RpcError(kInvalidParams, "ipc.transport must be platform-local");
+}
+
+Json load_config_file(const std::filesystem::path& path) {
+  std::error_code error;
+  if (!std::filesystem::exists(path, error)) return make_default_config();
+  if (error || !std::filesystem::is_regular_file(path, error))
+    throw std::runtime_error("configuration path is not a regular file");
+  const std::uintmax_t size = std::filesystem::file_size(path, error);
+  if (error || size > kMaximumConfigBytes)
+    throw std::runtime_error("configuration exceeds the 64 KiB limit");
+  std::ifstream stream(path, std::ios::binary);
+  std::string source(static_cast<std::size_t>(size), '\0');
+  if (!stream ||
+      (!source.empty() && !stream.read(source.data(), static_cast<std::streamsize>(size))))
+    throw std::runtime_error("cannot read configuration file");
+  Json config = molseq::parse_json(source);
+  validate_config(config);
+  return config;
+}
+
+void save_config_file(const std::filesystem::path& path, const Json& config) {
+  validate_config(config);
+  const std::string text = molseq::write_json(config) + "\n";
+  const std::filesystem::path temporary = path.string() + ".tmp";
+  std::ofstream stream(temporary, std::ios::binary | std::ios::trunc);
+  if (!stream || !stream.write(text.data(), static_cast<std::streamsize>(text.size())))
+    throw std::runtime_error("cannot write temporary configuration file");
+  stream.close();
+  if (!stream) throw std::runtime_error("cannot finalize temporary configuration file");
+#if defined(_WIN32)
+  if (MoveFileExW(temporary.c_str(), path.c_str(),
+                  MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) == FALSE) {
+    const unsigned long windows_error = static_cast<unsigned long>(GetLastError());
+    std::error_code ignored;
+    std::filesystem::remove(temporary, ignored);
+    throw std::runtime_error("cannot replace configuration file; Windows error " +
+                             std::to_string(windows_error));
+  }
+#else
+  if (::chmod(temporary.c_str(), S_IRUSR | S_IWUSR) != 0 ||
+      std::rename(temporary.c_str(), path.c_str()) != 0) {
+    std::error_code ignored;
+    std::filesystem::remove(temporary, ignored);
+    throw std::runtime_error("cannot securely replace configuration file");
+  }
+#endif
 }
 
 Json single_config_value(const Json& config, const Json& params) {
@@ -243,11 +365,49 @@ ServiceBackend::ServiceBackend(ServiceRuntime& runtime, std::filesystem::path st
     : config_(make_default_config()),
       runtime_(runtime),
       state_directory_(std::filesystem::absolute(std::move(state_directory)).lexically_normal()),
-      recordings_directory_(state_directory_ / "recordings") {
+      recordings_directory_(state_directory_ / "recordings"),
+      config_path_(state_directory_ / "config.json") {
   std::error_code error;
   std::filesystem::create_directories(recordings_directory_, error);
   if (error) throw std::runtime_error("cannot create service state directory: " + error.message());
+  const bool had_config = std::filesystem::exists(config_path_, error);
+  if (error) throw std::runtime_error("cannot inspect service configuration: " + error.message());
+  config_ = load_config_file(config_path_);
+  if (!had_config) persist_config();
+
+  const std::string output_id =
+      string_value(required(config_, "output_device_id"), "output_device_id", 512u);
+  if (output_id != runtime_.audio_status().device_id) (void)runtime_.select_output(output_id);
+
+  mol_command_t preset = command(MOL_COMMAND_SET_PRESET);
+  preset.payload.preset.preset = parse_preset(required(config_, "default_preset"));
+  require_ok(runtime_.submit(preset), "apply configured preset");
+  mol_command_t gain = command(MOL_COMMAND_SET_MASTER_GAIN);
+  gain.payload.scalar.value =
+      static_cast<float>(real_value(required(config_, "master_gain"), "master_gain", 0.0, 2.0));
+  require_ok(runtime_.submit(gain), "apply configured master gain");
+  mol_command_t tempo = command(MOL_COMMAND_SET_TEMPO);
+  tempo.payload.scalar.value =
+      static_cast<float>(real_value(required(config_, "bpm"), "bpm", MOL_TEMPO_MIN, MOL_TEMPO_MAX));
+  require_ok(runtime_.submit(tempo), "apply configured tempo");
+  mol_command_t scale = command(MOL_COMMAND_SET_SCALE);
+  scale.payload.scale.type = static_cast<std::uint32_t>(
+      u64_value(required(config_, "scale_type"), "scale_type", MOL_SCALE_TYPE_COUNT - 1u));
+  scale.payload.scale.tonic =
+      static_cast<std::uint8_t>(u64_value(required(config_, "scale_tonic"), "scale_tonic", 11u));
+  scale.payload.scale.mapping = static_cast<std::uint8_t>(
+      u64_value(required(config_, "scale_mapping"), "scale_mapping", MOL_SCALE_MAPPING_COUNT - 1u));
+  require_ok(runtime_.submit(scale), "apply configured scale");
+  mol_command_t chord = command(MOL_COMMAND_SET_CHORD_MODE);
+  chord.payload.integer.value = static_cast<std::int32_t>(
+      u64_value(required(config_, "chord_mode"), "chord_mode", MOL_CHORD_MODE_COUNT - 1u));
+  require_ok(runtime_.submit(chord), "apply configured chord");
+  const std::string input_id =
+      string_value(required(config_, "input_device_id"), "input_device_id", 512u);
+  (void)runtime_.attach_input(input_id);
 }
+
+void ServiceBackend::persist_config() const { save_config_file(config_path_, config_); }
 
 Json ServiceBackend::invoke(std::string_view method, const Json& params) {
   try {
@@ -362,6 +522,9 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
     value.payload.preset.hard_switch =
         hard != nullptr && bool_value(*hard, "hard") ? static_cast<std::uint8_t>(1u) : 0u;
     require_ok(runtime_.submit(value), "select preset");
+    config_.object["default_preset"] =
+        Json::string(mol_preset_stable_id(value.payload.preset.preset));
+    persist_config();
     return ok_result();
   }
   if (method == "preset.getParameters") {
@@ -402,6 +565,8 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
     value.payload.scalar.value = static_cast<float>(
         real_value(required(params, "bpm"), "bpm", MOL_TEMPO_MIN, MOL_TEMPO_MAX));
     require_ok(runtime_.submit(value), "set tempo");
+    config_.object["bpm"] = Json::number(value.payload.scalar.value);
+    persist_config();
     return ok_result();
   }
   if (method == "transport.setTimeSignature") {
@@ -427,13 +592,17 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
   }
   if (method == "input.attach") {
     allow_members(params, {"id"});
-    require_ok(runtime_.attach_input(string_value(required(params, "id"), "id", 512u)),
-               "attach input");
+    const std::string id = string_value(required(params, "id"), "id", 512u);
+    require_ok(runtime_.attach_input(id), "attach input");
+    config_.object["input_device_id"] = Json::string(id);
+    persist_config();
     return ok_result();
   }
   if (method == "input.detach") {
     allow_members(params, {});
     require_ok(runtime_.detach_input(), "detach input");
+    config_.object["input_device_id"] = Json::string("programmatic");
+    persist_config();
     return ok_result();
   }
   if (method == "input.getMapping") {
@@ -448,7 +617,11 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
     const Json& mapping = required(params, "mapping");
     if (mapping.type != Json::Type::Object || mapping.object.size() > 128u)
       throw RpcError(kInvalidParams, "mapping must be an object with at most 128 entries");
-    config_.object["input_mapping"] = mapping;
+    Json candidate = config_;
+    candidate.object["input_mapping"] = mapping;
+    validate_config(candidate);
+    config_ = std::move(candidate);
+    persist_config();
     return ok_result();
   }
   if (method == "audio.listDevices") {
@@ -460,6 +633,7 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
     const std::string id = string_value(required(params, "id"), "id", 512u);
     require_ok(runtime_.select_output(id), "select output");
     config_.object["output_device_id"] = Json::string(id);
+    persist_config();
     return audio_status_json(runtime_.audio_status());
   }
   if (method == "audio.getLatency") {
@@ -540,6 +714,10 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
       throw RpcError(kInvalidParams, "unknown performance control: " + control);
     }
     require_ok(runtime_.submit(value), "performance control");
+    if (control == "chord") {
+      config_.object["chord_mode"] = Json::number(value.payload.integer.value);
+      persist_config();
+    }
     return ok_result();
   }
   if (method == "recording.start" || method == "recording.stop") {
@@ -619,13 +797,12 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
     allow_members(params, {"key", "value"});
     const std::string key = string_value(required(params, "key"), "key", 64u);
     const Json& value = required(params, "value");
-    if (key == "log_level") {
-      const std::string level = string_value(value, "value", 16u);
-      if (level != "error" && level != "warning" && level != "info" && level != "debug")
-        throw RpcError(kInvalidParams, "log_level must be error, warning, info, or debug");
-    } else if (key == "web_ui") {
-      (void)bool_value(value, "value");
-    } else if (key == "bpm") {
+    if (key == "schema_version" || config_.object.find(key) == config_.object.end())
+      throw RpcError(kInvalidParams, "configuration key is read-only or unknown: " + key);
+    Json candidate = config_;
+    candidate.object[key] = value;
+    validate_config(candidate);
+    if (key == "bpm") {
       mol_command_t update = command(MOL_COMMAND_SET_TEMPO);
       update.payload.scalar.value =
           static_cast<float>(real_value(value, "value", MOL_TEMPO_MIN, MOL_TEMPO_MAX));
@@ -641,11 +818,30 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
     } else if (key == "output_device_id") {
       require_ok(runtime_.select_output(string_value(value, "value", 512u)),
                  "set configured output");
-    } else {
-      throw RpcError(kInvalidParams, "configuration key is read-only or unknown: " + key);
+    } else if (key == "input_device_id") {
+      require_ok(runtime_.attach_input(string_value(value, "value", 512u)), "set configured input");
+    } else if (key == "scale_type" || key == "scale_tonic" || key == "scale_mapping") {
+      mol_command_t update = command(MOL_COMMAND_SET_SCALE);
+      update.payload.scale.type = static_cast<std::uint32_t>(
+          u64_value(required(candidate, "scale_type"), "scale_type", MOL_SCALE_TYPE_COUNT - 1u));
+      update.payload.scale.tonic = static_cast<std::uint8_t>(
+          u64_value(required(candidate, "scale_tonic"), "scale_tonic", 11u));
+      update.payload.scale.mapping = static_cast<std::uint8_t>(u64_value(
+          required(candidate, "scale_mapping"), "scale_mapping", MOL_SCALE_MAPPING_COUNT - 1u));
+      require_ok(runtime_.submit(update), "set configured scale");
+    } else if (key == "chord_mode") {
+      mol_command_t update = command(MOL_COMMAND_SET_CHORD_MODE);
+      update.payload.integer.value =
+          static_cast<std::int32_t>(u64_value(value, "value", MOL_CHORD_MODE_COUNT - 1u));
+      require_ok(runtime_.submit(update), "set configured chord");
     }
-    config_.object[key] = value;
-    return ok_result();
+    config_ = std::move(candidate);
+    persist_config();
+    Json::Object result;
+    result["ok"] = Json::boolean_value(true);
+    result["restart_required"] =
+        Json::boolean_value(key == "sample_rate_policy" || key == "max_voices" || key == "ipc");
+    return Json::object_value(std::move(result));
   }
   if (method == "diagnostics.selfTest") {
     allow_members(params, {});

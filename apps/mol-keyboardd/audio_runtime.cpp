@@ -167,7 +167,7 @@ class AudioRuntime::Impl {
   void stop();
   bool initialize_context(bool null_backend, std::string& error);
   bool initialize_device(const std::string& device_id, std::string& error);
-  void shutdown_device();
+  void shutdown_device(bool shutdown_engine = true);
   void drain_commands() noexcept;
   mol_result_t synchronize(mol_engine_state_t* state, const molseq::SequenceDocument* load,
                            molseq::SequenceDocument* recording);
@@ -224,6 +224,7 @@ bool AudioRuntime::Impl::initialize_context(bool use_null_backend, std::string& 
 }
 
 bool AudioRuntime::Impl::initialize_device(const std::string& device_id, std::string& error) {
+  const bool had_engine = engine != nullptr;
   ma_device_id selected_id{};
   if (!device_id.empty() && device_id != "default" && !decode_device_id(device_id, selected_id)) {
     error = "invalid output device identifier";
@@ -231,7 +232,7 @@ bool AudioRuntime::Impl::initialize_device(const std::string& device_id, std::st
   }
 
   ma_device_config config = ma_device_config_init(ma_device_type_playback);
-  config.sampleRate = 0u;
+  config.sampleRate = engine == nullptr ? 0u : status.sample_rate;
   config.periodSizeInFrames = kRequestedPeriodFrames;
   config.periods = kRequestedPeriods;
   config.performanceProfile = ma_performance_profile_low_latency;
@@ -256,20 +257,27 @@ bool AudioRuntime::Impl::initialize_device(const std::string& device_id, std::st
   }
   device_initialized = true;
 
-  mol_engine_config_t engine_config = mol_engine_config_default();
-  engine_config.sample_rate = device.sampleRate;
-  engine_config.channel_count = kChannelCount;
-  const std::size_t required = mol_engine_query_memory(&engine_config);
-  if (required == 0u || required > memory->bytes.size()) {
-    error = "engine memory requirement exceeds the fixed desktop arena";
-    shutdown_device();
-    return false;
-  }
-  const mol_result_t engine_result =
-      mol_engine_init(memory->bytes.data(), memory->bytes.size(), &engine_config, &engine);
-  if (engine_result != MOL_OK) {
-    error = std::string("engine initialization failed: ") + mol_result_string(engine_result);
-    shutdown_device();
+  if (engine == nullptr) {
+    mol_engine_config_t engine_config = mol_engine_config_default();
+    engine_config.sample_rate = device.sampleRate;
+    engine_config.channel_count = kChannelCount;
+    const std::size_t required = mol_engine_query_memory(&engine_config);
+    if (required == 0u || required > memory->bytes.size()) {
+      error = "engine memory requirement exceeds the fixed desktop arena";
+      shutdown_device();
+      return false;
+    }
+    const mol_result_t engine_result =
+        mol_engine_init(memory->bytes.data(), memory->bytes.size(), &engine_config, &engine);
+    if (engine_result != MOL_OK) {
+      error = std::string("engine initialization failed: ") + mol_result_string(engine_result);
+      shutdown_device();
+      return false;
+    }
+  } else if (device.sampleRate != status.sample_rate) {
+    error = "selected output cannot use the active engine sample rate";
+    ma_device_uninit(&device);
+    device_initialized = false;
     return false;
   }
 
@@ -292,7 +300,7 @@ bool AudioRuntime::Impl::initialize_device(const std::string& device_id, std::st
   audio_result = ma_device_start(&device);
   if (audio_result != MA_SUCCESS) {
     error = std::string("audio output start failed: ") + ma_result_description(audio_result);
-    shutdown_device();
+    shutdown_device(!had_engine);
     return false;
   }
   device_started = true;
@@ -323,13 +331,13 @@ bool AudioRuntime::Impl::start(bool use_null_backend, const std::string& device_
   return true;
 }
 
-void AudioRuntime::Impl::shutdown_device() {
+void AudioRuntime::Impl::shutdown_device(bool shutdown_engine) {
   if (device_started) {
     stopping.store(true, std::memory_order_release);
     (void)ma_device_stop(&device);
     device_started = false;
   }
-  if (engine != nullptr) {
+  if (shutdown_engine && engine != nullptr) {
     drain_commands();
     mol_command_t silence = make_command(MOL_COMMAND_ALL_SOUND_OFF);
     (void)mol_engine_submit(engine, &silence);
@@ -562,10 +570,18 @@ std::vector<molcontrol::DeviceInfo> AudioRuntime::output_devices() {
 mol_result_t AudioRuntime::select_output(const std::string& id) {
   std::lock_guard<std::mutex> lock(impl_->control_mutex);
   if (!impl_->context_initialized) return MOL_ERROR_INVALID_STATE;
-  impl_->shutdown_device();
+  const std::string previous_id = impl_->status.device_id;
+  impl_->shutdown_device(false);
   impl_->stopping.store(false, std::memory_order_release);
   std::string error;
-  return impl_->initialize_device(id, error) ? MOL_OK : MOL_ERROR_IO;
+  if (impl_->initialize_device(id, error)) return MOL_OK;
+  impl_->stopping.store(false, std::memory_order_release);
+  std::string recovery_error;
+  if (!impl_->initialize_device(previous_id, recovery_error) && previous_id != "default") {
+    impl_->stopping.store(false, std::memory_order_release);
+    (void)impl_->initialize_device("default", recovery_error);
+  }
+  return MOL_ERROR_IO;
 }
 
 molcontrol::AudioStatus AudioRuntime::audio_status() const {

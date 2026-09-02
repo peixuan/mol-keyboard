@@ -21,10 +21,12 @@ class ServiceBackend final : public RpcBackend {
 
  private:
   molseq::Json invoke_checked(std::string_view method, const molseq::Json& params);
+  void persist_config() const;
   molseq::Json config_;
   ServiceRuntime& runtime_;
   std::filesystem::path state_directory_;
   std::filesystem::path recordings_directory_;
+  std::filesystem::path config_path_;
 };
 
 }  // namespace molcontrol

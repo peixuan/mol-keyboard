@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <utility>
@@ -227,10 +228,20 @@ int main() {
     dispatch(dispatcher, "diagnostics.benchmark", "{\"frames\":1024}");
     dispatch(dispatcher, "system.shutdown");
 
+    molcontrol::ServiceBackend restored_backend(*runtime, state);
+    molcontrol::JsonRpcDispatcher restored_dispatcher;
+    if (!molcontrol::register_service_methods(restored_dispatcher, restored_backend)) return 1;
+    const molseq::Json restored =
+        dispatch(restored_dispatcher, "config.get", "{\"key\":\"log_level\"}");
+    if (molseq::json_string(molseq::require_member(restored, "log_level")) != "debug" ||
+        std::filesystem::exists(state / "config.json.tmp"))
+      return 1;
+
     if (!runtime->shutdown_requested ||
         !std::filesystem::is_regular_file(backend.recordings_directory() / "take.molseq") ||
         !dispatch_fails(dispatcher, "recording.save", "{\"name\":\"../escape.molseq\"}") ||
         !dispatch_fails(dispatcher, "transport.setTempo", "{\"bpm\":500}") ||
+        !dispatch_fails(dispatcher, "input.setMapping", "{\"mapping\":{\"4\":200}}") ||
         !dispatch_fails(dispatcher, "engine.getState", "{\"unknown\":true}")) {
       return 1;
     }
@@ -239,6 +250,20 @@ int main() {
       if (std::find(exercised_methods.begin(), exercised_methods.end(), method) ==
           exercised_methods.end())
         return 1;
+
+    const std::filesystem::path invalid_state = state / "invalid";
+    std::filesystem::create_directories(invalid_state);
+    {
+      std::ofstream invalid_config(invalid_state / "config.json", std::ios::binary);
+      invalid_config << "{\"schema_version\":1,\"unknown\":true}";
+    }
+    bool rejected_invalid_config = false;
+    try {
+      molcontrol::ServiceBackend invalid_backend(*runtime, invalid_state);
+    } catch (const std::exception&) {
+      rejected_invalid_config = true;
+    }
+    if (!rejected_invalid_config) return 1;
     return 0;
   } catch (const std::exception& error) {
     std::fprintf(stderr, "Service backend test failed: %s\n", error.what());
