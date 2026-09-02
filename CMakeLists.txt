@@ -138,6 +138,16 @@ if(NOT CMAKE_CROSSCOMPILING AND (MOL_BUILD_TOOLS OR MOL_BUILD_DAEMON OR MOL_BUIL
   set_target_properties(mol_jsonrpc PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
   mol_enable_warnings(mol_jsonrpc)
   mol_enable_optional_instrumentation(mol_jsonrpc)
+
+  add_library(mol_service_control STATIC src/control/service_backend.cpp)
+  add_library(mol::service_control ALIAS mol_service_control)
+  target_include_directories(mol_service_control PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/control)
+  target_link_libraries(mol_service_control PUBLIC mol::jsonrpc mol::sequence_document)
+  target_compile_features(mol_service_control PUBLIC cxx_std_17)
+  set_target_properties(mol_service_control PROPERTIES CXX_EXTENSIONS OFF
+                                                       CXX_STANDARD_REQUIRED ON)
+  mol_enable_warnings(mol_service_control)
+  mol_enable_optional_instrumentation(mol_service_control)
   if(MOL_BUILD_FUZZERS AND WIN32)
     target_compile_definitions(
       mol_json PRIVATE _DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION
