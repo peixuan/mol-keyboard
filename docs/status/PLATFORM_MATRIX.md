@@ -5,17 +5,17 @@ toolchain result recorded here.
 
 | Platform | Status | Verified | Toolchain / device | Command and evidence |
 |---|---|---|---|---|
-| Windows x64 | runtime-verified (M3 core and desktop audio) | 2026-09-02 | VS 2026 18.8.0; MSVC 19.51.36248; miniaudio 0.11.25; WASAPI; Clang 22.1.3 sanitizers | Debug/Release 24/24 tests; Standard 18-preset audio golden; ASan/UBSan 19/19 including Patch fuzz; real default device at 48 kHz |
+| Windows x64 | runtime-verified (M4 core/tools and desktop audio) | 2026-09-03 | VS 2026 18.8.0; MSVC 19.51.36248; miniaudio 0.11.25; WASAPI; Clang 22.1.3 sanitizers | Debug/Release 51/51 tests; deterministic record/playback and WAV/JSON evidence; ASan/UBSan 23/23 with Patch and Sequence fuzz; real default device at 48 kHz |
 | Windows arm64 | planned | — | Not evaluated | Pending |
 | Linux x86_64 | planned | — | Not available on this host | Pending CI or Linux host |
 | Linux aarch64 | planned | — | Not available on this host | Pending CI or device |
 | macOS arm64/x64 | planned | — | Apple SDK not available on this host | Pending macOS host |
-| WebAssembly | runtime-verified (M3 core/worklet) | 2026-09-02 | Emscripten 6.0.5; Node.js 22.16.0; Chromium | Debug/Release 20/20 tests; all 18 Standard-preset PCM metrics match Native golden tolerances; real AudioWorklet C4 261.25 Hz |
+| WebAssembly | runtime-verified (M4 core/worklet) | 2026-09-03 | Emscripten 6.0.5; Node.js 22.16.0; Chromium | Debug/Release 23/23 tests; shared 12-event sequence fixture and all 18 Standard-preset PCM metrics match Native goldens; real AudioWorklet C4 261.25 Hz |
 | Android arm64/x86_64 | source-checked (M1 Oboe entry) | 2026-09-02 | Oboe 1.10.0 headers; MSVC strict source check; Android NDK unavailable | Kotlin/JNI/Oboe path present; actual ABI build and device remain unverified |
 | iOS arm64 | source-reviewed (M1 AudioUnit entry) | 2026-09-02 | Apple SDK unavailable on this host | Objective-C++/AVAudioSession/AudioUnit path present; compilation and device remain unverified |
 | HarmonyOS arm64 | source-checked (M1 OHAudio entry) | 2026-09-02 | OpenHarmony audio declarations at c2e9f5b; MSVC strict source check; DevEco SDK unavailable | ArkTS/Node-API/OHAudio path present; OHOS build and device remain unverified |
-| ESP32 | build-verified (M3 Tiny core/I2S) | 2026-09-02 | ESP-IDF 6.1; GNU 15.2.0 | Current firmware with all 18 patches and effects built; app binary 146,704 bytes; core archive 20,422 bytes; 33,572 bytes internal DRAM remain |
-| ESP32-S3 | build-verified (M3 Tiny core/I2S) | 2026-09-02 | ESP-IDF 6.1; GNU 15.2.0 | Current firmware with all 18 patches and effects built; app binary 172,560 bytes; core archive 20,646 bytes; 169,105 bytes internal RAM remain; no Classic A2DP claim |
+| ESP32 | build-verified (M4 Tiny core/I2S) | 2026-09-03 | ESP-IDF 6.1; GNU 15.2.0 | Firmware parses the shared 12-event fixture before I2S startup; app binary 153,440 bytes; 33,572 bytes internal DRAM remain |
+| ESP32-S3 | build-verified (M4 Tiny core/I2S) | 2026-09-03 | ESP-IDF 6.1; GNU 15.2.0 | Firmware parses the shared 12-event fixture before I2S startup; app binary 179,328 bytes; 169,105 bytes internal RAM remain; no Classic A2DP claim |
 
 ## Capability boundaries
 

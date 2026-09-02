@@ -6,8 +6,8 @@
 | M1 portable sound path | passed | Same C4 sequence is 261.25 Hz with finite output in Native, Wasm, and the ESP32 32 kHz core path; allocation-free desktop/worklet/I2S callbacks and Android Oboe, Apple AudioUnit, and Harmony OHAudio call entries exist |
 | M2 music semantics | passed | All required transforms, gesture ownership, sustain, portamento, transport, metronome, and six arpeggiator modes pass 17 Native and 15 Wasm tests; both targets match the 35-event golden digest; exact transport math reaches the two-hour frame with zero drift |
 | M3 instruments and DSP | passed | All DSP primitives, 18 compiled procedural patches, stereo effects/master safety, calibrated audio golden, Native/Wasm metric conformance, sanitizer fuzzing, Tiny/feature-off builds, and current ESP32/ESP32-S3 map evidence pass |
-| M4 recording and tools | in progress | Highest unmet gate after M3 |
-| M5 desktop headless product | not started | Depends on M4 |
+| M4 recording and tools | passed | Bounded streaming Mol Sequence v1, deterministic processed-event recording/playback, JSON/MIDI/editing tools, three-format offline WAV renderer, corruption/round-trip tests, parser/writer fuzzing, and one shared Native/Wasm/ESP32 sequence fixture pass |
+| M5 desktop headless product | in progress | Highest unmet gate after M4 |
 | M6 Web/PWA | not started | Depends on portable core gates |
 | M7 Android and iOS | not started | Depends on portable core gates |
 | M8 HarmonyOS | not started | Depends on portable core gates |

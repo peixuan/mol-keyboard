@@ -16,9 +16,8 @@ It does not contain code or assets from an earlier MoL Keyboard project.
 
 ## Current status / 当前状态
 
-The M0 engineering baseline and M1 portable sound-path gate are complete;
-development is now implementing M2 music semantics on the
-freestanding-friendly ISO C11 core. Platform claims
+The M0-M4 quality gates are complete; development is now implementing the M5
+desktop headless product around the freestanding-friendly ISO C11 core. Platform claims
 are recorded only after real builds or runtime checks. See
 [`docs/status/IMPLEMENTATION_STATUS.md`](docs/status/IMPLEMENTATION_STATUS.md)
 and [`docs/status/PLATFORM_MATRIX.md`](docs/status/PLATFORM_MATRIX.md) for current
@@ -44,13 +43,23 @@ implementations.
 Windows 用户需在 Visual Studio 开发者终端中运行，并确保 `PATH` 中包含 Ninja。其他平台
 命令会随真实验证的实现逐步补充。
 
-Render a deterministic C4 performance to 16-bit PCM WAV without an audio device:
+Render the included sequence to a deterministic 24-bit mono WAV without an audio device:
 
 ```powershell
-build/dev-release/apps/mol-render/mol-render --output c4.wav --duration 2 --note 60
+build/dev-release/apps/mol-render/mol-render examples/sequences/scale-study.molseq `
+  --output scale-study.wav --format pcm24 --channels 1 --report scale-study.json
 ```
 
-无需音频设备即可用上述命令将确定性的 C4 演奏渲染为 16-bit PCM WAV。
+无需音频设备即可用上述命令将示例序列确定性地渲染为 24-bit 单声道 WAV，并生成含统计与
+SHA-256 的 JSON 报告。
+
+Inspect, validate, convert, or edit Mol Sequence v1 files with `mol-seq`:
+
+```powershell
+build/dev-release/apps/mol-seq/mol-seq inspect examples/sequences/scale-study.molseq
+build/dev-release/apps/mol-seq/mol-seq binary-to-json input.molseq output.molseq.json
+build/dev-release/apps/mol-seq/mol-seq midi-export input.molseq output.mid
+```
 
 List desktop outputs or play the same C4 through the system default device:
 
