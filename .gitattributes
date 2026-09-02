@@ -1,14 +1,9 @@
-# Normalize text files in the repository.
-* text=auto
-
-# Use LF for repository configuration files.
-.gitattributes text eol=lf
-.gitignore text eol=lf
-.editorconfig text eol=lf
-
-# Use LF for Markdown files.
-*.[mM][dD] text eol=lf
-
-# Use CRLF for Windows command scripts.
-*.[bB][aA][tT] text eol=crlf
-*.[cC][mM][dD] text eol=crlf
+# SPDX-License-Identifier: Apache-2.0
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.png binary
+*.wav binary
+*.molpatch binary
+*.molseq binary

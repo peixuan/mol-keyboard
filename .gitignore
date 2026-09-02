@@ -1,9 +1,12 @@
-# Operating system files
-.DS_Store
-Thumbs.db
-Desktop.ini
-
-# Editor temporary files
+# SPDX-License-Identifier: Apache-2.0
+/build/
+/out/
+/.cache/
+/.vs/
+/.vscode/
+*.user
+*.suo
 *.swp
-*.swo
-*~
+*.tmp
+*.log
+compile_commands.json
