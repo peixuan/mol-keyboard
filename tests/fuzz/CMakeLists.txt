@@ -40,6 +40,15 @@ endfunction()
 mol_add_fuzzer(fuzz_patch_parser fuzz_patch_parser.c)
 mol_add_fuzzer(fuzz_sequence_parser fuzz_sequence_parser.c)
 mol_add_fuzzer(fuzz_wire_parser fuzz_wire_parser.c)
+mol_add_fuzzer(fuzz_jsonrpc_dispatch fuzz_jsonrpc_dispatch.cpp)
+target_link_libraries(fuzz_jsonrpc_dispatch PRIVATE mol::jsonrpc)
+target_compile_features(fuzz_jsonrpc_dispatch PRIVATE cxx_std_17)
+set_target_properties(fuzz_jsonrpc_dispatch PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
+if(WIN32)
+  target_compile_definitions(
+    fuzz_jsonrpc_dispatch
+    PRIVATE _DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION _ITERATOR_DEBUG_LEVEL=0)
+endif()
 
 set(_mol_patch_corpus "${CMAKE_CURRENT_BINARY_DIR}/corpus/patch_parser_ci")
 set(_mol_patch_artifacts "${CMAKE_CURRENT_BINARY_DIR}/artifacts/patch_parser")
@@ -76,3 +85,14 @@ add_test(
   COMMAND fuzz_wire_parser -max_total_time=20 -max_len=64 -timeout=5
           -artifact_prefix=${_mol_wire_artifacts}/)
 set_tests_properties(fuzz_wire_parser_smoke PROPERTIES TIMEOUT 45)
+
+set(_mol_jsonrpc_corpus "${CMAKE_CURRENT_BINARY_DIR}/corpus/jsonrpc_dispatch_ci")
+set(_mol_jsonrpc_artifacts "${CMAKE_CURRENT_BINARY_DIR}/artifacts/jsonrpc_dispatch")
+file(MAKE_DIRECTORY "${_mol_jsonrpc_corpus}" "${_mol_jsonrpc_artifacts}")
+configure_file(seeds/jsonrpc_request.json ${_mol_jsonrpc_corpus}/request.json COPYONLY)
+add_test(
+  NAME fuzz_jsonrpc_dispatch_smoke
+  COMMAND
+    fuzz_jsonrpc_dispatch -max_total_time=20 -max_len=65536 -timeout=5
+    -artifact_prefix=${_mol_jsonrpc_artifacts}/ ${_mol_jsonrpc_corpus})
+set_tests_properties(fuzz_jsonrpc_dispatch_smoke PROPERTIES TIMEOUT 45)

@@ -74,6 +74,7 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_C_COMPILER": "clang",
         "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded",
         "MOL_BUILD_FUZZERS": "ON",
         "MOL_BUILD_TOOLS": "OFF",
         "MOL_BUILD_DESKTOP_AUDIO": "OFF",

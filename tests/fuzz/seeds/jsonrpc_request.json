@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","method":"echo","params":{"note":60,"velocity":0.8},"id":1}

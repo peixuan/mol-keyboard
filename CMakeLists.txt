@@ -125,6 +125,14 @@ if(NOT CMAKE_CROSSCOMPILING AND (MOL_BUILD_TOOLS OR MOL_BUILD_DAEMON OR MOL_BUIL
   set_target_properties(mol_jsonrpc PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
   mol_enable_warnings(mol_jsonrpc)
   mol_enable_optional_instrumentation(mol_jsonrpc)
+  if(MOL_BUILD_FUZZERS AND WIN32)
+    target_compile_definitions(
+      mol_json PRIVATE _DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION
+                       _ITERATOR_DEBUG_LEVEL=0)
+    target_compile_definitions(
+      mol_jsonrpc PRIVATE _DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION
+                          _ITERATOR_DEBUG_LEVEL=0)
+  endif()
 endif()
 
 install(
