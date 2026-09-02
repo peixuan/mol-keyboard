@@ -8,7 +8,7 @@
 #include "mol/mol.h"
 
 #define MOL_DEVICE_SETTINGS_RECORD_SIZE 128u
-#define MOL_DEVICE_SETTINGS_VERSION 1u
+#define MOL_DEVICE_SETTINGS_VERSION 2u
 #define MOL_DEVICE_SETTINGS_COMMAND_COUNT 11u
 
 typedef uint32_t mol_device_output_mode_t;
@@ -40,6 +40,8 @@ typedef struct mol_device_settings {
   uint8_t web_ui_enabled;
   uint8_t paired_peer_valid;
   uint8_t paired_peer_address[6];
+  uint8_t a2dp_sink_valid;
+  uint8_t a2dp_sink_address[6];
 } mol_device_settings_t;
 
 mol_device_settings_t mol_device_settings_default(void);

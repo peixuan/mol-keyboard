@@ -58,6 +58,7 @@ static void test_non_default_round_trip(void) {
   mol_device_settings_t settings = mol_device_settings_default();
   mol_device_settings_t decoded;
   const uint8_t address[6] = {0x10u, 0x20u, 0x30u, 0x40u, 0x50u, 0x60u};
+  const uint8_t sink_address[6] = {0x60u, 0x50u, 0x40u, 0x30u, 0x20u, 0x10u};
   settings.master_gain = 1.25f;
   settings.preset = MOL_PRESET_MUSIC_BOX;
   settings.octave_shift = -3;
@@ -82,6 +83,8 @@ static void test_non_default_round_trip(void) {
   settings.web_ui_enabled = 0u;
   settings.paired_peer_valid = 1u;
   memcpy(settings.paired_peer_address, address, sizeof(address));
+  settings.a2dp_sink_valid = 1u;
+  memcpy(settings.a2dp_sink_address, sink_address, sizeof(sink_address));
   EXPECT_TRUE(mol_device_settings_encode(&settings, encoded) == MOL_OK);
   EXPECT_TRUE(mol_device_settings_decode(encoded, sizeof(encoded), &decoded) == MOL_OK);
   EXPECT_TRUE(memcmp(&decoded, &settings, sizeof(settings)) == 0);
@@ -101,7 +104,7 @@ static void test_corruption_is_rejected(void) {
   }
   EXPECT_TRUE(mol_device_settings_decode(encoded, sizeof(encoded) - 1u, &decoded) ==
               MOL_ERROR_CORRUPT_DATA);
-  encoded[4] = 2u;
+  encoded[4] = 3u;
   refresh_crc(encoded);
   EXPECT_TRUE(mol_device_settings_decode(encoded, sizeof(encoded), &decoded) ==
               MOL_ERROR_UNSUPPORTED_VERSION);
@@ -117,7 +120,7 @@ static void test_noncanonical_fields_are_rejected(void) {
   EXPECT_TRUE(mol_device_settings_decode(encoded, sizeof(encoded), &decoded) ==
               MOL_ERROR_CORRUPT_DATA);
   EXPECT_TRUE(mol_device_settings_encode(&settings, encoded) == MOL_OK);
-  encoded[114] = 1u;
+  encoded[121] = 1u;
   refresh_crc(encoded);
   EXPECT_TRUE(mol_device_settings_decode(encoded, sizeof(encoded), &decoded) ==
               MOL_ERROR_CORRUPT_DATA);
@@ -147,6 +150,34 @@ static void test_invalid_values_are_rejected(void) {
   EXPECT_TRUE(mol_device_settings_validate(&settings) == MOL_ERROR_INVALID_ARGUMENT);
   settings.paired_peer_valid = 1u;
   EXPECT_TRUE(mol_device_settings_validate(&settings) == MOL_OK);
+  settings = mol_device_settings_default();
+  settings.a2dp_sink_address[5] = 1u;
+  EXPECT_TRUE(mol_device_settings_validate(&settings) == MOL_ERROR_INVALID_ARGUMENT);
+  settings.a2dp_sink_valid = 1u;
+  EXPECT_TRUE(mol_device_settings_validate(&settings) == MOL_OK);
+}
+
+static void test_version_one_migrates_without_a2dp_sink(void) {
+  uint8_t encoded[MOL_DEVICE_SETTINGS_RECORD_SIZE];
+  mol_device_settings_t settings = mol_device_settings_default();
+  mol_device_settings_t decoded;
+  const uint8_t keyboard_address[6] = {1u, 2u, 3u, 4u, 5u, 6u};
+  settings.generation = 17u;
+  settings.paired_peer_valid = 1u;
+  memcpy(settings.paired_peer_address, keyboard_address, sizeof(keyboard_address));
+  EXPECT_TRUE(mol_device_settings_encode(&settings, encoded) == MOL_OK);
+  encoded[4] = 1u;
+  encoded[5] = 0u;
+  encoded[6] = 0u;
+  encoded[7] = 0u;
+  memset(encoded + 114u, 0, 10u);
+  refresh_crc(encoded);
+  EXPECT_TRUE(mol_device_settings_decode(encoded, sizeof(encoded), &decoded) == MOL_OK);
+  EXPECT_TRUE(decoded.generation == 17u);
+  EXPECT_TRUE(decoded.paired_peer_valid == 1u);
+  EXPECT_TRUE(memcmp(decoded.paired_peer_address, keyboard_address, sizeof(keyboard_address)) == 0);
+  EXPECT_TRUE(decoded.a2dp_sink_valid == 0u);
+  EXPECT_TRUE(memcmp(decoded.a2dp_sink_address, "\0\0\0\0\0\0", 6u) == 0);
 }
 
 static void test_command_compilation(void) {
@@ -219,6 +250,7 @@ int main(void) {
   test_corruption_is_rejected();
   test_noncanonical_fields_are_rejected();
   test_invalid_values_are_rejected();
+  test_version_one_migrates_without_a2dp_sink();
   test_command_compilation();
   if (failures != 0) {
     fprintf(stderr, "%d ESP32 settings test(s) failed\n", failures);

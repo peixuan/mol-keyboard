@@ -63,7 +63,7 @@ static uint32_t settings_crc32(const uint8_t* input, size_t size) {
   return ~crc;
 }
 
-static bool encoded_small_fields_are_canonical(const uint8_t* input) {
+static bool encoded_small_fields_are_canonical(const uint8_t* input, uint32_t version) {
   static const size_t offsets[] = {36u, 40u, 60u, 72u, 76u, 80u, 100u, 104u};
   size_t index;
   for (index = 0u; index < sizeof(offsets) / sizeof(offsets[0]); ++index) {
@@ -71,8 +71,22 @@ static bool encoded_small_fields_are_canonical(const uint8_t* input) {
       return false;
     }
   }
-  for (index = 114u; index < MOL_SETTINGS_CRC_OFFSET; ++index) {
-    if (input[index] != 0u) {
+  if (version == 1u) {
+    for (index = 114u; index < MOL_SETTINGS_CRC_OFFSET; ++index) {
+      if (input[index] != 0u) {
+        return false;
+      }
+    }
+  } else if (read_u32(input + 120u) > UINT8_MAX) {
+    return false;
+  }
+  return true;
+}
+
+static bool address_is_zero(const uint8_t* address, size_t size) {
+  size_t index;
+  for (index = 0u; index < size; ++index) {
+    if (address[index] != 0u) {
       return false;
     }
   }
@@ -103,8 +117,6 @@ mol_device_settings_t mol_device_settings_default(void) {
 
 mol_result_t mol_device_settings_validate(const mol_device_settings_t* settings) {
   uint32_t ignored_milli_bpm;
-  uint32_t index;
-  bool peer_address_is_zero = true;
   if (settings == NULL || !isfinite(settings->master_gain) || settings->master_gain < 0.0f ||
       settings->master_gain > 2.0f || settings->preset >= MOL_PRESET_COUNT ||
       settings->octave_shift < -3 || settings->octave_shift > 3 || settings->transpose < -24 ||
@@ -125,13 +137,13 @@ mol_result_t mol_device_settings_validate(const mol_device_settings_t* settings)
       !isfinite(settings->portamento_time_ms) || settings->portamento_time_ms < 0.0f ||
       settings->portamento_time_ms > 2000.0f ||
       settings->output_mode >= MOL_DEVICE_OUTPUT_MODE_COUNT || settings->web_ui_enabled > 1u ||
-      settings->paired_peer_valid > 1u) {
+      settings->paired_peer_valid > 1u || settings->a2dp_sink_valid > 1u) {
     return MOL_ERROR_INVALID_ARGUMENT;
   }
-  for (index = 0u; index < sizeof(settings->paired_peer_address); ++index) {
-    peer_address_is_zero = peer_address_is_zero && settings->paired_peer_address[index] == 0u;
-  }
-  if ((settings->paired_peer_valid == 0u) != peer_address_is_zero) {
+  if ((settings->paired_peer_valid == 0u) !=
+          address_is_zero(settings->paired_peer_address, sizeof(settings->paired_peer_address)) ||
+      (settings->a2dp_sink_valid == 0u) !=
+          address_is_zero(settings->a2dp_sink_address, sizeof(settings->a2dp_sink_address))) {
     return MOL_ERROR_INVALID_ARGUMENT;
   }
   return MOL_OK;
@@ -176,6 +188,8 @@ mol_result_t mol_device_settings_encode(const mol_device_settings_t* settings,
   write_u32(output + 100u, settings->web_ui_enabled);
   write_u32(output + 104u, settings->paired_peer_valid);
   memcpy(output + 108u, settings->paired_peer_address, sizeof(settings->paired_peer_address));
+  memcpy(output + 114u, settings->a2dp_sink_address, sizeof(settings->a2dp_sink_address));
+  write_u32(output + 120u, settings->a2dp_sink_valid);
   write_u32(output + MOL_SETTINGS_CRC_OFFSET, settings_crc32(output, MOL_SETTINGS_CRC_OFFSET));
   return MOL_OK;
 }
@@ -183,6 +197,7 @@ mol_result_t mol_device_settings_encode(const mol_device_settings_t* settings,
 mol_result_t mol_device_settings_decode(const uint8_t* input, size_t input_size,
                                         mol_device_settings_t* settings) {
   mol_device_settings_t decoded;
+  uint32_t version;
   if (input == NULL || settings == NULL) {
     return MOL_ERROR_INVALID_ARGUMENT;
   }
@@ -191,12 +206,15 @@ mol_result_t mol_device_settings_decode(const uint8_t* input, size_t input_size,
     return MOL_ERROR_CORRUPT_DATA;
   }
   if (read_u32(input + 0u) != MOL_SETTINGS_MAGIC ||
-      read_u32(input + 8u) != MOL_SETTINGS_PAYLOAD_SIZE ||
-      !encoded_small_fields_are_canonical(input)) {
+      read_u32(input + 8u) != MOL_SETTINGS_PAYLOAD_SIZE) {
     return MOL_ERROR_CORRUPT_DATA;
   }
-  if (read_u32(input + 4u) != MOL_DEVICE_SETTINGS_VERSION) {
+  version = read_u32(input + 4u);
+  if (version != 1u && version != MOL_DEVICE_SETTINGS_VERSION) {
     return MOL_ERROR_UNSUPPORTED_VERSION;
+  }
+  if (!encoded_small_fields_are_canonical(input, version)) {
+    return MOL_ERROR_CORRUPT_DATA;
   }
   decoded = mol_device_settings_default();
   decoded.generation = read_u32(input + 12u);
@@ -224,6 +242,10 @@ mol_result_t mol_device_settings_decode(const uint8_t* input, size_t input_size,
   decoded.web_ui_enabled = (uint8_t)read_u32(input + 100u);
   decoded.paired_peer_valid = (uint8_t)read_u32(input + 104u);
   memcpy(decoded.paired_peer_address, input + 108u, sizeof(decoded.paired_peer_address));
+  if (version >= 2u) {
+    memcpy(decoded.a2dp_sink_address, input + 114u, sizeof(decoded.a2dp_sink_address));
+    decoded.a2dp_sink_valid = (uint8_t)read_u32(input + 120u);
+  }
   if (mol_device_settings_validate(&decoded) != MOL_OK) {
     return MOL_ERROR_CORRUPT_DATA;
   }
