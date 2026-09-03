@@ -10,12 +10,15 @@
       const result = document.querySelector("#result");
       try {
         const context = new OfflineAudioContext(2, 48000, 48000);
+        const wasmResponse = await fetch("./mol_audio_worklet_core.wasm");
+        if (!wasmResponse.ok) throw new Error(`Wasm fetch failed: HTTP ${wasmResponse.status}`);
+        const wasmBinary = await wasmResponse.arrayBuffer();
         await context.audioWorklet.addModule("./mol_audio_worklet_core.js");
         const node = new AudioWorkletNode(context, "mol-keyboard", {
           numberOfInputs: 0,
           numberOfOutputs: 1,
           outputChannelCount: [2],
-          processorOptions: { initialNote: 60 },
+          processorOptions: { initialNote: 60, wasmBinary },
         });
         node.connect(context.destination);
         const rendered = await context.startRendering();

@@ -1,63 +1,73 @@
 // SPDX-License-Identifier: Apache-2.0
 
-const molModule = {};
-// With synchronous Wasm compilation the factory populates and initializes the
-// caller's object before its compatibility Promise resolves. AudioWorklet
-// module loading cannot suspend on that Promise, so the processor keeps the
-// already-initialized object and intentionally ignores the resolved value.
-void Module(molModule);
-const initialize = molModule.cwrap("mol_wasm_initialize", "number", [
-  "number",
-  "number",
-  "number",
-]);
-const noteOn = molModule.cwrap("mol_wasm_note_on", "number", [
-  "number",
-  "number",
-  "number",
-]);
-const noteOff = molModule.cwrap("mol_wasm_note_off", "number", ["number"]);
-const submitScalar = molModule.cwrap("mol_wasm_submit_scalar", "number", ["number", "number"]);
-const submitInteger = molModule.cwrap("mol_wasm_submit_integer", "number", ["number", "number"]);
-const submitParameter = molModule.cwrap("mol_wasm_submit_parameter", "number", [
-  "number",
-  "number",
-]);
-const submitPreset = molModule.cwrap("mol_wasm_submit_preset", "number", ["number", "number"]);
-const submitScale = molModule.cwrap("mol_wasm_submit_scale", "number", [
-  "number",
-  "number",
-  "number",
-]);
-const submitArpeggiator = molModule.cwrap("mol_wasm_submit_arpeggiator", "number", [
-  "number",
-  "number",
-  "number",
-  "number",
-  "number",
-]);
-const submitTimeSignature = molModule.cwrap("mol_wasm_submit_time_signature", "number", [
-  "number",
-  "number",
-]);
-const submitMetronome = molModule.cwrap("mol_wasm_submit_metronome", "number", [
-  "number",
-  "number",
-]);
-const submitPortamento = molModule.cwrap("mol_wasm_submit_portamento", "number", [
-  "number",
-  "number",
-]);
-const submitAction = molModule.cwrap("mol_wasm_submit_action", "number", ["number"]);
-const pollEvents = molModule.cwrap("mol_wasm_poll_events", "number", []);
-const eventBuffer = molModule.cwrap("mol_wasm_event_buffer", "number", []);
-const exportRecording = molModule.cwrap("mol_wasm_export_recording", "number", []);
-const recordingLastError = molModule.cwrap("mol_wasm_recording_last_error", "number", []);
-const recordingBuffer = molModule.cwrap("mol_wasm_recording_buffer", "number", []);
-const sequenceInputBuffer = molModule.cwrap("mol_wasm_sequence_input_buffer", "number", []);
-const sequenceInputCapacity = molModule.cwrap("mol_wasm_sequence_input_capacity", "number", []);
-const loadSequence = molModule.cwrap("mol_wasm_load_sequence", "number", ["number"]);
-const render = molModule.cwrap("mol_wasm_render", "number", ["number", "number"]);
+let molModule;
+let initialize;
+let noteOn;
+let noteOff;
+let submitScalar;
+let submitInteger;
+let submitParameter;
+let submitPreset;
+let submitScale;
+let submitArpeggiator;
+let submitTimeSignature;
+let submitMetronome;
+let submitPortamento;
+let submitAction;
+let pollEvents;
+let eventBuffer;
+let exportRecording;
+let recordingLastError;
+let recordingBuffer;
+let sequenceInputBuffer;
+let sequenceInputCapacity;
+let loadSequence;
+let render;
+
+async function loadMolModule(wasmBinary) {
+  if (molModule !== undefined) return true;
+  if (!(wasmBinary instanceof ArrayBuffer) || wasmBinary.byteLength === 0) return false;
+
+  const candidate = { wasmBinary: new Uint8Array(wasmBinary) };
+  // Module registration must remain free of synchronous Wasm work. Firefox
+  // completes the Emscripten factory on a later microtask even when the actual
+  // Wasm compilation mode is synchronous, so always honor the factory Promise.
+  molModule = await Module(candidate);
+  if (typeof molModule.cwrap !== "function") return false;
+
+  initialize = molModule.cwrap("mol_wasm_initialize", "number", ["number", "number", "number"]);
+  noteOn = molModule.cwrap("mol_wasm_note_on", "number", ["number", "number", "number"]);
+  noteOff = molModule.cwrap("mol_wasm_note_off", "number", ["number"]);
+  submitScalar = molModule.cwrap("mol_wasm_submit_scalar", "number", ["number", "number"]);
+  submitInteger = molModule.cwrap("mol_wasm_submit_integer", "number", ["number", "number"]);
+  submitParameter = molModule.cwrap("mol_wasm_submit_parameter", "number", ["number", "number"]);
+  submitPreset = molModule.cwrap("mol_wasm_submit_preset", "number", ["number", "number"]);
+  submitScale = molModule.cwrap("mol_wasm_submit_scale", "number", ["number", "number", "number"]);
+  submitArpeggiator = molModule.cwrap("mol_wasm_submit_arpeggiator", "number", [
+    "number",
+    "number",
+    "number",
+    "number",
+    "number",
+  ]);
+  submitTimeSignature = molModule.cwrap("mol_wasm_submit_time_signature", "number", [
+    "number",
+    "number",
+  ]);
+  submitMetronome = molModule.cwrap("mol_wasm_submit_metronome", "number", ["number", "number"]);
+  submitPortamento = molModule.cwrap("mol_wasm_submit_portamento", "number", ["number", "number"]);
+  submitAction = molModule.cwrap("mol_wasm_submit_action", "number", ["number"]);
+  pollEvents = molModule.cwrap("mol_wasm_poll_events", "number", []);
+  eventBuffer = molModule.cwrap("mol_wasm_event_buffer", "number", []);
+  exportRecording = molModule.cwrap("mol_wasm_export_recording", "number", []);
+  recordingLastError = molModule.cwrap("mol_wasm_recording_last_error", "number", []);
+  recordingBuffer = molModule.cwrap("mol_wasm_recording_buffer", "number", []);
+  sequenceInputBuffer = molModule.cwrap("mol_wasm_sequence_input_buffer", "number", []);
+  sequenceInputCapacity = molModule.cwrap("mol_wasm_sequence_input_capacity", "number", []);
+  loadSequence = molModule.cwrap("mol_wasm_load_sequence", "number", ["number"]);
+  render = molModule.cwrap("mol_wasm_render", "number", ["number", "number"]);
+  return true;
+}
 
 const MOL_RENDER_QUANTUM = 128;
 const MOL_CHANNEL_COUNT = 2;
@@ -113,7 +123,7 @@ function numberInRange(value, minimum, maximum) {
 class MolAudioProcessor extends AudioWorkletProcessor {
   constructor(options) {
     super();
-    this.ready = initialize(sampleRate, MOL_CHANNEL_COUNT, MOL_MAX_VOICES) === 0;
+    this.ready = false;
     this.activeGestures = new Set();
     this.engineEventMessage = {
       type: "engine-events",
@@ -137,14 +147,6 @@ class MolAudioProcessor extends AudioWorkletProcessor {
       this.sharedCapacity = commandCapacity;
     }
     const initialNote = options?.processorOptions?.initialNote;
-    if (this.ready && initialNote !== undefined) {
-      noteOn(initialNote, 1.0, 1);
-    }
-    this.port.postMessage({
-      type: "ready",
-      ready: this.ready,
-      fastPath: this.sharedWords !== undefined,
-    });
     this.port.onmessage = (event) => {
       const message = event.data;
       if (!this.ready || message === null || typeof message !== "object") {
@@ -181,6 +183,25 @@ class MolAudioProcessor extends AudioWorkletProcessor {
         }
       }
     };
+    void this.initializeEngine(options?.processorOptions?.wasmBinary, initialNote);
+  }
+
+  async initializeEngine(wasmBinary, initialNote) {
+    let moduleError;
+    try {
+      const moduleReady = await loadMolModule(wasmBinary);
+      this.ready = moduleReady && initialize(sampleRate, MOL_CHANNEL_COUNT, MOL_MAX_VOICES) === 0;
+      if (this.ready && initialNote !== undefined) noteOn(initialNote, 1.0, 1);
+    } catch (error) {
+      this.ready = false;
+      moduleError = error instanceof Error ? error.message : String(error);
+    }
+    this.port.postMessage({
+      type: "ready",
+      ready: this.ready,
+      fastPath: this.sharedWords !== undefined,
+      error: moduleError,
+    });
   }
 
   handleRecordingExport(message) {

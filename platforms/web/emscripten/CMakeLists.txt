@@ -40,8 +40,7 @@ target_link_options(
           -sWASM=1
           -sMODULARIZE=1
           -sEXPORT_ES6=1
-          -sENVIRONMENT=worker
-          -sSINGLE_FILE=1
+          -sENVIRONMENT=worklet
           -sWASM_ASYNC_COMPILATION=0
           -sASSERTIONS=0
           -sALLOW_MEMORY_GROWTH=0
@@ -65,5 +64,6 @@ if(MOL_BUILD_TESTS)
   add_test(
     NAME mol_audio_worklet_conformance
     COMMAND ${MOL_NODE_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_audio_worklet.mjs
-            $<TARGET_FILE:mol_audio_worklet_core>)
+            $<TARGET_FILE:mol_audio_worklet_core>
+            $<TARGET_FILE_DIR:mol_audio_worklet_core>/mol_audio_worklet_core.wasm)
 endif()

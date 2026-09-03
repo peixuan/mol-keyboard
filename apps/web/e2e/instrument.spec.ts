@@ -16,15 +16,59 @@ test("renders the complete accessible instrument", async ({ page }) => {
   );
 });
 
+test("Firefox executes the Wasm DSP inside an offline AudioWorklet", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "firefox-desktop", "Firefox headless audio-device contract");
+  const metrics = await page.evaluate(async () => {
+    const context = new OfflineAudioContext(2, 48_000, 48_000);
+    const wasmResponse = await fetch("./generated/mol_audio_worklet_core.wasm");
+    if (!wasmResponse.ok) throw new Error("AudioWorklet Wasm unavailable");
+    const wasmBinary = await wasmResponse.arrayBuffer();
+    await context.audioWorklet.addModule("./generated/mol_audio_worklet_core.js");
+    const node = new AudioWorkletNode(context, "mol-keyboard", {
+      numberOfInputs: 0,
+      numberOfOutputs: 1,
+      outputChannelCount: [2],
+      processorOptions: { initialNote: 60, wasmBinary },
+    });
+    let resolveReady: (message: unknown) => void = () => undefined;
+    const ready = new Promise<unknown>((resolve) => {
+      resolveReady = resolve;
+    });
+    let processorError = false;
+    node.port.onmessage = (event) => {
+      resolveReady(event.data);
+    };
+    node.addEventListener("processorerror", () => {
+      processorError = true;
+    });
+    node.connect(context.destination);
+    const readyMessage = await ready;
+    const rendered = await context.startRendering();
+    const left = rendered.getChannelData(0);
+    let peak = 0;
+    let finite = true;
+    for (const sample of left) {
+      peak = Math.max(peak, Math.abs(sample));
+      finite &&= Number.isFinite(sample);
+    }
+    return { finite, peak, processorError, readyMessage };
+  });
+  expect(metrics.processorError).toBe(false);
+  expect(metrics.readyMessage).toMatchObject({ error: undefined, ready: true, type: "ready" });
+  expect(metrics.finite).toBe(true);
+  expect(metrics.peak).toBeGreaterThan(0.01);
+  expect(metrics.peak).toBeLessThanOrEqual(1);
+});
+
 test("AudioWorklet survives a busy main thread and blur releases every note", async ({ page }, testInfo) => {
   test.skip(
-    testInfo.project.name.includes("webkit"),
-    "Playwright's Windows WebKit port does not expose AudioWorklet; real Safari is a separate device gate",
+    testInfo.project.name.includes("webkit") || testInfo.project.name === "firefox-desktop",
+    "This check needs a realtime audio device; Firefox DSP is covered with OfflineAudioContext",
   );
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.getByRole("button", { name: "Start audio" }).click();
-  await expect(page.locator("[data-status]")).toContainText("Audio ready");
+  await expect(page.locator("[data-status]")).toContainText("Audio ready", { timeout: 10_000 });
   if (testInfo.project.name.startsWith("chrom") || testInfo.project.name === "edge-desktop") {
     await expect(page.locator("[data-fast-path]")).toHaveText("SharedArrayBuffer SPSC");
   }
@@ -72,6 +116,13 @@ test("persists settings and installs an offline app shell", async ({ page, conte
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page).toHaveTitle("MoL Keyboard · Play the browser");
   await expect(page.locator("[data-accessible-keys] button")).toHaveCount(30);
+  await page.getByRole("button", { name: "Start audio" }).click();
+  await expect(page.locator("[data-status]")).toContainText("Audio ready", { timeout: 10_000 });
+  const eventsBeforeOfflineNote = Number(await page.locator("[data-event-count]").textContent());
+  await page.keyboard.press("z");
+  await expect
+    .poll(async () => Number(await page.locator("[data-event-count]").textContent()))
+    .toBeGreaterThan(eventsBeforeOfflineNote);
   await context.setOffline(false);
 });
 

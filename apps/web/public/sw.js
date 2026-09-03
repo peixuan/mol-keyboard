@@ -10,6 +10,7 @@ const FIXED_ASSETS = [
   "./icons/mol-keyboard.svg",
   "./icons/mol-keyboard-maskable.svg",
   "./generated/mol_audio_worklet_core.js",
+  "./generated/mol_audio_worklet_core.wasm",
 ];
 
 async function fetchChecked(url) {

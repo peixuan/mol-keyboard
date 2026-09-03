@@ -1,19 +1,25 @@
 # Web Audio Integration
 
 MoL Keyboard's production Web target runs the portable C11 engine inside an
-`AudioWorkletProcessor`. The generated `mol_audio_worklet_core.js` file is a
-self-contained JavaScript and WebAssembly module and registers the processor
-name `mol-keyboard`.
+`AudioWorkletProcessor`. The generated `mol_audio_worklet_core.js` module
+registers the processor name `mol-keyboard`; its paired
+`mol_audio_worklet_core.wasm` contains the C engine.
 
-Serve the module over HTTP with a JavaScript MIME type and register it before
-constructing the node:
+Serve both files with their standard JavaScript and WebAssembly MIME types. Read
+the Wasm on the main thread, register the worklet, and pass the bounded binary
+to the node. This keeps worklet registration portable to browsers whose
+`AudioWorkletGlobalScope` does not provide the URL or fetch APIs:
 
 ```javascript
+const response = await fetch("./mol_audio_worklet_core.wasm");
+if (!response.ok) throw new Error(`Wasm fetch failed: HTTP ${response.status}`);
+const wasmBinary = await response.arrayBuffer();
 await audioContext.audioWorklet.addModule("./mol_audio_worklet_core.js");
 const node = new AudioWorkletNode(audioContext, "mol-keyboard", {
   numberOfInputs: 0,
   numberOfOutputs: 1,
   outputChannelCount: [2],
+  processorOptions: { wasmBinary },
 });
 node.connect(audioContext.destination);
 ```
@@ -40,9 +46,10 @@ hidden page, page hide, or blur and handles audio-state and output-device
 changes. The automated browser suite starts the real worklet and observes
 engine events rather than substituting an offline renderer.
 
-The processor intentionally has no network fetching, asynchronous setup,
-allocation, logging, blocking operation, or message posting in its render
-method. The Wasm heap is fixed at link time, and engine memory remains bounded.
+The processor's render method intentionally has no network fetching,
+asynchronous setup, allocation, logging, blocking operation, or message
+posting. Initialization is completed before the processor reports `ready`; the
+Wasm heap is fixed at link time, and engine memory remains bounded.
 
 Build and test the complete PWA with the pinned package lock:
 

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 
 let processorConstructor;
@@ -28,12 +29,43 @@ globalThis.registerProcessor = (name, constructor) => {
   processorConstructor = constructor;
 };
 
+async function readyMessage(processor) {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const ready = processor.port.messages.find((message) => message.type === "ready");
+    if (ready !== undefined) return ready;
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  throw new Error("AudioWorklet initialization timed out");
+}
+
+async function waitUntilReady(processor) {
+  const ready = await readyMessage(processor);
+  if (ready.ready !== true) throw new Error(`AudioWorklet initialization failed: ${ready.error}`);
+}
+
 await import(pathToFileURL(process.argv[2]).href);
 if (processorConstructor === undefined) {
   throw new Error("AudioWorklet processor was not registered");
 }
 
-const processor = new processorConstructor();
+const invalidProcessor = new processorConstructor({
+  processorOptions: { wasmBinary: new Uint8Array([0, 1, 2, 3]).buffer },
+});
+const invalidReady = await readyMessage(invalidProcessor);
+if (invalidReady.ready !== false || typeof invalidReady.error !== "string") {
+  throw new Error("AudioWorklet accepted a malformed Wasm module");
+}
+
+const wasmBinary = await readFile(process.argv[3]);
+const processor = new processorConstructor({
+  processorOptions: {
+    wasmBinary: wasmBinary.buffer.slice(
+      wasmBinary.byteOffset,
+      wasmBinary.byteOffset + wasmBinary.byteLength,
+    ),
+  },
+});
+await waitUntilReady(processor);
 processor.port.onmessage({
   data: { type: "control", requestId: 6, control: "action", action: "record-start" },
 });
@@ -152,6 +184,7 @@ const sharedFloats = new Float32Array(sharedBuffer);
 const sharedProcessor = new processorConstructor({
   processorOptions: { commandBuffer: sharedBuffer, commandCapacity: sharedCapacity },
 });
+await waitUntilReady(sharedProcessor);
 const sharedOffset = 4;
 sharedWords[sharedOffset] = 1;
 sharedWords[sharedOffset + 1] = 64;

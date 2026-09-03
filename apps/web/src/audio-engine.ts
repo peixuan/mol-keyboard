@@ -11,6 +11,7 @@ interface ReadyMessage {
   readonly type: "ready";
   readonly ready: boolean;
   readonly fastPath?: boolean;
+  readonly error?: string;
 }
 
 export interface EngineEvent {
@@ -27,8 +28,38 @@ interface ControlPayload {
 }
 
 const MAX_BATCH_SIZE = 64;
+const WORKLET_LOAD_TIMEOUT_MS = 8_000;
 const READY_TIMEOUT_MS = 8_000;
 const CONTROL_TIMEOUT_MS = 2_000;
+
+async function settleWithin<T>(operation: Promise<T>, message: string): Promise<T> {
+  let timer: number | undefined;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<never>((_resolve, reject) => {
+        timer = window.setTimeout(() => reject(new Error(message)), WORKLET_LOAD_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) window.clearTimeout(timer);
+  }
+}
+
+async function loadAudioWorklet(context: AudioContext, url: URL): Promise<ArrayBuffer> {
+  const wasmUrl = new URL("mol_audio_worklet_core.wasm", url);
+  const wasmResponse = await fetch(wasmUrl, { cache: "no-cache" });
+  if (!wasmResponse.ok) {
+    throw new Error(`Could not load the WebAssembly core: HTTP ${wasmResponse.status}.`);
+  }
+  const wasmBinary = await wasmResponse.arrayBuffer();
+  if (wasmBinary.byteLength === 0) throw new Error("The WebAssembly core is empty.");
+  await settleWithin(
+    context.audioWorklet.addModule(url.href),
+    "The audio worklet did not load in time.",
+  );
+  return wasmBinary;
+}
 
 export class MolAudioEngine extends EventTarget {
   private context: AudioContext | undefined;
@@ -238,8 +269,9 @@ export class MolAudioEngine extends EventTarget {
       this.deviceListenerInstalled = true;
     }
     try {
+      await settleWithin(context.resume(), "The audio output did not start in time.");
       const workletUrl = new URL("generated/mol_audio_worklet_core.js", document.baseURI);
-      await context.audioWorklet.addModule(workletUrl.href);
+      const wasmBinary = await loadAudioWorklet(context, workletUrl);
       this.sharedRing = SharedCommandRing.create();
       const node = new AudioWorkletNode(context, "mol-keyboard", {
         numberOfInputs: 0,
@@ -247,8 +279,9 @@ export class MolAudioEngine extends EventTarget {
         outputChannelCount: [2],
         processorOptions:
           this.sharedRing === undefined
-            ? undefined
+            ? { wasmBinary }
             : {
+                wasmBinary,
                 commandBuffer: this.sharedRing.buffer,
                 commandCapacity: this.sharedRing.capacity,
               },
@@ -257,12 +290,11 @@ export class MolAudioEngine extends EventTarget {
       node.port.addEventListener("message", (event: MessageEvent<unknown>) => this.onMessage(event.data));
       node.connect(context.destination);
       await this.waitUntilReady(node.port);
-      await context.resume();
     } catch (error: unknown) {
-      await context.close();
       this.context = undefined;
       this.node = undefined;
       this.startPromise = undefined;
+      void context.close().catch(() => undefined);
       throw error;
     }
   }
@@ -362,7 +394,13 @@ export class MolAudioEngine extends EventTarget {
           this.fastPath = message.fastPath === true && this.sharedRing !== undefined;
           resolve();
         } else {
-          reject(new Error("The WebAssembly audio engine could not initialize."));
+          reject(
+            new Error(
+              typeof message.error === "string" && message.error.length > 0
+                ? `The WebAssembly audio engine could not initialize: ${message.error}`
+                : "The WebAssembly audio engine could not initialize.",
+            ),
+          );
         }
       };
       port.addEventListener("message", onMessage);

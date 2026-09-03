@@ -91,6 +91,7 @@ def required_paths(root: Path) -> list[str]:
         "share/mol-keyboard/web/index.html",
         "share/mol-keyboard/web/manifest.webmanifest",
         "share/mol-keyboard/web/generated/mol_audio_worklet_core.js",
+        "share/mol-keyboard/web/generated/mol_audio_worklet_core.wasm",
         "share/mol-keyboard/service/mol-keyboardd.service",
     ]
     library_candidates = [root / "lib" / "libmol_core.a", root / "lib" / "mol_core.lib"]
