@@ -123,6 +123,19 @@
       }
     },
     {
+      "name": "endurance",
+      "inherits": "base",
+      "displayName": "Release Endurance Tests",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "MOL_BUILD_STRESS_TESTS": "ON",
+        "MOL_BUILD_TOOLS": "OFF",
+        "MOL_BUILD_DESKTOP_AUDIO": "OFF",
+        "MOL_VALIDATE_MOBILE_SOURCES": "OFF",
+        "MOL_ENABLE_ASSERTIONS": "OFF"
+      }
+    },
+    {
       "name": "ci-macos",
       "inherits": "base",
       "cacheVariables": {
@@ -229,6 +242,7 @@
     { "name": "coverage-clang", "configurePreset": "coverage-clang" },
     { "name": "static-analysis-clang", "configurePreset": "static-analysis-clang" },
     { "name": "tsan-clang", "configurePreset": "tsan-clang" },
+    { "name": "endurance", "configurePreset": "endurance" },
     { "name": "ci-macos", "configurePreset": "ci-macos" },
     { "name": "wasm-debug", "configurePreset": "wasm-debug" },
     { "name": "wasm-release", "configurePreset": "wasm-release" },
