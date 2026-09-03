@@ -59,6 +59,12 @@ instead of silently omitting both ESP32 evidence-parser tests and the Linux
 launchd-process simulation. An intentionally invalid interpreter fails
 configuration; Python 3.14.6 on Windows and 3.14.4 on Linux configure
 successfully. Windows passes 90/90, Linux passes 91/91, and Wasm passes 42/42.
+The same candidate has now been rebuilt under GNU 15 Release+LTO in Tiny,
+Standard, and Full configurations, passing 90/90, 91/91, and 90/90. Its Windows
+and Linux shared builds pass 88/88 and 89/89, respectively; independent C11 and
+C++17 consumers compiled against the installed packages run on both hosts, the
+Linux library matches all 47 public symbols, and ABI Compliance Checker reports
+100% binary and source compatibility with no problems or warnings.
 The preceding `5e84b49` candidate makes browser acceptance fail when the real
 desktop daemon is absent, and the checked-in Linux CI path builds that daemon
 before running the locked production Web bundle across Chromium, Firefox, and
@@ -144,12 +150,13 @@ Debug suite passes 59/59, affected MSVC tests pass 5/5, and ESP32 HIL
 parser/model self-tests pass 5/5. The prior
 `4f77f56` candidate retains the complete MSVC Debug/LTO Release, Linux Clang,
 ABI, sanitizer, analysis, endurance, size, package, and clean-checkout evidence
-documented below. MSVC Debug/LTO Release and Linux Clang previously passed
-78/78 tests; Emscripten MinSizeRel passes 31/31. Windows and Linux shared-core
-builds pass 74/74 public-boundary tests, expose exactly the 47 version 1.0 API
-symbols, and Linux ABI Compliance Checker reports 100% binary and source
-compatibility with zero problems. GNU 15 Release+LTO Tiny, Standard, and Full
-profiles pass 75/75, 76/76, and 75/75. ASan/UBSan passes 45/45 including all
+documented below. MSVC LTO Release passes 90/90 tests and its prior Debug run
+passed 78/78; Emscripten MinSizeRel passes 42/42 and its prior Debug run passed
+31/31. Windows and Linux shared-core builds pass 88/88 and 89/89
+public-boundary tests, expose exactly the 47 version 1.0 API symbols, and Linux
+ABI Compliance Checker reports 100% binary and source compatibility with zero
+problems. GNU 15 Release+LTO Tiny, Standard, and Full profiles pass 90/90,
+91/91, and 90/90. ASan/UBSan passes 47/47 including all
 eleven fuzzers. LLVM-MinGW 20260826/Clang 23.1.0 and GNU 15.2.0 produced the
 complete Windows ARM64 and Linux AArch64 products. QEMU evidence is not inferred
 to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
@@ -391,9 +398,10 @@ HIL evidence-parser tests in addition to
 the independent daemon process, realtime runtime, local IPC, all service
 methods, CLI validation, configuration restart, recording/playback, the macOS
 IOHID/CoreAudio lifecycle simulations, and prior core/tool coverage. Dedicated
-GNU 15 Release+LTO presets previously passed 75/75 for Tiny, 76/76 for
-Standard, and 75/75 for Full. The Full run exercises 64 voices, 4,096 sequence
-events, the complete desktop daemon, and the expanded fixed host arenas.
+GNU 15 Release+LTO presets pass 90/90 for Tiny, 91/91 for Standard, and 90/90
+for Full with the required Node.js and Python runtimes. The Full run exercises
+64 voices, 4,096 sequence events, the complete desktop daemon, and the expanded
+fixed host arenas.
 
 Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 91/91
 tests; the prior Clang 21.1.8 candidate passed 78/78. The current suite runs a
@@ -422,11 +430,11 @@ abi-compliance-checker -l mol_core -old abi/mol_core-1.0.dump \
   -report-path build/mol_core-abi-report.html
 ```
 
-Windows and Linux shared builds passed 74/74 tests. The current dynamic library
-matches all 47 expected symbols exactly; ABI Compliance Checker reports 100%
-binary and source compatibility, zero problems, and zero warnings. Independent
-installed C11 and C++17 consumers also compile and execute against the Windows
-shared package.
+Windows and Linux shared builds pass 88/88 and 89/89 tests, respectively. The
+current dynamic library matches all 47 expected symbols exactly; ABI Compliance
+Checker reports 100% binary and source compatibility, zero problems, and zero
+warnings. Independent installed C11 and C++17 consumers also compile and execute
+against the Windows and Linux shared packages.
 
 With the pinned Emscripten environment active:
 
