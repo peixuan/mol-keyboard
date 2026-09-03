@@ -32,7 +32,9 @@ gap. Linux AArch64 also passes an end-to-end QEMU product gate and 59/59 target
 tests, while execution on native ARM64 hosts remains unclaimed. Android
 emulator coverage now also stops and reopens AAudio across injected transient
 focus loss/gain. The exact background-policy state machine consumed by the iOS
-controller now also executes under MSVC, Linux GCC, and Emscripten. A checked-in
+controller now also executes under MSVC, Linux GCC, and Emscripten. Its exact
+hardware-key mapping and ownership state machine does too, including repeat,
+rollback, and deactivation release behavior. A checked-in
 iPhone Simulator gate now installs and launches the packaged application and
 requires both production-UI readiness and valid/rejected reply-bridge behavior;
 it still requires a real Apple CI execution. M0 through M9 are
@@ -43,11 +45,16 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`b255bef` (`test(windows): exercise startup service shortcut`) is the latest
-locally validated code candidate. It creates and inspects a real temporary
-Startup `.lnk`, launches the exact Windows daemon through it with hidden-window
-policy, drives the exact CLI through the complete null-audio lifecycle, retains
-the process handle through clean exit, and removes the shortcut with the
+`221abd9` (`fix(ios): keep key capacity assertion portable`) is the latest
+locally validated code candidate. It completes the preceding `68a4336` iOS
+hardware-key simulation: `MOLViewController` now directly consumes the tested
+C11 ownership state for all 30 notes and Space sustain, with compile-time UIKit
+usage checks in the Apple source. MSVC, GCC, Emscripten, and targeted Clang
+ASan/UBSan execution pass. The preceding `b255bef` candidate creates and
+inspects a real temporary Startup `.lnk`, launches the exact Windows daemon
+through it with hidden-window policy, drives the exact CLI through the complete
+null-audio lifecycle, retains the process handle through clean exit, and removes
+the shortcut with the
 production uninstaller without touching the user's Startup folder. The
 preceding `938f955` candidate uses a real systemd 259 user manager to validate
 and link a temporary unit retaining the shipped sandbox/restart policy, launches the real
@@ -76,8 +83,8 @@ ESP32-S3 images boot under Espressif QEMU, mount/format transactional storage,
 pass the shared sequence and C4 checks, drain 12 production input commands, and
 render more than 100,000 frames with non-silent finite output and zero project
 failure counters. All four physical-board configurations still compile with
-the emulator option disabled. Windows MSVC Release passes 85/85 tests, Linux
-x86_64 GCC passes 86/86, and Emscripten MinSizeRel passes 37/37. System Chrome
+the emulator option disabled. Windows MSVC Release passes 86/86 tests, Linux
+x86_64 GCC passes 87/87, and Emscripten MinSizeRel passes 38/38. System Chrome
 on Windows and bundled Chromium on Linux each pass the five applicable desktop
 application cases, including a real platform daemon process and authenticated
 service controller. Current core coverage remains 94.10%, Clang static analysis passes
@@ -201,6 +208,10 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   execute against controlled API models under MSVC and Linux Clang. Input
   enumeration/gesture cleanup and audio callbacks/device recovery pass, without
   claiming Apple SDK or native macOS evidence.
+- The iOS controller directly consumes portable C11 background-policy and
+  hardware-key ownership state. All 30 note usages plus Space sustain, repeat
+  suppression, rejected-submit rollback, individual release, and bounded
+  deactivation cleanup execute under MSVC, GCC, Emscripten, and Clang sanitizers.
 - The Apple CTest graph includes a 30-second LaunchAgent product smoke which
   drives the real daemon and CLI over private local IPC with null audio and
   checks diagnostics, recording/playback, zero-exit shutdown, and socket
@@ -283,8 +294,8 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   service process paths pass, while macOS platform-specific source paths have
   executable simulations and a CI-bound LaunchAgent product smoke. Native
   macOS application/service acceptance is the highest-priority external gate.
-  The iOS production background-policy state
-  machine and strongest reachable device-free ESP32 firmware execution gate
+  The iOS production background-policy and hardware-key ownership state
+  machines and strongest reachable device-free ESP32 firmware execution gate
   also pass; mobile and ESP32 external acceptance follows the desktop gate.
   Documentation remains a draft and `v1.0.0` remains forbidden until all
   results pass.
@@ -322,7 +333,7 @@ cmake --build --preset dev-release
 ctest --preset dev-release --output-on-failure
 ```
 
-MSVC 19.51.36248 passes 85/85 tests in the current LTO Release build; the prior
+MSVC 19.51.36248 passes 86/86 tests in the current LTO Release build; the prior
 Debug build passed 78/78. These runs include the iOS production lifecycle
 policy, strict Web form protocol and HIL evidence-parser tests in addition to
 the independent daemon process, realtime runtime, local IPC, all service
@@ -332,7 +343,7 @@ GNU 15 Release+LTO presets previously passed 75/75 for Tiny, 76/76 for
 Standard, and 75/75 for Full. The Full run exercises 64 voices, 4,096 sequence
 events, the complete desktop daemon, and the expanded fixed host arenas.
 
-Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 86/86
+Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 87/87
 tests; the prior Clang 21.1.8 candidate passed 78/78. The current suite runs a
 real systemd user unit lifecycle plus the production macOS service smoke
 unchanged through a controlled launchd model and
@@ -374,7 +385,7 @@ cmake --build --preset wasm-release
 ctest --preset wasm-release --output-on-failure
 ```
 
-Emscripten 6.0.5 and Node.js 22.16.0 pass 37/37 tests in the current LTO
+Emscripten 6.0.5 and Node.js 22.16.0 pass 38/38 tests in the current LTO
 MinSizeRel build; the prior Debug candidate passed 31/31. Both configurations
 match the Native event, sequence-fixture, and 18-preset audio-metric goldens.
 
@@ -588,8 +599,8 @@ tests.
 - Cross-platform source checks are not promoted to device verification.
 
 The HarmonyOS application descriptors, project audit, and native source-check
-boundary pass locally. Windows MSVC Release passes 85/85 tests and Linux GCC
-passes 86/86. The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
+boundary pass locally. Windows MSVC Release passes 86/86 tests and Linux GCC
+passes 87/87. The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
 5.8.9 build and audit
 both Debug and Release compatibility HAPs; the Release artifact is an unsigned
 2,951,842-byte package containing ArkTS bytecode and both required native ABIs.

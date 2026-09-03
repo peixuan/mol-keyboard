@@ -54,12 +54,12 @@ device-free acceptance were refreshed through code candidate `b255bef`.
 | Configuration | Result | Relevant evidence |
 |---|---:|---|
 | Windows MSVC Debug | 78/78 | local IPC recovery, all 41 RPC methods, runtime callback, independent daemon process, CLI, recording/playback, rendering, macOS interface simulations |
-| Windows MSVC LTO Release | 85/85 | current optimized suite plus real temporary Startup-shortcut product lifecycle and portable service-asset audits |
-| Linux x86_64 GCC (WSL) | 86/86 | current Unix socket/null-audio product suite, real systemd user-service lifecycle, executable macOS LaunchAgent orchestration simulation, and portable Windows service audit |
+| Windows MSVC LTO Release | 86/86 | current optimized suite plus real temporary Startup-shortcut product lifecycle, portable service-asset audits, and iOS hardware-key ownership simulation |
+| Linux x86_64 GCC (WSL) | 87/87 | current Unix socket/null-audio product suite, real systemd user-service lifecycle, executable macOS LaunchAgent orchestration simulation, portable Windows service audit, and iOS hardware-key ownership simulation |
 | Linux x86_64 Clang (WSL) | 78/78 | Unix socket mode/cleanup, null-audio service process, CLI lifecycle, Linux adapter compilation, macOS interface simulations |
 | Linux AArch64 QEMU 10.2.1 | 59/59 | target core/DSP/music tests, 18-preset metrics, null playback, nested daemon process, CLI/render lifecycle |
 | Windows Clang ASan/UBSan | 30/30 | all sanitizer-enabled portable/control tests and four 20-second parser fuzz sessions |
-| Emscripten MinSizeRel | 37/37 | current core/worklet regression plus platform acceptance-project audits |
+| Emscripten MinSizeRel | 38/38 | current core/worklet regression plus platform acceptance-project audits and iOS hardware-key ownership simulation |
 | ESP32 / ESP32-S3 | build passed | firmware regression; application binaries remain 153,440 and 179,328 bytes |
 
 The production Web/PWA application was also run against the current desktop

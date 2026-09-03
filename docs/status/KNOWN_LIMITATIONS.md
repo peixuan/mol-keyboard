@@ -88,10 +88,14 @@ UI, Promise-based WKWebView bridge, AudioUnit lifecycle restoration, hardware
 key interception, private sequence persistence, offline content policy, privacy
 manifest, and Xcode simulator/device pipeline. The exact background-policy
 state machine consumed by the Objective-C++ controller passes executable tests
-under MSVC, Linux GCC, and Emscripten. CI also contains a fail-closed `simctl`
-runner which installs and launches the real Simulator app, verifies the
-packaged production UI, calls the reply-capable bridge, checks invalid-version
-rejection, and captures logs plus a screenshot. This validates application
+under MSVC, Linux GCC, and Emscripten. The controller also directly consumes an
+executable C11 hardware-key ownership state machine: all 30 note usages, Space
+sustain, repeat suppression, failed-submit rollback, gesture IDs, and
+deactivation cleanup pass across those toolchains plus targeted Clang
+ASan/UBSan. This does not simulate UIKit event delivery. CI also contains a
+fail-closed `simctl` runner which installs and launches the real Simulator app,
+verifies the packaged production UI, calls the reply-capable bridge, checks
+invalid-version rejection, and captures logs plus a screenshot. This validates application
 state transitions and acceptance wiring, not Apple APIs or scheduling. This
 Windows host has no Xcode, iOS Simulator, signing identity, or physical Apple
 device, so compilation, installation, Simulator execution, audible output,

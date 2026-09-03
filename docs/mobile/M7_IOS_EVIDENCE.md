@@ -3,11 +3,12 @@
 ## Status
 
 The iOS application implementation is complete and source-reviewed. Its exact
-production background-policy state machine is executable under non-Apple
-toolchains. A fail-closed Simulator runner now builds, installs, launches, and
-checks the packaged production UI and real reply-capable bridge when executed
-on macOS. It is checked into CI but has not executed on this host, so the
-application is not marked `build-verified`, `runtime-verified`, or
+production background-policy and hardware-key ownership state machines are
+executable under non-Apple toolchains. A fail-closed Simulator runner now
+builds, installs, launches, and checks the packaged production UI and real
+reply-capable bridge when executed on macOS. It is checked into CI but has not
+executed on this host, so the application is not marked `build-verified`,
+`runtime-verified`, or
 `device-verified`: this Windows host has no Xcode, iOS SDK, Simulator, Apple
 signing identity, or physical Apple device.
 
@@ -32,7 +33,8 @@ The application provides:
   finite/ranged numeric validation, 2 MiB recording limits, bounded event
   batches, and bounded error text;
 - 30 foreground hardware-key mappings plus Space sustain through UIKit HID
-  usages, with key-repeat suppression and release on app deactivation;
+  usages, with key-repeat suppression, failed-submit rollback, gesture ownership,
+  and release on app deactivation in a controller-consumed C11 state machine;
 - playback-category AVAudioSession configuration, RemoteIO, effective sample
   rate/slice reporting, interruption handling, route rebuild, and media
   services reset recovery;
@@ -68,14 +70,22 @@ tests cover user-start gating, foreground resignation, idle background stop,
 playback continuation and completion, the metronome-plus-transport rule,
 engine reset, route restoration, foreground/background media-services reset,
 restart failure, route-revision saturation, and invalid/null calls. The same
-production C source passed as part of Windows MSVC Release 85/85, Linux GCC
-86/86, Emscripten MinSizeRel 37/37, and the prior ASan/UBSan 47/47 suites;
+production lifecycle C source and controller-consumed hardware-key C source
+passed as part of Windows MSVC Release 86/86, Linux GCC 87/87, Emscripten
+MinSizeRel 38/38, and Clang ASan/UBSan targeted execution;
 Clang static analysis also includes this production translation unit. A new
 cross-platform project audit fails if the app-side smoke, valid and rejected
 bridge requests, `simctl` install/launch runner, result markers, screenshot, or
 CI invocation is removed. This validates deterministic application policy and
 acceptance wiring only; it does not simulate or claim UIKit, AVAudioSession,
 RemoteIO, OS notifications, actual background scheduling, or an audio route.
+
+The hardware-key tests cover all 30 USB HID usages in chromatic order, Space
+sustain, stable gesture IDs, repeat consumption, release-before-press rejection,
+audio-submit rollback, bounded partial and complete release-all, and invalid or
+null calls. `MOLViewController` directly uses that state for foreground UIKit
+presses and deactivation cleanup, while compile-time assertions bind every
+numeric usage to Apple's UIKit constants when the real iOS target builds.
 
 The source was formatted with Visual Studio ClangFormat 22 and passed
 `git diff --check`. The property lists parsed as XML, the asset catalogs parsed
@@ -86,10 +96,11 @@ resolution.
 The shared Web UI passed 12/12 Node tests, strict TypeScript checking, and a
 production Vite build after adding Promise-based WKWebView reply support.
 MSVC Release rebuilt the complete native project with warnings as errors and
-passed 85/85 CTest cases; Linux GCC passed 86/86 and Emscripten MinSizeRel
-passed 37/37. These include the production iOS lifecycle state machine, the
-Simulator acceptance-project audit, macOS platform simulations, and dependency
-license audit. `build-app.sh` and `run-simulator-smoke.sh` both pass `bash -n`.
+passed 86/86 CTest cases; Linux GCC passed 87/87 and Emscripten MinSizeRel
+passed 38/38. These include the production iOS lifecycle and hardware-key state
+machines, the Simulator acceptance-project audit, macOS platform simulations,
+and dependency license audit. `build-app.sh` and `run-simulator-smoke.sh` both
+pass `bash -n`.
 
 ## Reproducible Apple commands
 
