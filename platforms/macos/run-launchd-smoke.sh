@@ -147,7 +147,7 @@ for path in sys.argv[1:]:
 status, audio, self_test, doctor, benchmark = documents
 if status.get("sample_rate") != 48000 or status.get("channel_count") != 2:
     raise SystemExit("launchd daemon engine state is invalid")
-if audio.get("backend") != "null" or audio.get("null_sink") is not True:
+if str(audio.get("backend", "")).lower() != "null" or audio.get("null_sink") is not True:
     raise SystemExit("launchd daemon did not use the null backend")
 if self_test.get("ok") is not True or doctor.get("ok") is not True:
     raise SystemExit("launchd daemon diagnostics failed")
