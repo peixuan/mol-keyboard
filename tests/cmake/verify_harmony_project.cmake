@@ -13,6 +13,9 @@ set(_service "${_app}/entry/src/main/ets/audio/AudioService.ets")
 set(_page "${_app}/entry/src/main/ets/pages/Index.ets")
 set(_native "${MOL_SOURCE_DIR}/platforms/harmony/native/napi_module.cpp")
 set(_audio_host "${MOL_SOURCE_DIR}/platforms/harmony/native/oh_audio_host.cpp")
+set(_audio_host_sim "${MOL_SOURCE_DIR}/tests/platform/test_harmony_audio_host_sim.cpp")
+set(_ohaudio_sim "${MOL_SOURCE_DIR}/tests/platform/harmony_ohaudio_sim.cpp")
+set(_tests_cmake "${MOL_SOURCE_DIR}/tests/CMakeLists.txt")
 set(_types "${_app}/entry/src/main/cpp/types/libmol_harmony_audio/index.d.ts")
 set(_compat_script "${MOL_SOURCE_DIR}/platforms/harmony/build-openharmony-compat.sh")
 set(_compat_ps_script "${MOL_SOURCE_DIR}/platforms/harmony/build-openharmony-compat.ps1")
@@ -28,6 +31,9 @@ foreach(_required
         "${_service}"
         "${_page}"
         "${_audio_host}"
+        "${_audio_host_sim}"
+        "${_ohaudio_sim}"
+        "${_tests_cmake}"
         "${_types}"
         "${_compat_script}"
         "${_compat_ps_script}"
@@ -35,6 +41,30 @@ foreach(_required
         "${_app}/entry/src/main/resources/base/media/startIcon.png")
   if(NOT EXISTS "${_required}")
     message(FATAL_ERROR "HarmonyOS application input is missing: ${_required}")
+  endif()
+endforeach()
+
+file(READ "${_audio_host_sim}" _audio_host_sim_text)
+file(READ "${_ohaudio_sim}" _ohaudio_sim_text)
+file(READ "${_tests_cmake}" _tests_cmake_text)
+foreach(_token
+        "reject_fast_latency"
+        "change_output_device"
+        "AUDIOSTREAM_INTERRUPT_HINT_PAUSE"
+        "AUDIOSTREAM_ERROR_SYSTEM"
+        "export_recording"
+        "load_recording")
+  if(NOT _audio_host_sim_text MATCHES "${_token}" AND
+     NOT _ohaudio_sim_text MATCHES "${_token}")
+    message(FATAL_ERROR "HarmonyOS OHAudio simulation is missing ${_token}")
+  endif()
+endforeach()
+foreach(_token
+        "mol_harmony_audio_host_simulation_tests"
+        [[platforms/harmony/native/oh_audio_host.cpp]]
+        [[platform/harmony_ohaudio_sim.cpp]])
+  if(NOT _tests_cmake_text MATCHES "${_token}")
+    message(FATAL_ERROR "HarmonyOS OHAudio simulation build wiring is missing ${_token}")
   endif()
 endforeach()
 

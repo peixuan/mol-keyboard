@@ -329,6 +329,26 @@ mol_enable_optional_instrumentation(mol_platform_audio_runtime_tests)
 add_test(NAME mol_platform_audio_runtime_tests COMMAND mol_platform_audio_runtime_tests)
 
 add_executable(
+  mol_harmony_audio_host_simulation_tests
+  platform/test_harmony_audio_host_sim.cpp
+  platform/harmony_ohaudio_sim.cpp
+  ${PROJECT_SOURCE_DIR}/platforms/harmony/native/oh_audio_host.cpp)
+target_include_directories(
+  mol_harmony_audio_host_simulation_tests
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/platform
+          ${PROJECT_SOURCE_DIR}/platforms/harmony/native
+          ${PROJECT_SOURCE_DIR}/platforms/harmony/source_check/include)
+target_link_libraries(mol_harmony_audio_host_simulation_tests
+                      PRIVATE mol::platform_audio_runtime)
+target_compile_features(mol_harmony_audio_host_simulation_tests PRIVATE cxx_std_17)
+set_target_properties(mol_harmony_audio_host_simulation_tests
+                      PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_harmony_audio_host_simulation_tests)
+mol_enable_optional_instrumentation(mol_harmony_audio_host_simulation_tests)
+add_test(NAME mol_harmony_audio_host_simulation_tests
+         COMMAND mol_harmony_audio_host_simulation_tests)
+
+add_executable(
   mol_ios_audio_lifecycle_tests
   unit/test_ios_audio_lifecycle.c
   ${PROJECT_SOURCE_DIR}/platforms/ios/mol_ios_audio_lifecycle.c)
