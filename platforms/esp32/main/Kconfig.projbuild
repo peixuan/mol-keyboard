@@ -1,5 +1,14 @@
 menu "MoL Keyboard audio host"
 
+    config MOL_QEMU_RUNTIME
+        bool "Run the bounded Espressif QEMU firmware smoke test"
+        default n
+        help
+            Replaces physical I2S pacing with a deterministic virtual sink and skips
+            radio, USB, and GPIO startup so the real ESP-IDF image can execute on
+            Espressif QEMU. This option is for emulator evidence only and must never
+            be enabled in a board release image.
+
     config MOL_INPUT_QUEUE_LENGTH
         int "Bounded cross-task input command queue length"
         range 32 128
@@ -89,7 +98,7 @@ menu "MoL Keyboard audio host"
 
     config MOL_A2DP_ENABLE
         bool "Enable original ESP32 A2DP Source output"
-        depends on IDF_TARGET_ESP32 && BT_A2DP_ENABLE
+        depends on IDF_TARGET_ESP32 && BT_A2DP_ENABLE && !MOL_QEMU_RUNTIME
         default y
 
     if MOL_A2DP_ENABLE
@@ -120,7 +129,7 @@ menu "MoL Keyboard audio host"
 
     config MOL_USB_HID_ENABLE
         bool "Enable the ESP32-S3 USB HID keyboard host"
-        depends on IDF_TARGET_ESP32S3
+        depends on IDF_TARGET_ESP32S3 && !MOL_QEMU_RUNTIME
         default y
 
     if MOL_USB_HID_ENABLE
@@ -206,6 +215,7 @@ menu "MoL Keyboard audio host"
 
     config MOL_GPIO_MATRIX_ENABLE
         bool "Enable the reference 5x6 GPIO keyboard matrix"
+        depends on !MOL_QEMU_RUNTIME
         default y
 
     if MOL_GPIO_MATRIX_ENABLE

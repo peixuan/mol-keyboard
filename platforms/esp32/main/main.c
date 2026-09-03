@@ -38,7 +38,12 @@
 #define MOL_ESP32_CHANNEL_COUNT 2u
 #define MOL_ESP32_ENGINE_BYTES 37888u
 #define MOL_ESP32_WRITE_TIMEOUT_MS 100u
+#if CONFIG_MOL_QEMU_RUNTIME
+#define MOL_ESP32_DIAGNOSTIC_PERIOD_MS 2000u
+#define MOL_ESP32_QEMU_REQUIRED_SNAPSHOTS 3u
+#else
 #define MOL_ESP32_DIAGNOSTIC_PERIOD_MS 10000u
+#endif
 #define MOL_ESP32_C4_HZ 261.6256f
 
 typedef union mol_esp32_engine_storage {
@@ -58,6 +63,8 @@ typedef struct mol_esp32_audio_stats {
   atomic_uint_least32_t submitted_commands;
   atomic_uint_least32_t max_render_time_us;
   atomic_uint_least32_t rendered_frames;
+  atomic_uint_least32_t nonfinite_samples;
+  atomic_uint_least32_t nonzero_samples;
 } mol_esp32_audio_stats_t;
 
 typedef struct mol_esp32_audio_snapshot {
@@ -70,6 +77,8 @@ typedef struct mol_esp32_audio_snapshot {
   uint32_t submitted_commands;
   uint32_t max_render_time_us;
   uint32_t rendered_frames;
+  uint32_t nonfinite_samples;
+  uint32_t nonzero_samples;
 } mol_esp32_audio_snapshot_t;
 
 static const char* const kTag = "mol-keyboard";
@@ -80,7 +89,9 @@ static StackType_t audio_task_stack[CONFIG_MOL_AUDIO_TASK_STACK_SIZE];
 static StaticTask_t audio_task_control;
 static TaskHandle_t audio_task_handle;
 static mol_engine_t* engine;
+#if !CONFIG_MOL_QEMU_RUNTIME
 static i2s_chan_handle_t i2s_tx_channel;
+#endif
 static mol_esp32_audio_stats_t audio_stats;
 
 _Static_assert(CONFIG_MOL_AUDIO_TASK_PRIORITY < configMAX_PRIORITIES,
@@ -115,6 +126,10 @@ static mol_esp32_audio_snapshot_t audio_stats_snapshot(void) {
       (uint32_t)atomic_load_explicit(&audio_stats.max_render_time_us, memory_order_relaxed);
   snapshot.rendered_frames =
       (uint32_t)atomic_load_explicit(&audio_stats.rendered_frames, memory_order_relaxed);
+  snapshot.nonfinite_samples =
+      (uint32_t)atomic_load_explicit(&audio_stats.nonfinite_samples, memory_order_relaxed);
+  snapshot.nonzero_samples =
+      (uint32_t)atomic_load_explicit(&audio_stats.nonzero_samples, memory_order_relaxed);
   return snapshot;
 }
 
@@ -202,6 +217,7 @@ static int16_t float_to_pcm16(float sample) {
   return (int16_t)rounded;
 }
 
+#if !CONFIG_MOL_QEMU_RUNTIME
 static bool IRAM_ATTR on_send_queue_overflow(i2s_chan_handle_t handle, i2s_event_data_t* event,
                                              void* user_context) {
   mol_esp32_audio_stats_t* stats = (mol_esp32_audio_stats_t*)user_context;
@@ -249,6 +265,7 @@ static void initialize_i2s(void) {
   ESP_ERROR_CHECK(i2s_channel_register_event_callback(i2s_tx_channel, &callbacks, &audio_stats));
   ESP_ERROR_CHECK(i2s_channel_enable(i2s_tx_channel));
 }
+#endif
 
 static void audio_render_task(void* context) {
   const uint32_t render_deadline_us =
@@ -272,9 +289,23 @@ static void audio_render_task(void* context) {
         engine, render_buffer, MOL_ESP32_RENDER_FRAMES, MOL_ESP32_CHANNEL_COUNT);
 
     if (render_result == MOL_OK) {
+      uint32_t nonfinite_samples = 0u;
+      uint32_t nonzero_samples = 0u;
       for (index = 0u; index < MOL_ESP32_RENDER_FRAMES * MOL_ESP32_CHANNEL_COUNT; ++index) {
-        pcm_buffer[index] = float_to_pcm16(render_buffer[index]);
+        if (!isfinite(render_buffer[index])) {
+          pcm_buffer[index] = 0;
+          ++nonfinite_samples;
+        } else {
+          pcm_buffer[index] = float_to_pcm16(render_buffer[index]);
+          if (pcm_buffer[index] != 0) {
+            ++nonzero_samples;
+          }
+        }
       }
+      atomic_fetch_add_explicit(&audio_stats.nonfinite_samples, nonfinite_samples,
+                                memory_order_relaxed);
+      atomic_fetch_add_explicit(&audio_stats.nonzero_samples, nonzero_samples,
+                                memory_order_relaxed);
     } else {
       atomic_fetch_add_explicit(&audio_stats.render_failures, 1u, memory_order_relaxed);
       memset(pcm_buffer, 0, sizeof(pcm_buffer));
@@ -291,8 +322,14 @@ static void audio_render_task(void* context) {
 #if CONFIG_MOL_A2DP_ENABLE
     mol_a2dp_source_submit_pcm(pcm_buffer, sizeof(pcm_buffer));
 #endif
+#if CONFIG_MOL_QEMU_RUNTIME
+    vTaskDelay(pdMS_TO_TICKS((MOL_ESP32_RENDER_FRAMES * 1000u) / CONFIG_MOL_I2S_SAMPLE_RATE));
+    write_result = ESP_OK;
+    bytes_written = sizeof(pcm_buffer);
+#else
     write_result = i2s_channel_write(i2s_tx_channel, pcm_buffer, sizeof(pcm_buffer), &bytes_written,
                                      MOL_ESP32_WRITE_TIMEOUT_MS);
+#endif
     if (write_result != ESP_OK) {
       atomic_fetch_add_explicit(&audio_stats.write_failures, 1u, memory_order_relaxed);
     } else if (bytes_written != sizeof(pcm_buffer)) {
@@ -325,6 +362,9 @@ void app_main(void) {
   bool device_storage_ready = false;
   bool sequence_storage_ready = false;
   bool bluetooth_ready = false;
+#if CONFIG_MOL_QEMU_RUNTIME
+  uint32_t qemu_diagnostic_count = 0u;
+#endif
 
   ESP_LOGI(kTag, "Reset reason=%d", (int)esp_reset_reason());
   device_settings = mol_device_settings_default();
@@ -412,7 +452,21 @@ void app_main(void) {
       return;
     }
   }
+#if CONFIG_MOL_QEMU_RUNTIME
+  if (!mol_input_submit(&note_on)) {
+    ESP_LOGE(kTag, "QEMU synthetic C4 command could not be queued");
+    return;
+  }
+  ESP_LOGI(kTag, "QEMU synthetic C4 command queued through the production input path");
+#endif
+#if CONFIG_MOL_QEMU_RUNTIME
+  ESP_LOGI(kTag,
+           "QEMU virtual audio sink active: %" PRIu32
+           " Hz, block=%u frames; physical I2S is not exercised",
+           (uint32_t)CONFIG_MOL_I2S_SAMPLE_RATE, MOL_ESP32_RENDER_FRAMES);
+#else
   initialize_i2s();
+#endif
   audio_task_handle = xTaskCreateStaticPinnedToCore(
       audio_render_task, "mol-audio", CONFIG_MOL_AUDIO_TASK_STACK_SIZE, NULL,
       CONFIG_MOL_AUDIO_TASK_PRIORITY, audio_task_stack, &audio_task_control,
@@ -436,6 +490,9 @@ void app_main(void) {
 #else
   ESP_LOGI(kTag, "GPIO matrix capability=unsupported (disabled by build configuration)");
 #endif
+#if CONFIG_MOL_QEMU_RUNTIME
+  ESP_LOGI(kTag, "QEMU runtime excludes physical GPIO, Bluetooth, A2DP, USB, RF, and I2S claims");
+#else
   ESP_LOGI(kTag,
            "I2S active: %" PRIu32
            " Hz, BCLK=%d WS=%d DOUT=%d, DMA=%d x %u, "
@@ -492,6 +549,7 @@ void app_main(void) {
 #else
   ESP_LOGI(kTag, "USB HID host capability=unsupported (not supported by this SoC)");
 #endif
+#endif
   result = mol_device_control_start(&device_settings, device_storage_ready, sequence_storage_ready,
                                     bluetooth_ready);
   if (result != ESP_OK) {
@@ -529,7 +587,8 @@ void app_main(void) {
         " bt_ble_scan=%" PRIu32 " bt_classic_scan=%" PRIu32 " bt_open=%" PRIu32
         " bt_connect=%" PRIu32 " bt_disconnect=%" PRIu32 " bt_report=%" PRIu32
         " bt_invalid=%" PRIu32 " bt_fail=%" PRIu32 " bt_stack_min=%" PRIu32
-        " audio_stack_min=%u gpio_stack_min=%" PRIu32 " internal_heap_min=%u",
+        " audio_stack_min=%u gpio_stack_min=%" PRIu32 " internal_heap_min=%u"
+        " nonfinite=%" PRIu32 " nonzero=%" PRIu32,
         audio_snapshot.rendered_frames, audio_snapshot.render_failures,
         audio_snapshot.write_failures, audio_snapshot.partial_writes,
         audio_snapshot.dma_queue_overflows, audio_snapshot.render_deadline_misses,
@@ -545,7 +604,8 @@ void app_main(void) {
         bluetooth_stats.invalid_reports, bluetooth_stats.delivery_failures,
         bluetooth_stats.stack_high_water,
         (unsigned int)uxTaskGetStackHighWaterMark(audio_task_handle), gpio_stats.stack_high_water,
-        (unsigned int)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL));
+        (unsigned int)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL),
+        audio_snapshot.nonfinite_samples, audio_snapshot.nonzero_samples);
     ESP_LOGI(kTag,
              "control_config=%" PRIu32 " control_apply=%" PRIu32 " control_reject=%" PRIu32
              " control_q_reject=%" PRIu32 " control_save=%" PRIu32 " control_io_fail=%" PRIu32
@@ -594,6 +654,34 @@ void app_main(void) {
                usb_stats.transfer_errors, usb_stats.delivery_failures, usb_stats.driver_failures,
                usb_stats.event_queue_overflows, usb_stats.host_stack_high_water,
                usb_stats.hid_stack_high_water);
+    }
+#endif
+#if CONFIG_MOL_QEMU_RUNTIME
+    ++qemu_diagnostic_count;
+    if (qemu_diagnostic_count >= MOL_ESP32_QEMU_REQUIRED_SNAPSHOTS) {
+      const bool qemu_passed =
+          audio_snapshot.rendered_frames >= CONFIG_MOL_I2S_SAMPLE_RATE &&
+          audio_snapshot.submitted_commands >= settings_command_count + 1u &&
+          audio_snapshot.render_failures == 0u && audio_snapshot.write_failures == 0u &&
+          audio_snapshot.partial_writes == 0u && audio_snapshot.watchdog_failures == 0u &&
+          audio_snapshot.nonfinite_samples == 0u && audio_snapshot.nonzero_samples > 0u &&
+          input_stats.dropped == 0u && input_stats.rejected == 0u &&
+          storage_stats.io_failures == 0u && sequence_storage_stats.io_failures == 0u;
+      if (qemu_passed) {
+        ESP_LOGI(kTag,
+                 "QEMU firmware smoke passed: snapshots=%" PRIu32 " frames=%" PRIu32
+                 " commands=%" PRIu32 " nonzero=%" PRIu32,
+                 qemu_diagnostic_count, audio_snapshot.rendered_frames,
+                 audio_snapshot.submitted_commands, audio_snapshot.nonzero_samples);
+      } else {
+        ESP_LOGE(kTag,
+                 "QEMU firmware smoke failed: snapshots=%" PRIu32 " frames=%" PRIu32
+                 " commands=%" PRIu32 " nonfinite=%" PRIu32 " nonzero=%" PRIu32,
+                 qemu_diagnostic_count, audio_snapshot.rendered_frames,
+                 audio_snapshot.submitted_commands, audio_snapshot.nonfinite_samples,
+                 audio_snapshot.nonzero_samples);
+      }
+      esp_restart();
     }
 #endif
   }

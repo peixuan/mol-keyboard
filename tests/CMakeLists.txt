@@ -103,6 +103,8 @@ find_package(Python3 QUIET COMPONENTS Interpreter)
 if(Python3_Interpreter_FOUND)
   add_test(NAME mol_esp32_hil_parser_tests
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/hardware/esp32_hil.py --self-test)
+  add_test(NAME mol_esp32_qemu_parser_tests
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/hardware/esp32_qemu.py --self-test)
 endif()
 
 add_executable(
