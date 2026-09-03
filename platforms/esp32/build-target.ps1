@@ -3,14 +3,24 @@
 param(
   [Parameter(Mandatory = $true)]
   [ValidateSet("esp32", "esp32s3")]
-  [string] $Target
+  [string] $Target,
+
+  [switch] $WebUi
 )
 
-$buildDirectory = "build-$Target"
+$buildDirectory = if ($WebUi) { "build-$Target-web" } else { "build-$Target" }
 
 Push-Location $PSScriptRoot
 try {
-  & idf.py -B $buildDirectory set-target $Target
+  if ($WebUi) {
+    $defaults = "sdkconfig.defaults;sdkconfig.defaults.web"
+    & idf.py -B $buildDirectory "-DSDKCONFIG_DEFAULTS=$defaults" `
+      "-DMOL_DEVICE_WEB_COMPONENTS=ON" set-target $Target
+  }
+  else {
+    & idf.py -B $buildDirectory set-target $Target
+  }
+
   if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
   }

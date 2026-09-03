@@ -25,6 +25,48 @@ menu "MoL Keyboard audio host"
         range 3072 8192
         default 4096
 
+    config MOL_DEVICE_WEB_UI_ENABLE
+        bool "Build the physically authorized local Web configuration service"
+        default n
+        help
+            Builds an AP-only HTTP configuration service. It remains stopped until the
+            designated physical configuration gesture is held and shuts down on timeout.
+
+    if MOL_DEVICE_WEB_UI_ENABLE
+
+    config MOL_DEVICE_WEB_SESSION_SECONDS
+        int "Physical configuration authorization window in seconds"
+        range 60 3600
+        default 600
+
+    config MOL_DEVICE_WEB_AP_CHANNEL
+        int "Private configuration access point channel"
+        range 1 13
+        default 6
+
+    config MOL_DEVICE_WEB_MAX_CLIENTS
+        int "Maximum concurrent configuration clients"
+
+        range 1 2
+        default 1
+
+    config MOL_DEVICE_WEB_TASK_PRIORITY
+        int "HTTP configuration task priority"
+        range 1 10
+        default 2
+
+    config MOL_DEVICE_WEB_TASK_CORE
+        int "HTTP configuration task core affinity"
+        range 0 1
+        default 0
+
+    config MOL_DEVICE_WEB_TASK_STACK_SIZE
+        int "HTTP configuration task stack size"
+        range 4096 8192
+        default 6144
+
+    endif
+
     config MOL_BLUETOOTH_HID_TASK_PRIORITY
         int "Bluetooth HID reconnect task priority"
         range 1 10

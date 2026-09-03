@@ -1,0 +1,3 @@
+# SPDX-License-Identifier: Apache-2.0
+# Preserve runtime heap while Wi-Fi, Classic Bluetooth, and A2DP are active.
+CONFIG_MOL_A2DP_PCM_BUFFER_BYTES=4096

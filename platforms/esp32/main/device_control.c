@@ -10,6 +10,9 @@
 #endif
 #include "bluetooth_hid.h"
 #include "device_storage.h"
+#if CONFIG_MOL_DEVICE_WEB_UI_ENABLE
+#include "device_web.h"
+#endif
 #include "esp_log.h"
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
@@ -193,6 +196,11 @@ static void restore_factory_defaults(void) {
 #if CONFIG_MOL_A2DP_ENABLE
   mol_a2dp_source_forget_preferred();
 #endif
+#if CONFIG_MOL_DEVICE_WEB_UI_ENABLE
+  if (mol_device_web_erase_credentials() != ESP_OK) {
+    atomic_fetch_add_explicit(&stats.persistence_failures, 1u, memory_order_relaxed);
+  }
+#endif
   if (storage_is_ready && mol_device_storage_erase_settings() != MOL_OK) {
     atomic_fetch_add_explicit(&stats.persistence_failures, 1u, memory_order_relaxed);
   }
@@ -221,8 +229,18 @@ static void control_task(void* context) {
     if (mol_input_take_config_mode_request()) {
       atomic_store_explicit(&configuration_active, true, memory_order_release);
       atomic_fetch_add_explicit(&stats.configuration_entries, 1u, memory_order_relaxed);
-      ESP_LOGI(kTag,
-               "Configuration mode entered by physical hold; local service is build optional");
+#if CONFIG_MOL_DEVICE_WEB_UI_ENABLE
+      {
+        mol_device_settings_t settings;
+        (void)mol_device_control_get_settings(&settings);
+        if (settings.web_ui_enabled == 0u || mol_device_web_start() != ESP_OK) {
+          atomic_store_explicit(&configuration_active, false, memory_order_release);
+        }
+      }
+#else
+      atomic_store_explicit(&configuration_active, false, memory_order_release);
+      ESP_LOGI(kTag, "Physical configuration request received; Web UI is not in this build");
+#endif
     }
     if (bluetooth_is_ready && mol_bluetooth_hid_take_new_peer(address)) {
       update_peer(address, false);
@@ -235,6 +253,12 @@ static void control_task(void* context) {
     if (xQueueReceive(settings_queue, &candidate, pdMS_TO_TICKS(50u)) == pdPASS) {
       apply_candidate(&candidate);
     }
+#if CONFIG_MOL_DEVICE_WEB_UI_ENABLE
+    if (atomic_load_explicit(&configuration_active, memory_order_acquire) &&
+        !mol_device_web_poll()) {
+      atomic_store_explicit(&configuration_active, false, memory_order_release);
+    }
+#endif
   }
 }
 

@@ -1,0 +1,6 @@
+# Name,    Type, SubType, Offset,   Size,     Flags
+# Optional Web builds target 4 MiB flash and retain 2.31 MiB for sequence files.
+nvs,       data, nvs,     0x9000,   0x6000,
+phy_init,  data, phy,     0xf000,   0x1000,
+factory,   app,  factory, 0x10000,  0x1a0000,
+sequences, data, fat,     0x1b0000, 0x250000,
