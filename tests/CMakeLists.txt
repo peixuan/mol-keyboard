@@ -429,6 +429,29 @@ mol_enable_warnings(mol_cpp_consumer)
 mol_enable_optional_instrumentation(mol_cpp_consumer)
 add_test(NAME mol_cpp_consumer COMMAND mol_cpp_consumer)
 
+# Instrumented archives intentionally require their matching sanitizer or
+# coverage runtime at final link. The installed SDK contract is verified in
+# ordinary static/shared and optimized builds instead of exporting development
+# instrumentation flags to downstream applications.
+if(NOT CMAKE_CROSSCOMPILING AND NOT MOL_ENABLE_SANITIZERS AND NOT MOL_ENABLE_COVERAGE AND
+   NOT MOL_ENABLE_THREAD_SANITIZER)
+  add_test(
+    NAME mol_installed_package_consumers
+    COMMAND
+      ${CMAKE_COMMAND}
+      "-DMOL_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+      "-DMOL_BINARY_DIR=${PROJECT_BINARY_DIR}"
+      "-DMOL_GENERATOR=${CMAKE_GENERATOR}"
+      "-DMOL_C_COMPILER=${CMAKE_C_COMPILER}"
+      "-DMOL_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+      "-DMOL_CTEST_COMMAND=${CMAKE_CTEST_COMMAND}"
+      "-DMOL_BUILD_TYPE=${CMAKE_BUILD_TYPE}"
+      "-DMOL_CONFIG=$<CONFIG>"
+      "-DMOL_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_installed_package.cmake")
+  set_tests_properties(mol_installed_package_consumers PROPERTIES LABELS package TIMEOUT 180)
+endif()
+
 if(MOL_BUILD_STRESS_TESTS)
   add_executable(mol_core_endurance_tests stress/test_core_endurance.c)
   target_link_libraries(mol_core_endurance_tests PRIVATE mol::core)
