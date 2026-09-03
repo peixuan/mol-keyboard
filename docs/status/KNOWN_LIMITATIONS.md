@@ -6,11 +6,19 @@ CMake 4.4.0, Ninja 1.13.2, Emscripten 6.0.5, and ESP-IDF 6.1. Linux/Clang servic
 validation runs under WSL with null audio. macOS compilation and physical
 Bluetooth audio/keyboard verification remain unavailable here.
 
-The production PWA is runtime-verified with current system Chrome and Edge and
-the pinned Firefox engine. Playwright WebKit verifies shared rendering and
-mobile layout, but its Windows port does not expose AudioWorklet and is not
-actual Safari. Current-stable Safari and physical mobile audio/lifecycle claims
-therefore remain an Apple-device gate.
+The production PWA is runtime-verified with current system Chrome and Edge.
+The pinned Firefox engine executes the real AudioWorklet and Wasm DSP through
+offline rendering, but its headless Windows process exposes no realtime output
+device; Firefox realtime audio output is therefore not claimed from this run.
+Playwright WebKit verifies shared rendering and mobile layout, but its Windows
+port does not expose AudioWorklet and is not actual Safari. Current-stable
+Safari and physical mobile audio/lifecycle claims remain an Apple-device gate.
+
+All locally actionable M10 automated gates, including clean-checkout
+reproduction and audited portable packages, pass. The remaining release gates
+all require unavailable official platform toolchains, physical devices/routes,
+or loopback measurement equipment. This is why the repository truthfully
+remains at 0.1.0 and has no `v1.0.0` tag.
 
 The M9 ESP-IDF implementation is complete and all four ESP32/ESP32-S3 default
 and optional-Web variants build. It has not run on a physical board. I2S

@@ -145,7 +145,7 @@ coexist without sharing an `sdkconfig`. On 2026-09-03, ESP-IDF 6.1 and GNU
 | ESP32 | 1,018,096 bytes | 26,790 bytes | DRAM 101,892 / 124,580 bytes |
 | ESP32-S3 | 796,656 bytes | 26,519 bytes | DIRAM 148,923 / 341,760 bytes |
 | ESP32 + Web | 1,550,992 bytes | 27,015 bytes | DRAM 117,984 / 124,580 bytes |
-| ESP32-S3 + Web | 1,302,032 bytes | 27,087 bytes | DIRAM 187,975 / 341,760 bytes |
+| ESP32-S3 + Web | 1,302,048 bytes | 27,087 bytes | DIRAM 187,975 / 341,760 bytes |
 
 The component builds the complete M3 Tiny graph and stores all 18 fixed
 120-byte compiled Patches in flash. Its complete code and read-only archive is

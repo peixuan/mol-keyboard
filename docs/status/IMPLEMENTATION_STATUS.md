@@ -2,23 +2,26 @@
 
 ## Current milestone
 
-M9 ESP32 product implementation is complete and build-verified for both target
-families and both optional-Web variants; physical acceptance remains blocked.
-M10 release-gate refresh is active. The Android, iOS, and HarmonyOS application
-implementations are complete; Android is dual-ABI build-verified and
-runtime-verified on an Android 15 x86_64 emulator, while iOS and HarmonyOS
-remain source-reviewed because their platform SDKs are unavailable on this
-host. Physical Bluetooth/evdev, macOS/Safari, and physical mobile acceptance
-remain environment-blocked. M0 through M4, the M5 desktop implementation, and
-the M6 Web/PWA implementation are complete.
+All locally actionable M10 release gates are complete. Native and Wasm
+regression, coverage, static analysis, ASan/UBSan with all six fuzzers, Linux
+ThreadSanitizer, optimized endurance, release-size budgets, dependency/license
+and SBOM audits, Windows/Linux package audits, Android packaging, and clean
+checkout reproduction pass. M0 through M9 are implementation-complete, but the
+Definition of Done is not complete: Apple and Harmony toolchains, current
+Safari, physical mobile devices, ESP32 hardware, physical audio routes, and
+instrumented end-to-end latency remain external acceptance gates. No
+`v1.0.0` tag exists.
 
 ## Last verified commit
 
-`c4df960` (`test(fuzz): cover config and MIDI parsers`) is the last locally
-validated commit. MSVC Debug and LTO Release passed 71/71 tests; Clang
-ASan/UBSan passed 40/40 tests with all six required parser fuzzers. All four
-ESP-IDF firmware variants also build with the pinned toolchain. Physical ESP32
-evidence remains explicitly unclaimed. Validation below ran on 2026-09-03.
+`3a1da43` (`fix(web): initialize Wasm worklets portably`) is the code candidate
+covered by this evidence update. MSVC Debug and LTO Release passed 71/71 tests;
+Emscripten Debug and MinSizeRel passed 31/31; Clang ASan/UBSan passed 40/40 with
+all six required parser fuzzers. All four ESP-IDF firmware variants, the
+Android application variants, and the production Web browser matrix also pass
+within their stated boundaries. A source archive of this exact commit rebuilt
+Native Debug, Wasm Release, and the production Web bundle from scratch.
+Validation below ran on 2026-09-03.
 
 ## Completed requirements
 
@@ -94,8 +97,12 @@ evidence remains explicitly unclaimed. Validation below ran on 2026-09-03.
   real AudioWorklet/Wasm synthesis, MessagePort and SharedArrayBuffer command
   paths, keyboard/multitouch gestures, IndexedDB recordings, offline service
   worker, and an authenticated loopback desktop-service controller. The browser
-  matrix passed 15 applicable cases with 21 explicit capability skips. Detailed
-  evidence and the unclaimed Safari boundary are in
+  matrix passed 15 applicable cases with 27 explicit capability skips across
+  42 project/test combinations. Chrome, Edge, and Chromium mobile exercised
+  realtime AudioWorklet output; Firefox exercised the same worklet/Wasm DSP in
+  an `OfflineAudioContext` because its headless Windows process exposes no
+  realtime audio output device. Detailed evidence and the unclaimed Safari
+  boundary are in
   `docs/web/M6_WEB_EVIDENCE.md`.
 - The Android application packages that same complete local UI without network
   permission, uses a bounded allow-listed JS bridge, and runs the shared core
@@ -129,7 +136,7 @@ evidence remains explicitly unclaimed. Validation below ran on 2026-09-03.
   isolated bounded control task; and an optional physically authorized WPA2
   SoftAP Web configuration service with strict Origin/token/form validation.
 - ESP-IDF 6.1 built the default ESP32/ESP32-S3 images at 1,018,096 and 796,656
-  bytes and the 4 MiB Web variants at 1,550,992 and 1,302,032 bytes. The core
+  bytes and the 4 MiB Web variants at 1,550,992 and 1,302,048 bytes. The core
   archive remains below 28 KiB and the queried eight-voice engine uses 37,664
   bytes of its 37,888-byte arena. A host-tested HIL verifier now fails on reset,
   underrun, watchdog, queue, persistence, capability, input, or real I2S-capture
@@ -137,10 +144,10 @@ evidence remains explicitly unclaimed. Validation below ran on 2026-09-03.
 
 ## In-progress work
 
-- M10: refresh every locally actionable release gate, including Release,
-  sanitizer/fuzz, coverage, size, dependency/SBOM, packaging, documentation,
-  and clean-checkout reproduction. Do not tag v1.0.0 while external acceptance
-  remains missing.
+- No locally actionable implementation or automated release gate is known to
+  remain. Release acceptance now requires the external hosts, devices, routes,
+  and measurement equipment listed below. Documentation remains a draft and
+  `v1.0.0` remains forbidden until those results pass.
 
 ## Blocked platform checks
 
@@ -189,15 +196,19 @@ cmake --build --preset wasm-release
 ctest --preset wasm-release --output-on-failure
 ```
 
-Emscripten 6.0.5 and Node.js 22.16.0 passed 24/24 tests in Debug and LTO
+Emscripten 6.0.5 and Node.js 22.16.0 passed 31/31 tests in Debug and LTO
 MinSizeRel. Both configurations match the Native event, sequence-fixture, and
 18-preset audio-metric goldens.
 
-The production Web bundle passed 12/12 Node tests. Playwright 1.62.1 ran 36
-browser project/test combinations: 15 applicable cases passed and 21 were
+The production Web bundle passed 12/12 Node tests. Playwright 1.62.1 ran 42
+browser project/test combinations: 15 applicable cases passed and 27 were
 explicitly skipped by capability. System Chrome 151.0.7922.175, system Edge
 152.0.4191.53, Firefox 153.0, Chromium 151.0.7922.34 mobile emulation, and
-WebKit 26.5 desktop/mobile rendering were covered. Actual Safari is not claimed.
+WebKit 26.5 desktop/mobile rendering were covered. Chrome and Edge exercised
+the realtime AudioWorklet; Firefox executed the real worklet and Wasm DSP in
+an offline audio graph because the headless runner exposes no realtime output
+device. Chrome also reloaded offline, started audio, played a note, and observed
+the core event. Actual Safari is not claimed.
 
 With JDK 21, Android API 36, Build Tools 36.0.0, NDK 28.2.13676358, and CMake
 3.31.6 installed:
@@ -213,10 +224,12 @@ Push-Location platforms/android
 Pop-Location
 ```
 
-The reproducible Debug pipeline passed 24/24 Wasm tests, 12/12 Web tests,
+The reproducible Debug pipeline passed 31/31 Wasm tests, 12/12 Web tests,
 TypeScript strict checking, the production UI build, and the dual-ABI Android
 build. Debug, unsigned Release, device-test APKs, R8/lintVital, and full Debug
-lint all passed. The official Android 15/API 35 x86_64 emulator returned AAudio
+lint all passed. Archive inspection confirmed the paired
+`mol_audio_worklet_core.js` and `.wasm` assets in both final APK variants. The
+official Android 15/API 35 x86_64 emulator returned AAudio
 API 2, 48 kHz, 36,480 rendered frames at the foreground checkpoint, 162
 background callbacks, 263 screen-off callbacks, no render/non-finite failure,
 successful idle shutdown, and instrumentation code `-1`.
@@ -246,10 +259,67 @@ With the pinned ESP-IDF environment active, from `platforms/esp32`:
 
 All four ESP-IDF 6.1/GNU 15.2.0 variants rebuilt successfully. Default/Web
 image sizes are 1,018,096/1,550,992 bytes for ESP32 and
-796,656/1,302,032 bytes for ESP32-S3. Default ESP32 reports 101,892 of 124,580
+796,656/1,302,048 bytes for ESP32-S3. Default ESP32 reports 101,892 of 124,580
 bytes DRAM; its Web variant reports 117,984 bytes. Default ESP32-S3 reports
 148,923 of 341,760 bytes DIRAM; its Web variant reports 187,975 bytes. These
 are build/map results, not physical playback results.
+
+Additional locally actionable M10 gates passed with these reproducible command
+families:
+
+```sh
+cmake --preset coverage-clang
+cmake --build --preset coverage-clang
+python3 tools/coverage_gate.py --build-dir build/coverage-clang --source-dir .
+cmake --preset static-analysis-clang
+cmake --build --preset static-analysis-clang
+python3 tools/static_analysis.py --build-dir build/static-analysis-clang
+cmake --preset tsan-clang
+cmake --build --preset tsan-clang
+ctest --preset tsan-clang
+cmake --preset endurance
+cmake --build --preset endurance
+ctest --test-dir build/endurance --output-on-failure -L endurance
+```
+
+Coverage passed at 94.10% overall, including 95.95% queue/memory, 97.78%
+music-state, 97.49% Patch, and 95.57% Sequence coverage. Clang static analysis
+passed all 38 first-party production translation units. Linux Clang
+ThreadSanitizer passed 40/40 tests in 15.62 seconds. The GCC 15 optimized
+endurance suite passed 2/2 in 286.80 seconds: the engine simulated 1,800 seconds
+in 284.807 seconds (6.32x realtime, approximately 15.82% of one core), emitted
+230,136 events, and produced no non-finite samples. Runtime recovery completed
+30 rebuild cycles in 1.55 seconds.
+
+The release size gate passed at 510,340 bytes for the stripped core, 943,392
+bytes for daemon plus CLI, 22,943 bytes for gzip-compressed Wasm, and 157,413
+bytes for deployable Web resources. Dependency locks, notices, licenses, npm
+audit, and SPDX SBOM validation passed. CPack package audits each found 143
+required files and passed installed daemon/CLI smoke tests: the Windows AMD64
+ZIP is 1,267,534 bytes with SHA-256
+`921d15be9bd93fec23d569ced210c0b566e9d8a3f4342401ada30406468027af`;
+the Linux x86_64 TGZ is 1,662,777 bytes with SHA-256
+`f32e51e73e3973c9d1dc74ac8dcf645031a9dfe225654f3fb8fbc6e8fd8bc4b4`.
+They are unsigned 0.1.0 candidate archives built from `3a1da43`, not releases.
+
+```sh
+python3 tools/release_size_gate.py \
+  --native-core build/package-release/libmol_core.a \
+  --daemon build/package-release/apps/mol-keyboardd/mol-keyboardd \
+  --cli build/package-release/apps/molctl/molctl \
+  --wasm build/wasm-release/platforms/web/emscripten/mol_core.wasm \
+  --web-dir apps/web/dist --report-dir build/size-report
+cpack --config build/package-release/CPackConfig.cmake -B build/packages
+python3 tools/package_audit.py --archive <archive> \
+  --report-dir <report-directory> --expected-version 0.1.0
+```
+
+A clean archive of `3a1da43ad8d8171baa2c24afd132c30c129717bd` with no
+Git metadata or copied caches was built in a new directory. MSVC Debug passed
+71/71 tests; Emscripten MinSizeRel passed 31/31; a clean `npm ci` reported zero
+vulnerabilities, the Web unit suite passed 12/12, and the production bundle
+built. The Emscripten configure used the Ninja executable shipped with Visual
+Studio because Ninja is not on this host's default `PATH`.
 
 ## Known environment constraints
 
@@ -266,7 +336,8 @@ evidence and pending physical acceptance are in
 
 ## Next highest-priority task
 
-Run the complete M10 local release-gate matrix and produce auditable reports.
-Keep v1.0.0, Apple/Harmony, physical mobile, Safari, ESP32/ESP32-S3, A2DP radio,
-I2S signal, and 30-minute hardware claims blocked until the required hosts,
-boards, and instruments are available.
+Run the external acceptance matrix: macOS plus current Safari, official iOS and
+Harmony builds, physical Android/iOS/Harmony lifecycle and route checks,
+ESP32/ESP32-S3 30-minute HIL with I2S/A2DP/USB/GPIO evidence, and instrumented
+P50/P95/maximum latency on every required route. Keep `v1.0.0` blocked until
+all results pass and the exact final candidate is reviewed.

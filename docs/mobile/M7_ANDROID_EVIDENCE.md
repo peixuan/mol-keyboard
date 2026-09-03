@@ -30,8 +30,8 @@ Push-Location platforms/android
 Pop-Location
 ```
 
-The first command reconfigured the Release Wasm target, passed 24/24 CTest
-tests, installed the exact npm lock, passed 11/11 Web tests, type-checked and
+The first command reconfigured the Release Wasm target, passed 31/31 CTest
+tests, installed the exact npm lock, passed 12/12 Web tests, type-checked and
 built the production UI, and assembled the Android Debug APK. The other two
 variants and the full Android lint gate also passed. Debug and Release both
 contain `arm64-v8a` and `x86_64` native libraries. A separate Debug build with
@@ -42,15 +42,16 @@ The final artifacts were:
 
 | Artifact | Bytes | SHA-256 |
 |---|---:|---|
-| `app-debug.apk` | 3,643,429 | `eaa7ede186f61c6a51f17ce3a4277a094d89d01a993f219fa1f4bf715639ba46` |
-| `app-release-unsigned.apk` | 2,590,258 | `b6bcca70262617818fc1fa9c0f2db9e53c093add6cdfad9fe9e68493a6bc00b1` |
+| `app-debug.apk` | 3,692,937 | `67bd0b0a10b87c08bda0921df0fc96f424f392613e80e4db1c81e3c274e26288` |
+| `app-release-unsigned.apk` | 2,589,628 | `89a36140090b99e4918aef5dcd26e405275ab3c8fe2d8e3a54ff2ec67fb5cdd6` |
 | `app-debug-androidTest.apk` | 22,058 | `5ba1b2b367a641dcfd3021af4398c4abc00cf063c68bb5de65540cea06955860` |
 
 The unsigned Release APK targets API 36 with minimum API 26. Archive
 inspection found both native ABIs, the packaged local `index.html`,
-`PRIVACY.md`, and `THIRD_PARTY_NOTICES.md`. The manifest has no `INTERNET`
-permission and declares only the notification and media-playback foreground
-service permissions needed by the product.
+`PRIVACY.md`, `THIRD_PARTY_NOTICES.md`, and exactly one each of the paired
+`generated/mol_audio_worklet_core.js` and `.wasm` assets. The manifest has no
+`INTERNET` permission and declares only the notification and media-playback
+foreground service permissions needed by the product.
 
 ## Emulator runtime
 

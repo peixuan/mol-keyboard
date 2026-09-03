@@ -1,6 +1,7 @@
 # M5 Desktop Headless Evidence
 
-Verified on 2026-09-03 at commit `c87e1a1`.
+Verified on 2026-09-03 at commit `c87e1a1`; the complete regression suite was
+refreshed at code candidate `3a1da43`.
 
 ## Implemented surface
 
@@ -37,7 +38,7 @@ Verified on 2026-09-03 at commit `c87e1a1`.
 | Windows MSVC LTO Release | 63/63 | same optimized suite; daemon plus CLI total 586,240 bytes |
 | Linux x86_64 Clang (WSL) | 63/63 | Unix socket mode/cleanup, null-audio service process, CLI lifecycle, Linux adapter compilation |
 | Windows Clang ASan/UBSan | 30/30 | all sanitizer-enabled portable/control tests and four 20-second parser fuzz sessions |
-| Emscripten Debug/MinSizeRel | 24/24 each | core regression after the control-plane changes |
+| Emscripten Debug/MinSizeRel | 31/31 each | current core/worklet regression after the control-plane changes |
 | ESP32 / ESP32-S3 | build passed | firmware regression; application binaries remain 153,440 and 179,328 bytes |
 
 An independently started Windows Release daemon enumerated four WASAPI
