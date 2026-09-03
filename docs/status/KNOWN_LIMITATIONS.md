@@ -29,7 +29,7 @@ scheduling, so macOS remains below `build-verified` and `runtime-verified`.
 
 The complete Windows ARM64 and Linux AArch64 products cross-build and their
 object formats were inspected as COFF-ARM64 and AArch64 ELF respectively. They
-have not executed on a native ARM64 host. QEMU 10.2.1 now passes 59/59 Linux
+have not executed on a native ARM64 host. QEMU 10.2.1 now passes 69/69 Linux
 AArch64 target tests and an end-to-end null-audio daemon/CLI/render gate, which
 checks ISA execution and process behavior but not native scheduling, audio,
 input, latency, or hardware lifecycle. Native ARM64
@@ -109,6 +109,11 @@ latency fallback and reporting, AudioSession focus, AVSession controls,
 audio-playback continuous-task policy, private sequence persistence, and HAP
 build audit. The official public OpenHarmony 5.0.0.71/API 12 SDK produces
 audited Debug and Release compatibility HAPs with both required native ABIs.
+The unchanged production OHAudio host passes controlled API execution for
+fast/normal startup, PCM rendering, route/interruption/error recovery,
+recording playback, and cleanup under x64, Wasm, sanitizers, and AArch64 QEMU.
+This simulates the host boundary, not AudioSession, AVSession, continuous-task
+delivery, HarmonyOS scheduling, or audio hardware.
 This host still has no DevEco Studio, formal HarmonyOS SDK/toolchain, signing
 identity, emulator, or physical device. A formal signed HarmonyOS HAP,
 installation, sound, background and screen-off playback,

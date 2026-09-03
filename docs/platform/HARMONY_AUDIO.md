@@ -84,6 +84,14 @@ declaration-only SDK subsets under `source_check/include`. Those declarations
 mirror only the official signatures used here, provide no implementation, and
 are never included by an OHOS build.
 
+CTest additionally links the unchanged production `AudioHost` to a controlled
+OHAudio API 12 implementation. It executes fast-path startup, normal-mode
+fallback, effective format/latency queries, variable-size PCM callbacks,
+record/export/load/playback, route changes, interrupts, renderer errors,
+recovery, and cleanup with injected failures. This runs under MSVC, Linux GCC,
+Emscripten, Clang sanitizers, and AArch64 QEMU; it validates host logic and
+target instructions without claiming HarmonyOS services or hardware.
+
 ## Verification boundary
 
 The full application project, native bridge, OHAudio host, ArkUI surface,
@@ -91,18 +99,20 @@ official lifecycle integrations, persistence, and audited HAP pipeline are
 implemented. The public OpenHarmony 5.0.0.71/API 12 toolchain builds and audits
 Debug and Release compatibility HAPs with ArkTS bytecode and both AArch64 and
 x86-64 native libraries. Windows MSVC and Linux Clang also compile the C++
-boundary with warnings as errors, and the repository audit checks the Stage
-declarations, exact keyboard table, complete control surface, private
-persistence, continuous-task/AVSession/AudioSession calls, and absence of ArkTS
-PCM rendering.
+boundary with warnings as errors. The production OHAudio host passes controlled
+API execution across x64, Wasm, sanitizers, and AArch64 QEMU, and the repository
+audit checks the Stage declarations, exact keyboard table, complete control
+surface, private persistence, continuous-task/AVSession/AudioSession calls,
+executable host-simulation wiring, and absence of ArkTS PCM rendering.
 
 No DevEco Studio/HarmonyOS SDK, signing identity, emulator, or physical device
 is available on the current host. Therefore only the OpenHarmony compatibility
 artifact is `build-verified`; the formal HarmonyOS product remains
 `implementation-complete` and `source-checked`, and neither is
 `runtime-verified` or `device-verified`. Formal HAP construction, installation,
-audible performance, background playback, interruptions, output-route changes,
-latency, and sustained playback remain mandatory M8 acceptance work. See
+audible performance, OS-delivered background playback, interruptions,
+output-route changes, latency, and sustained playback remain mandatory M8
+acceptance work. See
 `docs/mobile/M8_HARMONY_EVIDENCE.md`.
 
 ## Platform references

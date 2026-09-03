@@ -2,12 +2,14 @@
 
 ## Status
 
-The HarmonyOS application implementation is complete and source-checked. A
-separate OpenHarmony API 12 compatibility product is now `build-verified` with
-the official public OpenHarmony SDK, but this does not qualify the formal
-HarmonyOS/DevEco product. Neither product is `runtime-verified` or
-`device-verified`: this Windows host has no DevEco Studio, HarmonyOS SDK,
-signing identity, emulator, or physical HarmonyOS/OpenHarmony device.
+The HarmonyOS application implementation is complete and source-checked. Its
+exact production OHAudio host now passes executable controlled-API simulations,
+including an AArch64 QEMU run. A separate OpenHarmony API 12 compatibility
+product is `build-verified` with the official public OpenHarmony SDK, but this
+does not qualify the formal HarmonyOS/DevEco product. Neither product is
+`runtime-verified` or `device-verified`: this Windows host has no DevEco Studio,
+HarmonyOS SDK, signing identity, emulator, or physical HarmonyOS/OpenHarmony
+device.
 
 ## Implemented product path
 
@@ -65,6 +67,19 @@ Its 13 audited entries include `ets/modules.abc`, `module.json`,
 LLVM inspection identifies those libraries as AArch64 and x86-64 ELF64 shared
 objects and confirms their Node-API registration plus API 12 OHAudio imports.
 
+The unchanged production `AudioHost` also executes against a controlled API 12
+OHAudio implementation. The tests verify the requested 48 kHz stereo S16 music
+contract, fast renderer startup, normal-latency fallback, effective stream
+reporting, 640-frame chunked non-silent PCM, malformed-buffer silencing,
+underflow reporting, route loss, shared and forced interruption behavior,
+renderer errors, clean recovery/release, invalid commands, and real engine
+record/export/load/playback. Failure injection rejects bad negotiated formats,
+renderer creation, and renderer startup. MSVC Release, Linux x86_64 GCC,
+Emscripten, and Clang ASan/UBSan execute this exact host. The same test also
+cross-compiles with GNU 15.2.0 and passes under AArch64 QEMU as part of the
+current 69/69 target suite. These are host API and target-instruction
+simulations, not HarmonyOS runtime or device evidence.
+
 ArkTS strict checking found and drove fixes for explicitly typed selector data,
 the component `scale` name collision, API 12 AudioSession/WantAgent signatures,
 and asynchronous Preferences flush. Native cross-compilation found and drove
@@ -76,10 +91,11 @@ handled, but only device execution can settle those runtime paths.
 
 MSVC 19.51 and Linux Clang 21.1.8 also compile the OHAudio host and Node-API
 bridge against the declaration-only API 12 source-check boundary with warnings
-as errors. The complete Windows and Linux suites pass 78/78, including
-`mol_harmony_project_audit`, and both build wrappers pass shell syntax checks.
-This is real OpenHarmony package evidence, not a formal HarmonyOS build or a
-runtime/device result.
+as errors. The current Windows, Linux, and Emscripten suites pass 87/87, 88/88,
+and 39/39 respectively, including the executable host simulation and
+`mol_harmony_project_audit`; both build wrappers pass shell syntax checks. This
+is real OpenHarmony package evidence plus controlled host simulation, not a
+formal HarmonyOS build or runtime/device result.
 
 ## Reproducible HarmonyOS commands
 
