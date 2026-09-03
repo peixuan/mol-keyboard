@@ -54,7 +54,9 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 ## Last verified commit
 
 `e64e8f0` (`test: verify installed SDK consumers`) is the latest locally
-validated code candidate. Every ordinary native test configuration now installs
+validated code candidate. Its exact tree at documentation commit `cc3af78` was
+also reproduced from a new clone with empty build trees on Windows, Linux, and
+Emscripten. Every ordinary native test configuration now installs
 the SDK into an empty isolated prefix, disables CMake package registries,
 requires exactly one installed `mol_keyboardConfig.cmake`, compiles every one of
 the 14 public headers independently as C11 and C++17, and runs independent C11
@@ -650,7 +652,22 @@ python3 tools/package_audit.py --archive <archive> \
   --report-dir <report-directory> --expected-version 0.1.0
 ```
 
-A clean local clone of `75609b6f32c25f430cb618e9e56a04e9391406f6` with no
+A clean local clone of exact candidate
+`cc3af789a91d1b78e47664a341c8fe7dcb356e13`, created without local-object or
+hardlink reuse and with no copied build output or managed-dependency directory,
+compiled all 167 MSVC targets and passed 91/91 LTO Release tests. The same clone
+compiled all 167 Linux GCC targets and passed 92/92 tests, then compiled all 108
+Emscripten targets and passed 42/42 MinSizeRel tests. The two native runs each
+installed the SDK into a fresh nested prefix, built all 28 independent public
+header translation units plus C11 and C++17 consumers, and passed both installed
+consumer tests. The Windows suite created a real temporary hidden Startup
+shortcut and drove the real headless daemon through the CLI before clean
+shutdown and uninstall. The Linux suite ran the real daemon/CLI through the
+actual systemd 259 user manager. Its macOS service case used the same production
+daemon and CLI against a controlled launchd model, so it remains simulation and
+not native Apple evidence.
+
+An earlier clean local clone of `75609b6f32c25f430cb618e9e56a04e9391406f6` with no
 copied repository build output compiled all 167 Linux GCC targets. Its first
 configure exposed that a missing Node executable silently reduced the suite to
 89 tests. The official Node.js 22.16.0 Linux x64 archive was then verified
