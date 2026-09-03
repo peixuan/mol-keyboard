@@ -58,7 +58,7 @@ static int mol_read_exact(FILE* file, void* output, size_t size) {
   return fread(output, 1u, size, file) == size;
 }
 
-static int mol_load_wav(const char* path, mol_wav_t* wav) {
+static int mol_load_wav_stream(FILE* file, mol_wav_t* wav) {
   uint8_t header[12];
   uint8_t chunk[8];
   uint16_t format = 0u;
@@ -66,13 +66,9 @@ static int mol_load_wav(const char* path, mol_wav_t* wav) {
   uint16_t block_align = 0u;
   uint32_t data_size = 0u;
   long data_offset = -1;
-  FILE* file = fopen(path, "rb");
   memset(wav, 0, sizeof(*wav));
   if (file == NULL || !mol_read_exact(file, header, sizeof(header)) ||
       memcmp(header, "RIFF", 4u) != 0 || memcmp(header + 8u, "WAVE", 4u) != 0) {
-    if (file != NULL) {
-      (void)fclose(file);
-    }
     return 0;
   }
   while (mol_read_exact(file, chunk, sizeof(chunk))) {
@@ -101,19 +97,16 @@ static int mol_load_wav(const char* path, mol_wav_t* wav) {
       wav->sample_rate < 8000u || wav->sample_rate > 192000u || block_align != wav->channels * 2u ||
       data_offset < 0 || data_size == 0u || data_size > MOL_ANALYZE_MAX_DATA_BYTES ||
       data_size % block_align != 0u) {
-    (void)fclose(file);
     return 0;
   }
   wav->frame_count = data_size / block_align;
   if (wav->frame_count < 128u) {
-    (void)fclose(file);
     return 0;
   }
   wav->samples = (float*)malloc(sizeof(*wav->samples) * wav->frame_count * wav->channels);
   if (wav->samples == NULL || fseek(file, data_offset, SEEK_SET) != 0) {
     free(wav->samples);
     wav->samples = NULL;
-    (void)fclose(file);
     return 0;
   }
   wav->hash = UINT64_C(14695981039346656037);
@@ -123,7 +116,6 @@ static int mol_load_wav(const char* path, mol_wav_t* wav) {
     if (!mol_read_exact(file, encoded, sizeof(encoded))) {
       free(wav->samples);
       wav->samples = NULL;
-      (void)fclose(file);
       return 0;
     }
     wav->hash = (wav->hash ^ encoded[0]) * UINT64_C(1099511628211);
@@ -131,7 +123,21 @@ static int mol_load_wav(const char* path, mol_wav_t* wav) {
     sample = (int16_t)mol_u16_le(encoded);
     wav->samples[index] = sample < 0 ? (float)sample / 32768.0f : (float)sample / 32767.0f;
   }
-  return fclose(file) == 0;
+  return 1;
+}
+
+static int mol_load_wav(const char* path, mol_wav_t* wav) {
+  FILE* file = fopen(path, "rb");
+  int loaded;
+  int closed;
+  if (file == NULL) return 0;
+  loaded = mol_load_wav_stream(file, wav);
+  closed = fclose(file) == 0;
+  if (loaded && !closed) {
+    free(wav->samples);
+    wav->samples = NULL;
+  }
+  return loaded && closed;
 }
 
 static void mol_analyze_spectrum(const mol_wav_t* wav, mol_metrics_t* metrics) {

@@ -44,10 +44,28 @@ mol_add_fuzzer(fuzz_jsonrpc_dispatch fuzz_jsonrpc_dispatch.cpp)
 mol_add_fuzzer(fuzz_config_parser fuzz_config_parser.cpp)
 mol_add_fuzzer(fuzz_midi_parser fuzz_midi_parser.cpp)
 mol_add_fuzzer(fuzz_latency_capture fuzz_latency_capture.c)
+mol_add_fuzzer(fuzz_audio_capture fuzz_audio_capture.c)
+mol_add_fuzzer(fuzz_esp32_settings fuzz_esp32_settings.c)
+mol_add_fuzzer(fuzz_esp32_web_config fuzz_esp32_web_config.c)
+mol_add_fuzzer(fuzz_hid_keyboard fuzz_hid_keyboard.c)
 target_sources(fuzz_latency_capture PRIVATE ${PROJECT_SOURCE_DIR}/apps/mol-render/sha256.c)
 target_include_directories(fuzz_latency_capture PRIVATE ${PROJECT_SOURCE_DIR}/apps/mol-render)
+target_sources(
+  fuzz_esp32_settings PRIVATE ${PROJECT_SOURCE_DIR}/platforms/esp32/main/device_settings.c)
+target_sources(
+  fuzz_esp32_web_config
+  PRIVATE ${PROJECT_SOURCE_DIR}/platforms/esp32/main/device_settings.c
+          ${PROJECT_SOURCE_DIR}/platforms/esp32/main/web_config_protocol.c)
+target_sources(fuzz_hid_keyboard
+               PRIVATE ${PROJECT_SOURCE_DIR}/platforms/esp32/main/hid_keyboard.c)
+foreach(_mol_esp32_fuzzer fuzz_esp32_settings fuzz_esp32_web_config fuzz_hid_keyboard)
+  target_include_directories(${_mol_esp32_fuzzer}
+                             PRIVATE ${PROJECT_SOURCE_DIR}/platforms/esp32/main)
+endforeach()
 if(WIN32)
-  target_compile_definitions(fuzz_latency_capture PRIVATE _CRT_SECURE_NO_WARNINGS)
+  foreach(_mol_stdio_fuzzer fuzz_latency_capture fuzz_audio_capture)
+    target_compile_definitions(${_mol_stdio_fuzzer} PRIVATE _CRT_SECURE_NO_WARNINGS)
+  endforeach()
 endif()
 target_link_libraries(fuzz_jsonrpc_dispatch PRIVATE mol::jsonrpc)
 target_link_libraries(fuzz_config_parser PRIVATE mol::service_control)
@@ -145,3 +163,34 @@ add_test(
   COMMAND fuzz_latency_capture -max_total_time=20 -max_len=1048576 -timeout=5
           -artifact_prefix=${_mol_latency_artifacts}/)
 set_tests_properties(fuzz_latency_capture_smoke PROPERTIES TIMEOUT 45)
+
+set(_mol_audio_capture_artifacts "${CMAKE_CURRENT_BINARY_DIR}/artifacts/audio_capture")
+set(_mol_esp32_settings_artifacts "${CMAKE_CURRENT_BINARY_DIR}/artifacts/esp32_settings")
+set(_mol_esp32_web_config_artifacts "${CMAKE_CURRENT_BINARY_DIR}/artifacts/esp32_web_config")
+set(_mol_hid_keyboard_artifacts "${CMAKE_CURRENT_BINARY_DIR}/artifacts/hid_keyboard")
+file(
+  MAKE_DIRECTORY
+  "${_mol_audio_capture_artifacts}"
+  "${_mol_esp32_settings_artifacts}"
+  "${_mol_esp32_web_config_artifacts}"
+  "${_mol_hid_keyboard_artifacts}")
+add_test(
+  NAME fuzz_audio_capture_smoke
+  COMMAND fuzz_audio_capture -max_total_time=20 -max_len=1048576 -timeout=5
+          -artifact_prefix=${_mol_audio_capture_artifacts}/)
+add_test(
+  NAME fuzz_esp32_settings_smoke
+  COMMAND fuzz_esp32_settings -max_total_time=20 -max_len=256 -timeout=5
+          -artifact_prefix=${_mol_esp32_settings_artifacts}/)
+add_test(
+  NAME fuzz_esp32_web_config_smoke
+  COMMAND fuzz_esp32_web_config -max_total_time=20 -max_len=1024 -timeout=5
+          -artifact_prefix=${_mol_esp32_web_config_artifacts}/)
+add_test(
+  NAME fuzz_hid_keyboard_smoke
+  COMMAND fuzz_hid_keyboard -max_total_time=20 -max_len=64 -timeout=5
+          -artifact_prefix=${_mol_hid_keyboard_artifacts}/)
+set_tests_properties(
+  fuzz_audio_capture_smoke fuzz_esp32_settings_smoke fuzz_esp32_web_config_smoke
+  fuzz_hid_keyboard_smoke
+  PROPERTIES TIMEOUT 45)
