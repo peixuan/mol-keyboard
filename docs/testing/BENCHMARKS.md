@@ -49,10 +49,10 @@ archive and deterministic gzip level 9 for Wasm:
 
 | Measurement | Actual | Exclusive limit | Result |
 | --- | ---: | ---: | --- |
-| Stripped `mol_core` archive | 505,468 B | 1,048,576 B | pass |
-| Headless daemon + CLI | 943,392 B | 5,242,880 B | pass |
-| Compressed Standard Wasm | 22,978 B | 1,572,864 B | pass |
-| Web core resources, excluding maps | 157,413 B | 2,097,152 B | pass |
+| Stripped `mol_core` archive | 505,956 B | 1,048,576 B | pass |
+| Headless daemon + CLI | 976,136 B | 5,242,880 B | pass |
+| Compressed Standard Wasm | 23,018 B | 1,572,864 B | pass |
+| Web core resources, excluding maps | 157,610 B | 2,097,152 B | pass |
 
 The Web total includes HTML, JavaScript, CSS, manifest, service worker, icons,
 and the paired AudioWorklet JavaScript and Wasm artifacts. It excludes only

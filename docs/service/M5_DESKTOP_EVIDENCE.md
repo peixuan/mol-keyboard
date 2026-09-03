@@ -1,9 +1,12 @@
 # M5 Desktop Headless Evidence
 
-Verified on 2026-09-04 through code candidate `a52bc00`. The current Windows
+Verified on 2026-09-04 through code candidate `23ff832`. The current Windows
 LTO Release suite passes 93/93, Linux GCC passes 95/95 with native Linux Node
 22.16.0, and Emscripten MinSizeRel passes 42/42. The desktop-first regression
-and device-free acceptance began at candidate `00a0e50`. A clean
+was repeated from an exact `23ff832` clean clone: Windows compiled 176 targets,
+Linux compiled 180 targets, Wasm compiled 108 targets, and all three suites
+passed with the same 93/93, 95/95, and 42/42 totals.
+Device-free acceptance began at candidate `00a0e50`. A clean
 checkout of candidate `098ddf4` rebuilt 167 Windows LTO Release targets and
 passed 89/89 tests; its clean Wasm build compiled 108 targets and passed 41/41.
 A separate clean checkout of `75609b6` compiled all 167 Linux GCC targets and,
@@ -76,7 +79,7 @@ two capability-specific skips and zero npm vulnerabilities.
 | Linux x86_64 GCC (WSL) | 95/95 | current Unix socket/null-audio product suite, production raw-MIDI adapter on a kernel FIFO, fail-closed Web acceptance audit, real systemd user-service lifecycle, executable macOS LaunchAgent orchestration simulation, portable Windows service audit, and mobile policy/native-boundary simulations |
 | Linux x86_64 Clang (WSL) | 78/78 | Unix socket mode/cleanup, null-audio service process, CLI lifecycle, Linux adapter compilation, macOS interface simulations |
 | Linux AArch64 QEMU 10.2.1 | 71/71 | target core/DSP/music tests, 18-preset metrics, mobile policy/native-boundary simulations, null playback, nested daemon process, CLI/render lifecycle |
-| Windows Clang ASan/UBSan | 47/47 | all sanitizer-enabled portable/control tests and eleven 20-second parser fuzz sessions; current Harmony policy audit/source cases pass targeted validation |
+| Windows Clang ASan/UBSan | 57/57 | all sanitizer-enabled portable/control tests and twelve 20-second parser fuzz sessions, including MIDI-file import and realtime MIDI-stream decoding; current Harmony policy audit/source cases pass targeted validation |
 | Emscripten MinSizeRel | 42/42 | current core/worklet regression plus fail-closed Web/platform acceptance-project audits and mobile policy/native-boundary simulations |
 | ESP32 / ESP32-S3 | build passed | firmware regression; application binaries remain 153,440 and 179,328 bytes |
 

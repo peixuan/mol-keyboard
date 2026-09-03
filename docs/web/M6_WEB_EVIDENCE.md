@@ -43,9 +43,9 @@ The Chrome desktop service-controller case fails if that executable is missing;
 it is no longer reported as a capability skip.
 
 The production build type-checks and bundles successfully. Its complete output
-is 327,033 bytes including the source map. The application entry is 67,856
-bytes; the worklet JavaScript is 26,408 bytes and its Wasm is 44,435 bytes. The
-release gate counts 157,413 deployable bytes after excluding the source map,
+is 327,230 bytes including the source map. The application entry is 67,856
+bytes; the worklet JavaScript is 26,408 bytes and its Wasm is 44,632 bytes. The
+release gate counts 157,610 deployable bytes after excluding the source map,
 well below the exclusive 2 MiB Web budget.
 
 The browser run executed 42 project/test combinations: 15 applicable paths

@@ -67,9 +67,10 @@ frame with no accumulated drift.
 
 ## Parser and memory safety
 
-`fuzz-clang` enables ASan, UBSan, and eleven libFuzzer targets for Patch,
-Sequence, service configuration, JSON-RPC, MolWireEventV1, MIDI, latency and
-audio WAV captures, ESP32 settings and Web forms, and HID report parsing. Each
+`fuzz-clang` enables ASan, UBSan, and twelve libFuzzer targets for Patch,
+Sequence, service configuration, JSON-RPC, MolWireEventV1, MIDI-file and
+realtime MIDI-stream parsing, latency and audio WAV captures, ESP32 settings
+and Web forms, and HID report parsing. Each
 CI smoke session runs at least 20 seconds and reparses/canonicalizes successful
 inputs where applicable. Reproducer artifacts are reviewed privately before
 disclosure.

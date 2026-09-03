@@ -23,7 +23,7 @@ images now also execute through their production storage, input/control, shared-
 FreeRTOS audio paths in Espressif QEMU. Other locally actionable M10 release
 gates are complete. Native and Wasm
 regression, Release+LTO Tiny/Standard/Full profiles, static/shared ABI
-verification, coverage, static analysis, ASan/UBSan with all eleven fuzzers,
+verification, coverage, static analysis, ASan/UBSan with all twelve fuzzers,
 Linux ThreadSanitizer, optimized endurance, release-size budgets, dependency/license
 and SBOM audits, extracted Windows/Linux package headless lifecycles, Android packaging, and clean
 checkout reproduction pass. Complete Windows ARM64 and Linux AArch64 desktop
@@ -53,11 +53,13 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`a52bc00` (`test(packaging): require native MIDI capability`) is the latest
-locally validated code candidate. It adds a bounded streaming MIDI 1.0 decoder,
+`23ff832` (`fix(build): require C++17 for MIDI tests`) is the latest locally
+validated code candidate. It includes a bounded streaming MIDI 1.0 decoder,
 public CC1 modulation, native WinMM/Linux raw-MIDI/CoreMIDI adapters, explicit
 Omni or Channel 1--16 filtering, truthful service capability/device reporting,
-and feature-off support. Windows LTO Release passes 93/93, Linux GCC passes
+and feature-off support. The realtime decoder has a dedicated ASan/UBSan
+libFuzzer target that checks arbitrary chunk-boundary equivalence and bounded
+gesture cleanup. Windows LTO Release passes 93/93, Linux GCC passes
 95/95, and Emscripten MinSizeRel passes 42/42. Linux runs the exact raw-MIDI
 adapter through a kernel FIFO; the exact CoreMIDI source passes controlled API
 execution under MSVC and GCC. No physical MIDI or native Apple claim is made.
@@ -163,7 +165,7 @@ x86_64 GCC passes 92/92, and Emscripten MinSizeRel passes 42/42. System Chrome
 on Windows and bundled Chromium on Linux each pass the five applicable desktop
 application cases, including a real platform daemon process and authenticated
 service controller. Current core coverage remains 94.10%, Clang static analysis passes
-40 production translation units, and ASan/UBSan passes 47/47 with all eleven
+44 production translation units, and ASan/UBSan passes 57/57 with all twelve
 fuzzers. The earlier `61b3342` candidate adds the
 exact-production-source CoreAudio lifecycle simulation, and `18e6e7d` adds the
 corresponding IOHID lifecycle simulation. The earlier `240b207` candidate's
@@ -537,11 +539,13 @@ cmake --build --preset fuzz-clang
 ctest --preset fuzz-clang --output-on-failure
 ```
 
-The current ASan/UBSan configuration passed 47/47 tests. Patch, Mol Sequence, service
-configuration, JSON-RPC, MolWireEventV1, MIDI, latency/audio captures, ESP32
-settings/Web forms, and HID-report libFuzzer smoke sessions each ran for 20
-seconds and produced no finding. Accepted MIDI inputs are also reparsed and
-compared through the canonical sequence JSON representation.
+The current ASan/UBSan configuration passed 57/57 tests. Patch, Mol Sequence,
+service configuration, JSON-RPC, MolWireEventV1, MIDI-file import, realtime MIDI
+streaming, latency/audio captures, ESP32 settings/Web forms, and HID-report
+libFuzzer smoke sessions each ran for 20 seconds and produced no finding.
+Accepted MIDI files are reparsed and compared through the canonical sequence
+JSON representation; realtime streams must emit identical commands when fed as
+one buffer or at arbitrary chunk boundaries and must release every gesture.
 
 The latency analyzer's five native tests pass in static and shared suites. The
 synthetic fixture checks its 20 raw observations and 19.5/28.05/29 ms
@@ -641,16 +645,16 @@ object tools after the build. The LLVM-MinGW archive used locally was
 
 Coverage passed at 94.10% overall, including 95.95% queue/memory, 97.78%
 music-state, 97.49% Patch, and 95.57% Sequence coverage. Clang static analysis
-passed all 40 first-party production translation units. Linux Clang
+passed all 44 first-party production translation units. Linux Clang
 ThreadSanitizer passed 40/40 tests in 15.62 seconds. The refreshed GCC 15
 optimized endurance suite passed 2/2 in 270.38 seconds: the engine simulated
 1,800 seconds in 268.567 seconds (6.70x realtime, approximately 14.92% of one
 core), emitted 230,136 events, and produced no non-finite samples. Runtime
 recovery completed 30 rebuild cycles in 1.42 seconds.
 
-The refreshed release size gate passed at 505,468 bytes for the stripped core,
-943,392 bytes for daemon plus CLI, 22,978 bytes for gzip-compressed Wasm, and
-157,413 bytes for deployable Web resources. Dependency locks, notices,
+The refreshed release size gate passed at 505,956 bytes for the stripped core,
+976,136 bytes for daemon plus CLI, 23,018 bytes for gzip-compressed Wasm, and
+157,610 bytes for deployable Web resources. Dependency locks, notices,
 licenses, npm audit, and SPDX SBOM validation passed. Current CPack package
 audits each found 146 required files, including `mol-latency-probe` and every
 desktop service definition, then ran the extracted daemon and CLI through the
@@ -678,10 +682,9 @@ python3 tools/package_audit.py --archive <archive> \
 ```
 
 A clean local clone of exact candidate
-`cc3af789a91d1b78e47664a341c8fe7dcb356e13`, created without local-object or
-hardlink reuse and with no copied build output or managed-dependency directory,
-compiled all 167 MSVC targets and passed 91/91 LTO Release tests. The same clone
-compiled all 167 Linux GCC targets and passed 92/92 tests, then compiled all 108
+`23ff8320fba67fa4814b792de6f9101d974b62a4`, created without hardlinks or copied
+build output, compiled all 176 MSVC targets and passed 93/93 LTO Release tests.
+The same clone compiled all 180 Linux GCC targets and passed 95/95 tests, then compiled all 108
 Emscripten targets and passed 42/42 MinSizeRel tests. The two native runs each
 installed the SDK into a fresh nested prefix, built all 28 independent public
 header translation units plus C11 and C++17 consumers, and passed both installed

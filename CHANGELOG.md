@@ -18,8 +18,9 @@ All notable changes to this project will be documented in this file.
   program changes, panic controls, and native WinMM, Linux raw-MIDI, and
   CoreMIDI adapters.
 - Added sanitizer-backed fuzzing for all six required Patch, Sequence, service
-  configuration, JSON-RPC, Wire, and MIDI parser boundaries, plus the latency
-  capture, WAV analyzer, ESP32 settings/Web-form, and HID report parsers.
+  configuration, JSON-RPC, Wire, and MIDI-file parser boundaries, plus realtime
+  MIDI streams, the latency capture, WAV analyzer, ESP32 settings/Web-form, and
+  HID report parsers.
 - Added the complete installable offline Web/PWA instrument with paired
   AudioWorklet/Wasm loading, MessagePort and SharedArrayBuffer transports,
   IndexedDB persistence, keyboard/touch control, authenticated service mode,
