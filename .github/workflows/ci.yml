@@ -107,13 +107,19 @@ jobs:
       - name: Install AArch64 cross compiler
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-      - name: Configure and build complete AArch64 product
+          sudo apt-get install --no-install-recommends gcc-aarch64-linux-gnu g++-aarch64-linux-gnu qemu-user
+      - name: Configure, build, and emulate complete AArch64 product
         run: |
           cmake --preset ci-linux-aarch64
           cmake --build --preset ci-linux-aarch64
           file build/ci-linux-aarch64/apps/mol-keyboardd/mol-keyboardd
           file build/ci-linux-aarch64/apps/molctl/molctl
+          python3 tools/aarch64_emulation_gate.py \
+            --qemu /usr/bin/qemu-aarch64 \
+            --sysroot /usr/aarch64-linux-gnu \
+            --build-dir build/ci-linux-aarch64 \
+            --artifact-commit "$GITHUB_SHA" \
+            --report build/aarch64-emulation-report.json
 
   wasm:
     runs-on: ubuntu-24.04
