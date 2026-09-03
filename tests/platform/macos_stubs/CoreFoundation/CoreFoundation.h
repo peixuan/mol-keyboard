@@ -13,11 +13,13 @@ typedef void* CFMutableDictionaryRef;
 typedef void* CFNumberRef;
 typedef void* CFSetRef;
 typedef void* CFRunLoopRef;
+typedef const void* CFStringRef;
 typedef long CFIndex;
 typedef double CFTimeInterval;
 typedef unsigned char Boolean;
 typedef int CFNumberType;
 typedef int CFRunLoopRunResult;
+typedef unsigned int CFStringEncoding;
 
 typedef struct CFDictionaryKeyCallBacks {
   int unused;
@@ -45,6 +47,12 @@ CFIndex CFSetGetCount(CFSetRef set);
 CFRunLoopRef CFRunLoopGetCurrent(void);
 CFRunLoopRunResult CFRunLoopRunInMode(const void* mode, CFTimeInterval seconds,
                                      Boolean return_after_source_handled);
+CFIndex CFStringGetLength(CFStringRef string);
+CFIndex CFStringGetMaximumSizeForEncoding(CFIndex length, CFStringEncoding encoding);
+Boolean CFStringGetCString(CFStringRef string, char* buffer, CFIndex capacity,
+                           CFStringEncoding encoding);
+
+enum { kCFStringEncodingUTF8 = 0x08000100u };
 
 #ifdef __cplusplus
 }

@@ -7,6 +7,9 @@ if(MOL_ENABLE_MIDI AND WIN32)
 elseif(MOL_ENABLE_MIDI AND UNIX AND NOT APPLE)
   set(_mol_midi_enabled ON)
   set(_mol_midi_input_source midi_input_linux.cpp)
+elseif(MOL_ENABLE_MIDI AND APPLE)
+  set(_mol_midi_enabled ON)
+  set(_mol_midi_input_source midi_input_macos.cpp)
 else()
   set(_mol_midi_input_source midi_input_disabled.cpp)
 endif()
@@ -88,6 +91,20 @@ if(MOL_BUILD_TESTS)
   add_test(NAME mol_daemon_runtime_tests COMMAND mol_daemon_runtime_tests)
 
   if(NOT APPLE)
+    add_executable(mol_macos_midi_input_simulation_tests test_midi_input_macos_sim.cpp
+                                                        midi_input.cpp midi_input_macos.cpp)
+    target_include_directories(
+      mol_macos_midi_input_simulation_tests
+      PRIVATE ${PROJECT_SOURCE_DIR}/tests/platform/macos_stubs ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(mol_macos_midi_input_simulation_tests
+                          PRIVATE mol::service_control Threads::Threads)
+    set_target_properties(mol_macos_midi_input_simulation_tests
+                          PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
+    mol_enable_warnings(mol_macos_midi_input_simulation_tests)
+    mol_enable_optional_instrumentation(mol_macos_midi_input_simulation_tests)
+    add_test(NAME mol_macos_midi_input_simulation_tests
+             COMMAND mol_macos_midi_input_simulation_tests)
+
     add_executable(mol_macos_input_simulation_tests
                    test_physical_input_macos_sim.cpp physical_input_macos.cpp)
     target_include_directories(
