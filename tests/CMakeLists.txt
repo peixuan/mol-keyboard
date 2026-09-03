@@ -213,7 +213,7 @@ add_test(
   NAME mol_sequence_fixture_conformance
   COMMAND
     ${CMAKE_COMMAND} -DMOL_EXECUTABLE=$<TARGET_FILE:mol_sequence_fixture>
-    -DMOL_EMULATOR=${CMAKE_CROSSCOMPILING_EMULATOR}
+    "-DMOL_EMULATOR=${CMAKE_CROSSCOMPILING_EMULATOR}"
     -DMOL_EXPECTED=${CMAKE_CURRENT_SOURCE_DIR}/golden/m4_sequence_fixture.txt -P
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_event_trace.cmake)
 
@@ -268,7 +268,7 @@ add_test(
   NAME mol_event_trace_conformance
   COMMAND
     ${CMAKE_COMMAND} -DMOL_EXECUTABLE=$<TARGET_FILE:mol_event_trace>
-    -DMOL_EMULATOR=${CMAKE_CROSSCOMPILING_EMULATOR}
+    "-DMOL_EMULATOR=${CMAKE_CROSSCOMPILING_EMULATOR}"
     -DMOL_EXPECTED=${CMAKE_CURRENT_SOURCE_DIR}/golden/m2_event_trace.txt -P
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_event_trace.cmake)
 
@@ -282,7 +282,7 @@ if(MOL_PROFILE_STANDARD AND MOL_ENABLE_CHORUS AND MOL_ENABLE_DELAY AND MOL_ENABL
     NAME mol_audio_metrics_conformance
     COMMAND
       ${CMAKE_COMMAND} -DMOL_EXECUTABLE=$<TARGET_FILE:mol_audio_metrics>
-      -DMOL_EMULATOR=${CMAKE_CROSSCOMPILING_EMULATOR}
+      "-DMOL_EMULATOR=${CMAKE_CROSSCOMPILING_EMULATOR}"
       -DMOL_EXPECTED=${CMAKE_CURRENT_SOURCE_DIR}/golden/m3_audio_metrics.txt -P
       ${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_audio_metrics.cmake)
 endif()

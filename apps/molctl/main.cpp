@@ -562,7 +562,13 @@ int main(int argc, char** argv) try {
     std::filesystem::path renderer = directory / renderer_name;
     if (!std::filesystem::is_regular_file(renderer))
       renderer = directory.parent_path() / "mol-render" / renderer_name;
-    std::vector<std::string> arguments{renderer.string()};
+    std::vector<std::string> arguments;
+#if defined(__linux__)
+    const char* test_emulator = std::getenv("MOL_TEST_EXECUTABLE_EMULATOR");
+    if (test_emulator != nullptr && test_emulator[0] != '\0')
+      arguments.emplace_back(test_emulator);
+#endif
+    arguments.emplace_back(renderer.string());
     arguments.insert(arguments.end(), invocation.render_arguments.begin(),
                      invocation.render_arguments.end());
     const int result = run_program(arguments, error);

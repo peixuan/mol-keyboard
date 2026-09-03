@@ -6,7 +6,7 @@ endif()
 
 if(DEFINED MOL_EMULATOR AND NOT MOL_EMULATOR STREQUAL "")
   execute_process(
-    COMMAND "${MOL_EMULATOR}" "${MOL_EXECUTABLE}"
+    COMMAND ${MOL_EMULATOR} "${MOL_EXECUTABLE}"
     RESULT_VARIABLE trace_result
     OUTPUT_VARIABLE trace_output
     ERROR_VARIABLE trace_error)

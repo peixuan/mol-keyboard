@@ -100,6 +100,19 @@
       }
     },
     {
+      "name": "ci-linux-aarch64-qemu",
+      "inherits": "base",
+      "displayName": "Linux AArch64 QEMU Tests",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/linux-aarch64-gnu.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CROSSCOMPILING_EMULATOR": "/usr/bin/qemu-aarch64;-L;/usr/aarch64-linux-gnu",
+        "MOL_BUILD_TESTS": "ON",
+        "MOL_VALIDATE_MOBILE_SOURCES": "OFF",
+        "MOL_ENABLE_ASSERTIONS": "ON"
+      }
+    },
+    {
       "name": "ci-windows-msvc",
       "inherits": "base",
       "cacheVariables": {
@@ -318,6 +331,7 @@
     { "name": "ci-linux-gcc", "configurePreset": "ci-linux-gcc" },
     { "name": "ci-linux-clang", "configurePreset": "ci-linux-clang" },
     { "name": "ci-linux-aarch64", "configurePreset": "ci-linux-aarch64" },
+    { "name": "ci-linux-aarch64-qemu", "configurePreset": "ci-linux-aarch64-qemu" },
     { "name": "ci-windows-msvc", "configurePreset": "ci-windows-msvc" },
     { "name": "ci-shared", "configurePreset": "ci-shared" },
     { "name": "ci-windows-arm64-cross", "configurePreset": "ci-windows-arm64-cross" },
@@ -343,6 +357,7 @@
     { "name": "profile-full", "configurePreset": "profile-full", "output": { "outputOnFailure": true } },
     { "name": "ci-linux-gcc", "configurePreset": "ci-linux-gcc", "output": { "outputOnFailure": true } },
     { "name": "ci-linux-clang", "configurePreset": "ci-linux-clang", "output": { "outputOnFailure": true } },
+    { "name": "ci-linux-aarch64-qemu", "configurePreset": "ci-linux-aarch64-qemu", "output": { "outputOnFailure": true }, "environment": { "MOL_TEST_EXECUTABLE_EMULATOR": "/usr/bin/qemu-aarch64", "QEMU_LD_PREFIX": "/usr/aarch64-linux-gnu" } },
     { "name": "ci-windows-msvc", "configurePreset": "ci-windows-msvc", "output": { "outputOnFailure": true } },
     { "name": "ci-shared", "configurePreset": "ci-shared", "output": { "outputOnFailure": true } },
     { "name": "fuzz-clang", "configurePreset": "fuzz-clang", "output": { "outputOnFailure": true } },

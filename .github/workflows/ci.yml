@@ -120,6 +120,11 @@ jobs:
             --build-dir build/ci-linux-aarch64 \
             --artifact-commit "$GITHUB_SHA" \
             --report build/aarch64-emulation-report.json
+      - name: Run AArch64 test binaries under QEMU
+        run: |
+          cmake --preset ci-linux-aarch64-qemu
+          cmake --build --preset ci-linux-aarch64-qemu
+          ctest --preset ci-linux-aarch64-qemu
 
   wasm:
     runs-on: ubuntu-24.04

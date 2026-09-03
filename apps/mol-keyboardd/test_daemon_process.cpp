@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 #include <chrono>
+#include <cstdlib>
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
@@ -192,9 +193,16 @@ int main(int argc, char** argv) {
 
   ChildProcess process;
   std::string error;
-  if (!process.start({daemon.string(), "--null-backend", "--state-dir", state.string(),
-                      "--endpoint", endpoint},
-                     error)) {
+  std::vector<std::string> daemon_command;
+#if defined(__linux__)
+  const char* test_emulator = std::getenv("MOL_TEST_EXECUTABLE_EMULATOR");
+  if (test_emulator != nullptr && test_emulator[0] != '\0')
+    daemon_command.emplace_back(test_emulator);
+#endif
+  daemon_command.insert(daemon_command.end(),
+                        {daemon.string(), "--null-backend", "--state-dir", state.string(),
+                         "--endpoint", endpoint});
+  if (!process.start(daemon_command, error)) {
     std::fprintf(stderr, "%s\n", error.c_str());
     return 1;
   }
