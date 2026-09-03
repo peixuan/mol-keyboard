@@ -6,6 +6,13 @@ CMake 4.4.0, Ninja 1.13.2, Emscripten 6.0.5, and ESP-IDF 6.1. Linux/Clang servic
 validation runs under WSL with null audio. macOS compilation and physical
 Bluetooth audio/keyboard verification remain unavailable here.
 
+The complete Windows ARM64 and Linux AArch64 products cross-build and their
+object formats were inspected as COFF-ARM64 and AArch64 ELF respectively. They
+have not executed on a native ARM64 host, so audio, input, service lifecycle,
+and package behavior on those architectures remain unverified. Native ARM64
+GitHub runner jobs are checked in, but no result is claimed before the commits
+are present on a remote workflow run.
+
 The production PWA is runtime-verified with current system Chrome and Edge.
 The pinned Firefox engine executes the real AudioWorklet and Wasm DSP through
 offline rendering, but its headless Windows process exposes no realtime output

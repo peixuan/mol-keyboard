@@ -6,22 +6,25 @@ All locally actionable M10 release gates are complete. Native and Wasm
 regression, coverage, static analysis, ASan/UBSan with all six fuzzers, Linux
 ThreadSanitizer, optimized endurance, release-size budgets, dependency/license
 and SBOM audits, Windows/Linux package audits, Android packaging, and clean
-checkout reproduction pass. M0 through M9 are implementation-complete, but the
-Definition of Done is not complete: Apple and Harmony toolchains, current
-Safari, physical mobile devices, ESP32 hardware, physical audio routes, and
-instrumented end-to-end latency remain external acceptance gates. No
-`v1.0.0` tag exists.
+checkout reproduction pass. Complete Windows ARM64 and Linux AArch64 desktop
+products now cross-build through checked-in presets, closing their local build
+gap; execution on native ARM64 hosts remains unclaimed. M0 through M9 are
+implementation-complete, but the Definition of Done is not complete: native
+ARM64 runtime, Apple and Harmony toolchains, current Safari, physical mobile
+devices, ESP32 hardware, physical audio routes, and instrumented end-to-end
+latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`3a1da43` (`fix(web): initialize Wasm worklets portably`) is the code candidate
-covered by this evidence update. MSVC Debug and LTO Release passed 71/71 tests;
-Emscripten Debug and MinSizeRel passed 31/31; Clang ASan/UBSan passed 40/40 with
-all six required parser fuzzers. All four ESP-IDF firmware variants, the
-Android application variants, and the production Web browser matrix also pass
-within their stated boundaries. A source archive of this exact commit rebuilt
-Native Debug, Wasm Release, and the production Web bundle from scratch.
-Validation below ran on 2026-09-03.
+`d45383b` (`build: add reproducible Windows arm64 cross target`) is the latest
+locally validated implementation commit. MSVC Debug passed 71/71 tests and
+Emscripten MinSizeRel passed 31/31 after the cross-build fix. LLVM-MinGW
+20260826/Clang 23.1.0 produced the complete Windows ARM64 product, and an
+Ubuntu cross sysroot with GNU 15.2.0 produced the complete Linux AArch64
+product. Native ARM64 execution is not inferred from these builds. The prior
+`3a1da43` candidate remains covered by the complete Release, sanitizer, fuzz,
+coverage, endurance, platform, package, and clean-checkout matrix documented
+below. Validation ran on 2026-09-03.
 
 ## Completed requirements
 
@@ -87,6 +90,10 @@ Validation below ran on 2026-09-03.
   adapters, bounded local IPC, all 41 specified JSON-RPC methods, strict atomic
   configuration, recording/playback, actionable doctor/self-test/benchmark,
   and user startup assets for Windows, systemd, and launchd.
+- Checked-in cross toolchains build that complete desktop product, including
+  `mol-keyboardd`, `molctl`, `mol-play`, `mol-render`, `mol-seq`,
+  `mol-patchc`, `mol-audio-analyze`, and `mol_core`, as Windows ARM64 COFF and
+  Linux AArch64 ELF. CI also includes native Windows and Ubuntu ARM64 runners.
 - An independent Windows Release process used the active 48 kHz stereo WASAPI
   device, exposed the physical Raw Input adapter, passed doctor and a 96,000
   frame benchmark at 80.68 times realtime with no non-finite samples, and shut
@@ -157,6 +164,10 @@ Validation below ran on 2026-09-03.
 - No Bluetooth output was exposed for the Windows run. WSL exposes neither a
   physical evdev keyboard nor native Linux audio hardware. Those M5 acceptance
   paths and macOS compilation/runtime remain unverified.
+- Windows ARM64 and Linux AArch64 binaries are build-verified, but no native
+  ARM64 host was available locally to execute their service, input, or audio
+  paths. Native ARM64 CI jobs are configured but an unpushed local commit is not
+  reported as a CI result.
 - Physical Android/Apple/Harmony/ESP32 devices, I2S capture equipment, signing
   credentials, and long-run device time are not available. The Android emulator
   result and ESP-IDF builds are not promoted to device verification.
@@ -282,6 +293,28 @@ cmake --build --preset endurance
 ctest --test-dir build/endurance --output-on-failure -L endurance
 ```
 
+The complete desktop products also pass the checked-in cross-build presets:
+
+```sh
+# Ubuntu/Debian system cross compiler, or an unpacked sysroot selected through
+# MOL_LINUX_AARCH64_ROOT.
+cmake --preset ci-linux-aarch64
+cmake --build --preset ci-linux-aarch64
+```
+
+```powershell
+# Extract LLVM-MinGW 20260826 UCRT, then select it explicitly.
+$env:MOL_LLVM_MINGW_ROOT = "C:\path\to\llvm-mingw-20260826-ucrt-x86_64"
+cmake --preset ci-windows-arm64-cross
+cmake --build --preset ci-windows-arm64-cross
+```
+
+The Linux result contains AArch64 ELF executables; the Windows result contains
+COFF-ARM64 executables and archive members. Both were inspected with target
+object tools after the build. The LLVM-MinGW archive used locally was
+190,721,391 bytes with SHA-256
+`ae601f4e0f72bbdf441ad2df8bb16f037e2e9251559ea6b37b4057aef39c06c3`.
+
 Coverage passed at 94.10% overall, including 95.95% queue/memory, 97.78%
 music-state, 97.49% Patch, and 95.57% Sequence coverage. Clang static analysis
 passed all 38 first-party production translation units. Linux Clang
@@ -336,8 +369,9 @@ evidence and pending physical acceptance are in
 
 ## Next highest-priority task
 
-Run the external acceptance matrix: macOS plus current Safari, official iOS and
-Harmony builds, physical Android/iOS/Harmony lifecycle and route checks,
-ESP32/ESP32-S3 30-minute HIL with I2S/A2DP/USB/GPIO evidence, and instrumented
-P50/P95/maximum latency on every required route. Keep `v1.0.0` blocked until
-all results pass and the exact final candidate is reviewed.
+Run the external acceptance matrix: native Windows/Linux ARM64 execution,
+macOS plus current Safari, official iOS and Harmony builds, physical
+Android/iOS/Harmony lifecycle and route checks, ESP32/ESP32-S3 30-minute HIL
+with I2S/A2DP/USB/GPIO evidence, and instrumented P50/P95/maximum latency on
+every required route. Keep `v1.0.0` blocked until all results pass and the exact
+final candidate is reviewed.

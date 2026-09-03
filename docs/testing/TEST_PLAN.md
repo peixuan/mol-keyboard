@@ -40,6 +40,12 @@ and Wasm must match the event trace, shared sequence fixture, and calibrated
 18-preset audio metrics. ESP-IDF builds the same fixture into ESP32 and
 ESP32-S3 startup checks.
 
+The `ci-linux-aarch64` and `ci-windows-arm64-cross` presets must compile the
+complete headless product, not only `mol_core`, and object inspection must
+confirm AArch64 ELF and COFF-ARM64 outputs. CI additionally runs the ordinary
+native suite on Ubuntu and Windows ARM64 hosted runners; cross-build success is
+never promoted to runtime verification.
+
 Block-size conformance renders equivalent streams with different callback
 partitions. The two-hour rational transport case must end at the exact expected
 frame with no accumulated drift.

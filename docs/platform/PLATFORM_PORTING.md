@@ -26,6 +26,36 @@ Before adding device code, prove:
 4. The C consumer, shared sequence fixture, and all portable unit tests pass.
 5. The link map and static memory fit the target budget.
 
+## Desktop architecture cross-builds
+
+The ordinary native presets cover the host architecture. Two additional
+presets ensure that every headless desktop deliverable also compiles for the
+required secondary architectures:
+
+```sh
+sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+cmake --preset ci-linux-aarch64
+cmake --build --preset ci-linux-aarch64
+```
+
+`ci-linux-aarch64` uses the system GNU cross compiler by default. A locally
+unpacked Debian/Ubuntu cross sysroot can instead be selected with
+`MOL_LINUX_AARCH64_ROOT`; keep its host-side shared libraries discoverable when
+running its compiler binaries.
+
+```powershell
+$env:MOL_LLVM_MINGW_ROOT = "C:\path\to\llvm-mingw-ucrt-x86_64"
+cmake --preset ci-windows-arm64-cross
+cmake --build --preset ci-windows-arm64-cross
+```
+
+The Windows preset expects an LLVM-MinGW UCRT distribution and produces
+COFF-ARM64 output. Both presets build the core, daemon, CLI, realtime playback,
+sequence, Patch, renderer, and analyzer targets. Inspecting the object format
+proves the target architecture; it does not prove runtime behavior. Native
+ARM64 CI or a physical host must execute the regular test and device matrix
+before promotion to `runtime-verified`.
+
 ## Audio host
 
 Request float output when native support exists; otherwise convert from the

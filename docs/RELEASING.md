@@ -30,7 +30,8 @@ Do not change the public C API major merely to match a product release. Follow
 2. Re-run the dependency license audit, verify every lock/hash against its
    authoritative source, and update the SPDX SBOM and notices.
 3. Run MSVC, GCC, Clang, Emscripten, coverage, static-analysis, sanitizer/fuzz,
-   ThreadSanitizer, optimized endurance, and browser matrices.
+   ThreadSanitizer, optimized endurance, browser matrices, both ARM64
+   cross-build presets, and the native ARM64 CI jobs.
 4. Build the Android, iOS, HarmonyOS, ESP32, and ESP32-S3 products with their
    pinned official toolchains.
 5. Run the physical device, input, route, background, 30-minute, I2S capture,

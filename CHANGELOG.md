@@ -30,3 +30,5 @@ All notable changes to this project will be documented in this file.
   endurance, size, license/SBOM, package-audit, and clean-checkout gates with
   evidence. External device, Apple/Harmony, Safari, and physical latency gates
   remain required before v1.0.0.
+- Added reproducible Windows ARM64 and Linux AArch64 cross-build targets for the
+  complete headless product, plus native ARM64 CI runners.

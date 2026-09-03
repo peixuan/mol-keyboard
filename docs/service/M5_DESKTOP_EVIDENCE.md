@@ -55,3 +55,9 @@ speaker playback claim is made. The Linux run used WSL and a null sink, so it
 does not claim physical evdev or Linux audio hardware. An Apple SDK and macOS
 host were unavailable; the IOHIDManager adapter and launchd asset are present
 but macOS compilation/runtime acceptance remains unverified.
+
+The later `d45383b` release audit also cross-built the complete desktop product
+with checked-in presets. GNU 15.2.0 produced AArch64 ELF daemon, CLI, playback,
+sequence, render, patch, analyzer, and core outputs. LLVM-MinGW 20260826/Clang
+23.1.0 produced the equivalent COFF-ARM64 outputs. These results promote both
+architectures to `build-verified`; they are not native ARM64 runtime evidence.
