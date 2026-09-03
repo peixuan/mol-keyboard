@@ -14,9 +14,12 @@ cover input gesture ownership and cleanup plus audio callback, device selection,
 notification, recovery, and cleanup state. A fail-closed Apple-only CTest now
 bootstraps a temporary user LaunchAgent from the shipped template and drives the
 real daemon/CLI lifecycle with null audio, including zero-exit and socket-cleanup
-checks. Its cross-platform project audit passes, but the CTest itself has not
-run here. These checks do not provide Apple framework headers or ABI, actual
-launchd behavior, system permissions, hardware routes, or native macOS
+checks. Linux also executes the unchanged runner against a controlled launchd
+model and the real product binaries, validating the service contract,
+bootstrap/bootout, full control flow, clean exit, and cleanup. Its cross-platform
+project audit passes, but the Apple CTest itself has not run here. These checks
+do not provide Apple framework headers or ABI, native launchd behavior, system
+permissions, hardware routes, or native macOS
 scheduling, so macOS remains below `build-verified` and `runtime-verified`.
 
 The complete Windows ARM64 and Linux AArch64 products cross-build and their

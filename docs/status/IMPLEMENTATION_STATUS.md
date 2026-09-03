@@ -7,11 +7,12 @@ followed by mobile and ESP32. The production Web UI controls real Windows and
 Linux daemon processes, and both platforms pass their complete native suites.
 The exact macOS IOHID and CoreAudio-selected production sources also pass
 controlled lifecycle simulations under two non-Apple compilers; this does not
-replace an Apple SDK or macOS runtime result. A new Apple-only CTest will
-bootstrap the shipped LaunchAgent and exercise the real daemon/CLI lifecycle
-with null audio, while a portable audit keeps that macOS acceptance wiring
-fail-closed. It has not executed on this host. With those locally reachable
-desktop/service gates exhausted, both real ESP-IDF firmware images now also
+replace an Apple SDK or macOS runtime result. The Apple-only CTest bootstraps
+the shipped LaunchAgent and exercises the real daemon/CLI lifecycle with null
+audio. Linux now executes that exact runner unchanged against a controlled
+launchd process model and the real product binaries, while the portable audit
+keeps both paths fail-closed. Native Apple execution remains pending. With those
+locally reachable desktop/service gates exhausted, both real ESP-IDF firmware images now also
 execute through their production storage, input/control, shared-core, and
 FreeRTOS audio paths in Espressif QEMU. Other locally actionable M10 release
 gates are complete. Native and Wasm
@@ -36,14 +37,16 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`5b0640b` (`test(macos): exercise daemon through launchd`) is the latest locally
-validated code candidate. Its Apple-only CTest bootstraps a temporary user
-LaunchAgent from the shipped property-list template and uses the exact built
-daemon and CLI to verify null-audio startup, state/capabilities, preset and
-tempo control, note recording, playback, self-test, doctor, a finite 4,096-frame
-benchmark, all-notes-off, zero-exit shutdown, and private socket cleanup. The
-portable project audit passes on all three local toolchains, but no launchd
-execution is claimed here. The preceding `f34aef3` candidate's CI-bound iOS
+`a9b8e98` (`test(macos): simulate launchd service acceptance`) is the latest
+locally validated code candidate. Linux runs the exact production Apple smoke
+script unchanged against a controlled `launchctl`, `plutil`, and Darwin-host
+model. That model launches the real daemon and CLI, enforces the expected plist
+and executable contract, and verifies null-audio startup, state/capabilities,
+preset and tempo control, note recording, playback, self-test, doctor, a finite
+4,096-frame benchmark, all-notes-off, zero-exit shutdown, private socket cleanup,
+and bootstrap/bootout. This is process-orchestration simulation and not native
+Apple evidence. The Apple-only CTest and portable project audit remain
+fail-closed. The preceding `f34aef3` candidate's CI-bound iOS
 Simulator runner selects and boots an
 available iPhone, installs and launches the real application bundle, and fails
 unless the packaged production UI reaches the reply-capable native bridge for
@@ -58,9 +61,9 @@ ESP32-S3 images boot under Espressif QEMU, mount/format transactional storage,
 pass the shared sequence and C4 checks, drain 12 production input commands, and
 render more than 100,000 frames with non-silent finite output and zero project
 failure counters. All four physical-board configurations still compile with
-the emulator option disabled. Windows MSVC Release and Linux x86_64 GCC pass
-82/82 tests; Emscripten MinSizeRel passes 35/35. System Chrome on Windows and
-bundled Chromium on Linux each pass the five applicable desktop application
+the emulator option disabled. Windows MSVC Release passes 82/82 tests, Linux
+x86_64 GCC passes 83/83, and Emscripten MinSizeRel passes 35/35. System Chrome
+on Windows and bundled Chromium on Linux each pass the five applicable desktop application
 cases, including a real platform daemon process and authenticated service
 controller. Current core coverage remains 94.10%, Clang static analysis passes
 40 production translation units, and ASan/UBSan passes 47/47 with all eleven
@@ -179,8 +182,9 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
 - The Apple CTest graph includes a 30-second LaunchAgent product smoke which
   drives the real daemon and CLI over private local IPC with null audio and
   checks diagnostics, recording/playback, zero-exit shutdown, and socket
-  cleanup. Its portable integration audit passes; actual launchd execution
-  still requires an Apple runner.
+  cleanup. Linux executes the same runner against a controlled launchd process
+  model and real product binaries; its portable integration audit also passes.
+  Actual Apple launchd execution still requires an Apple runner.
 - An independent Windows Release process used the active 48 kHz stereo WASAPI
   device, exposed the physical Raw Input adapter, passed doctor and a 96,000
   frame benchmark at 80.68 times realtime with no non-finite samples, and shut
@@ -306,10 +310,12 @@ GNU 15 Release+LTO presets previously passed 75/75 for Tiny, 76/76 for
 Standard, and 75/75 for Full. The Full run exercises 64 voices, 4,096 sequence
 events, the complete desktop daemon, and the expanded fixed host arenas.
 
-Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 82/82
-tests; the prior Clang 21.1.8 candidate passed 78/78. The daemon process used
-its null sink and a private Unix socket; the production Web UI additionally
-controlled it under bundled Chromium. Physical Linux devices remain unclaimed.
+Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 83/83
+tests; the prior Clang 21.1.8 candidate passed 78/78. The current suite runs the
+production macOS service smoke unchanged through a controlled launchd model and
+the real Linux daemon/CLI. The daemon process used its null sink and a private
+Unix socket; the production Web UI additionally controlled it under bundled
+Chromium. Physical Linux devices and native Apple behavior remain unclaimed.
 
 Static/shared API parity is checked separately:
 
@@ -559,8 +565,9 @@ tests.
 - Cross-platform source checks are not promoted to device verification.
 
 The HarmonyOS application descriptors, project audit, and native source-check
-boundary pass locally. Windows MSVC Release and Linux GCC pass 82/82 tests. The
-official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor 5.8.9 build and audit
+boundary pass locally. Windows MSVC Release passes 82/82 tests and Linux GCC
+passes 83/83. The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
+5.8.9 build and audit
 both Debug and Release compatibility HAPs; the Release artifact is an unsigned
 2,951,842-byte package containing ArkTS bytecode and both required native ABIs.
 `platforms/harmony/build-app.sh release` remains the fail-closed formal DevEco

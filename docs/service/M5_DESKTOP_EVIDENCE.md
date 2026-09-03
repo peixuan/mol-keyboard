@@ -1,7 +1,7 @@
 # M5 Desktop Headless Evidence
 
 Verified on 2026-09-03 at commit `c87e1a1`; the desktop-first regression and
-device-free acceptance wiring were refreshed through code candidate `5b0640b`.
+device-free acceptance were refreshed through code candidate `a9b8e98`.
 
 ## Implemented surface
 
@@ -34,6 +34,11 @@ device-free acceptance wiring were refreshed through code candidate `5b0640b`.
   sink, drives the exact built CLI through status, capability, preset, tempo,
   note, recording, playback, self-test, doctor, benchmark, all-notes-off, and
   shutdown paths, and requires launchd exit code zero plus socket cleanup.
+- Linux CI runs that same production acceptance script unchanged against a
+  controlled `launchctl`, `plutil`, and Darwin-host model. The model starts the
+  real Linux daemon and CLI as a supervised process group, enforces the shipped
+  plist lifecycle and exact executable contract, records bootstrap/bootout,
+  and rejects a nonzero service exit or surviving supervisor.
 
 ## Verification results
 
@@ -41,7 +46,7 @@ device-free acceptance wiring were refreshed through code candidate `5b0640b`.
 |---|---:|---|
 | Windows MSVC Debug | 78/78 | local IPC recovery, all 41 RPC methods, runtime callback, independent daemon process, CLI, recording/playback, rendering, macOS interface simulations |
 | Windows MSVC LTO Release | 82/82 | current optimized suite, including the desktop platform simulations and macOS LaunchAgent project audit |
-| Linux x86_64 GCC (WSL) | 82/82 | current Unix socket/null-audio product suite and macOS LaunchAgent project audit |
+| Linux x86_64 GCC (WSL) | 83/83 | current Unix socket/null-audio product suite plus executable macOS LaunchAgent orchestration simulation |
 | Linux x86_64 Clang (WSL) | 78/78 | Unix socket mode/cleanup, null-audio service process, CLI lifecycle, Linux adapter compilation, macOS interface simulations |
 | Linux AArch64 QEMU 10.2.1 | 59/59 | target core/DSP/music tests, 18-preset metrics, null playback, nested daemon process, CLI/render lifecycle |
 | Windows Clang ASan/UBSan | 30/30 | all sanitizer-enabled portable/control tests and four 20-second parser fuzz sessions |
@@ -76,10 +81,13 @@ controlled CoreAudio/miniaudio model, covering backend selection, effective
 stream configuration, callbacks, device selection, reroute/stopped
 notifications, recovery, and cleanup. A new fail-closed runner now gives the
 macOS CI lane a real LaunchAgent daemon/CLI process acceptance path without
-requiring audio hardware. These are still explicitly unexecuted Apple results
-on this host: launchd execution, Apple framework ABI, CoreAudio devices, IOHID
-permissions, and the native macOS daemon process require a real macOS run before
-promotion.
+requiring audio hardware. The unchanged runner additionally passes on Linux
+against a controlled launchd process model while starting the real daemon and
+CLI, which validates orchestration, product behavior, zero-exit shutdown, and
+cleanup without claiming Apple implementation behavior. These are still
+explicitly unexecuted Apple results on this host: native launchd, Apple
+framework ABI, CoreAudio devices, IOHID permissions, and the native macOS
+daemon process require a real macOS run before promotion.
 
 The later `d45383b` release audit also cross-built the complete desktop product
 with checked-in presets. GNU 15.2.0 produced AArch64 ELF daemon, CLI, playback,
@@ -103,3 +111,12 @@ macOS CI runner, null-audio process launch, complete CLI lifecycle, diagnostic
 assertions, zero-exit check, and success marker remain connected. That audit
 passes under MSVC, Linux GCC, and Emscripten; the actual LaunchAgent CTest has
 not run on this Windows host and is not recorded as macOS runtime evidence.
+
+At candidate `a9b8e98`, Linux GCC executes that production runner through a
+fail-closed launchd model. The model accepted only the expected built daemon,
+then the real `mol-keyboardd` and `molctl` completed null-audio startup, all
+control/record/play/diagnostic assertions, a finite 4,096-frame benchmark,
+clean shutdown, socket removal, and both bootstrap and bootout. This raised the
+current Linux suite to 83/83. The runner also exposed and fixed a case-sensitive
+null-backend assertion (`Null` is miniaudio's real backend name). This is
+device-free service-orchestration evidence, not native macOS evidence.
