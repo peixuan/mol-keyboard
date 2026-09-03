@@ -53,18 +53,24 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`5c230cd` (`test: require Python for complete suites`) is the latest locally
-validated code candidate. Test-enabled CMake configuration now requires Python
-instead of silently omitting both ESP32 evidence-parser tests and the Linux
-launchd-process simulation. An intentionally invalid interpreter fails
+`e64e8f0` (`test: verify installed SDK consumers`) is the latest locally
+validated code candidate. Every ordinary native test configuration now installs
+the SDK into an empty isolated prefix, disables CMake package registries,
+requires exactly one installed `mol_keyboardConfig.cmake`, compiles every one of
+the 14 public headers independently as C11 and C++17, and runs independent C11
+and C++17 consumers linked through the installed `mol::core` target. Windows
+LTO Release passes 91/91, Linux GCC passes 92/92, and Emscripten MinSizeRel
+passes 42/42. GNU 15 Release+LTO Tiny, Standard, and Full pass 91/91, 92/92,
+and 91/91. Windows and Linux shared builds pass 89/89 and 90/90; the Linux
+library still matches all 47 public symbols, and ABI Compliance Checker reports
+100% binary and source compatibility with no problems or warnings. Instrumented
+and cross builds retain their dedicated gates without exporting development
+runtime flags as part of the installed SDK contract.
+The preceding `5c230cd` candidate makes test-enabled CMake configuration require
+Python instead of silently omitting both ESP32 evidence-parser tests and the
+Linux launchd-process simulation. An intentionally invalid interpreter fails
 configuration; Python 3.14.6 on Windows and 3.14.4 on Linux configure
-successfully. Windows passes 90/90, Linux passes 91/91, and Wasm passes 42/42.
-The same candidate has now been rebuilt under GNU 15 Release+LTO in Tiny,
-Standard, and Full configurations, passing 90/90, 91/91, and 90/90. Its Windows
-and Linux shared builds pass 88/88 and 89/89, respectively; independent C11 and
-C++17 consumers compiled against the installed packages run on both hosts, the
-Linux library matches all 47 public symbols, and ABI Compliance Checker reports
-100% binary and source compatibility with no problems or warnings.
+successfully.
 The preceding `5e84b49` candidate makes browser acceptance fail when the real
 desktop daemon is absent, and the checked-in Linux CI path builds that daemon
 before running the locked production Web bundle across Chromium, Firefox, and
@@ -132,8 +138,8 @@ ESP32-S3 images boot under Espressif QEMU, mount/format transactional storage,
 pass the shared sequence and C4 checks, drain 12 production input commands, and
 render more than 100,000 frames with non-silent finite output and zero project
 failure counters. All four physical-board configurations still compile with
-the emulator option disabled. Windows MSVC Release passes 90/90 tests, Linux
-x86_64 GCC passes 91/91, and Emscripten MinSizeRel passes 42/42. System Chrome
+the emulator option disabled. Windows MSVC Release passes 91/91 tests, Linux
+x86_64 GCC passes 92/92, and Emscripten MinSizeRel passes 42/42. System Chrome
 on Windows and bundled Chromium on Linux each pass the five applicable desktop
 application cases, including a real platform daemon process and authenticated
 service controller. Current core coverage remains 94.10%, Clang static analysis passes
@@ -150,13 +156,13 @@ Debug suite passes 59/59, affected MSVC tests pass 5/5, and ESP32 HIL
 parser/model self-tests pass 5/5. The prior
 `4f77f56` candidate retains the complete MSVC Debug/LTO Release, Linux Clang,
 ABI, sanitizer, analysis, endurance, size, package, and clean-checkout evidence
-documented below. MSVC LTO Release passes 90/90 tests and its prior Debug run
+documented below. MSVC LTO Release passes 91/91 tests and its prior Debug run
 passed 78/78; Emscripten MinSizeRel passes 42/42 and its prior Debug run passed
-31/31. Windows and Linux shared-core builds pass 88/88 and 89/89
+31/31. Windows and Linux shared-core builds pass 89/89 and 90/90
 public-boundary tests, expose exactly the 47 version 1.0 API symbols, and Linux
 ABI Compliance Checker reports 100% binary and source compatibility with zero
-problems. GNU 15 Release+LTO Tiny, Standard, and Full profiles pass 90/90,
-91/91, and 90/90. ASan/UBSan passes 47/47 including all
+problems. GNU 15 Release+LTO Tiny, Standard, and Full profiles pass 91/91,
+92/92, and 91/91. ASan/UBSan passes 47/47 including all
 eleven fuzzers. LLVM-MinGW 20260826/Clang 23.1.0 and GNU 15.2.0 produced the
 complete Windows ARM64 and Linux AArch64 products. QEMU evidence is not inferred
 to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
@@ -173,6 +179,10 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   hide every internal symbol and export exactly 47 `MOL_API` functions. The
   checked-in symbol and ABI Dumper baselines are enforced by a three-OS shared
   CI matrix and Linux ABI Compliance Checker.
+- The native SDK gate installs into a fresh isolated prefix, resolves only that
+  exported CMake package, compiles all public headers independently in C11 and
+  C++17 modes, and runs standalone C and C++ consumers for static and shared
+  libraries.
 - The same core sources build and run under MSVC, Emscripten, and ESP-IDF. C and
   C++17 consumers link against the public API.
 - The M1 path renders measured C4 through Native, WebAssembly/AudioWorklet,
@@ -391,19 +401,19 @@ cmake --build --preset dev-release
 ctest --preset dev-release --output-on-failure
 ```
 
-MSVC 19.51.36248 passes 90/90 tests in the current LTO Release build; the prior
+MSVC 19.51.36248 passes 91/91 tests in the current LTO Release build; the prior
 Debug build passed 78/78. These runs include the iOS production lifecycle
 policy, exact HarmonyOS production policy source, strict Web form protocol, and
 HIL evidence-parser tests in addition to
 the independent daemon process, realtime runtime, local IPC, all service
 methods, CLI validation, configuration restart, recording/playback, the macOS
 IOHID/CoreAudio lifecycle simulations, and prior core/tool coverage. Dedicated
-GNU 15 Release+LTO presets pass 90/90 for Tiny, 91/91 for Standard, and 90/90
+GNU 15 Release+LTO presets pass 91/91 for Tiny, 92/92 for Standard, and 91/91
 for Full with the required Node.js and Python runtimes. The Full run exercises
 64 voices, 4,096 sequence events, the complete desktop daemon, and the expanded
 fixed host arenas.
 
-Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 91/91
+Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 92/92
 tests; the prior Clang 21.1.8 candidate passed 78/78. The current suite runs a
 real systemd user unit lifecycle plus the production macOS service smoke
 unchanged through a controlled launchd model and
@@ -430,7 +440,7 @@ abi-compliance-checker -l mol_core -old abi/mol_core-1.0.dump \
   -report-path build/mol_core-abi-report.html
 ```
 
-Windows and Linux shared builds pass 88/88 and 89/89 tests, respectively. The
+Windows and Linux shared builds pass 89/89 and 90/90 tests, respectively. The
 current dynamic library matches all 47 expected symbols exactly; ABI Compliance
 Checker reports 100% binary and source compatibility, zero problems, and zero
 warnings. Independent installed C11 and C++17 consumers also compile and execute
@@ -703,7 +713,7 @@ tests.
 
 The HarmonyOS application descriptors, project audit, executable production
 policy/bridge/host simulations, and native source-check boundary pass locally.
-Windows MSVC Release passes 90/90 tests, Linux GCC passes 91/91, Emscripten
+Windows MSVC Release passes 91/91 tests, Linux GCC passes 92/92, Emscripten
 passes 42/42, and Linux AArch64 QEMU passes 71/71.
 The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
 5.8.9 build and audit

@@ -34,7 +34,8 @@ All notable changes to this project will be documented in this file.
 - Added reproducible Windows ARM64 and Linux AArch64 cross-build targets for the
   complete headless product, plus native ARM64 CI runners.
 - Added explicit static/shared `mol_core` builds, a hidden-by-default 47-symbol
-  public export boundary, installed shared-library consumers, and Linux ABI
+  public export boundary, isolated installed-package consumers, independent
+  C11/C++17 compilation for every public header, and Linux ABI
   symbol/layout/signature compatibility checks against the version 1.0 baseline.
 - Added `mol-latency-probe` for fail-closed analysis of multichannel PCM16
   physical captures, with report metadata, capture hashes, raw observations,

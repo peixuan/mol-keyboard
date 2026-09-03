@@ -33,8 +33,11 @@ ctest --preset dev-release
 Core cases cover lifecycle, invalid arguments, memory bounds, scheduling,
 queue overflow, music transformations, gesture ownership, stuck-note recovery,
 voice stealing, oscillator/filter/envelope/effects behavior, all 18 presets,
-recording/playback, transport, and randomized invariants. C and C++ consumers
-compile against public headers only.
+recording/playback, transport, and randomized invariants. A dedicated native
+gate installs the SDK into an empty prefix with CMake package registries disabled,
+requires the installed package configuration, compiles each of the 14 public
+headers independently in both C11 and C++17 modes, and runs standalone C and C++
+consumers against the installed static or shared library.
 
 ## Cross-target conformance
 

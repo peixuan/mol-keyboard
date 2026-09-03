@@ -65,16 +65,20 @@ is `abi/mol_core-1.0.dump`. Baseline provenance and update rules are recorded in
 ## Verification
 
 CI compiles and runs independent C11 and C++17 consumers in both the ordinary
-static configuration and the `ci-shared` configuration, checks structure and
-format constants in unit tests, and exercises Native and Wasm conformance
-fixtures. The Linux shared job compares the exported symbol set exactly against
-the 47-symbol allow-list, generates a fresh ABI dump, and requires ABI
+static configuration and the `ci-shared` configuration. Applicable native
+suites additionally install into a fresh isolated prefix, disable CMake package
+registries, resolve the installed `mol::core` target, compile every public header
+independently as C11 and C++17, and run both consumers against the installed
+library. Unit tests check structure and format constants and Native/Wasm suites
+exercise shared conformance fixtures. The Linux shared job compares the exported
+symbol set exactly against the 47-symbol allow-list, generates a fresh ABI dump,
+and requires ABI
 Compliance Checker to report binary and source compatibility with the 1.0
 baseline. Windows and macOS shared jobs build and execute the public consumers.
 
-Release packaging verifies the installed `mol::core` import target, headers,
-library, and versioned CMake package files. Any ABI-affecting change requires
-all of these tests, a reviewed baseline decision, this policy review, and an
-explicit changelog entry. A compatible symbol addition updates both baseline
-files in the same change; a removal or incompatible signature/layout change
+The isolated consumer gate verifies the installed `mol::core` import target,
+headers, library, and versioned CMake package files. Any ABI-affecting change
+requires all of these tests, a reviewed baseline decision, this policy review,
+and an explicit changelog entry. A compatible symbol addition updates both
+baseline files in the same change; a removal or incompatible signature/layout change
 requires a new ABI major and migration notes rather than overwriting history.
