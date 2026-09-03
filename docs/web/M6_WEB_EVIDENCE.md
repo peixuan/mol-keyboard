@@ -1,8 +1,8 @@
 # M6 Web/PWA evidence
 
-Verified on 2026-09-03 at code candidate `3a1da43` and the following
-documentation commit. The checked product is the production Vite bundle, not
-a test-only page.
+Verified on 2026-09-03 at code candidate `3a1da43` and refreshed through
+repository candidate `4cdb929`. The checked product is the production Vite
+bundle, not a test-only page.
 
 ## Implemented product paths
 
@@ -70,10 +70,20 @@ fail-closed behavior. Emscripten 6.0.5 Debug and LTO MinSizeRel each passed
 sequence, and all-preset metric conformance. The dependency license audit
 passed after a clean `npm ci` and reports no npm vulnerability.
 
-The desktop-first refresh also ran the production bundle and the real Linux
-x86_64 daemon together under WSL. Playwright's pinned Chromium was selected
-explicitly so this result did not depend on a separately installed branded
-browser:
+The current desktop-first refresh reinstalled the exact lockfile independently
+on Windows and in a clean Linux checkout, reporting zero vulnerabilities in
+both environments. Node.js 22.16.0 passed 12/12 tests and the production build
+on each. System Chrome 151.0.7922.175 on Windows and bundled Chrome for Testing
+151.0.7922.34 on Linux each passed all five applicable desktop cases; the two
+reported skips are the Firefox-only offline-worklet case and the mobile-layout
+case. In both runs the service-controller case spawned the platform's real
+`mol-keyboardd`, authenticated over loopback WebSocket, observed engine events,
+recorded through the service, rejected a bad token, shut down through local
+IPC, and required a clean child-process exit.
+
+The Linux refresh ran the production bundle and the real Linux x86_64 daemon
+together under WSL. Playwright's pinned Chromium was selected explicitly so
+this result did not depend on a separately installed branded browser:
 
 ```sh
 export MOL_USE_BUNDLED_CHROMIUM=1

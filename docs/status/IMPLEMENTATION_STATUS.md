@@ -58,7 +58,10 @@ validated code candidate. Native test configuration now fails closed when
 Node.js is unavailable, instead of silently omitting the exact HarmonyOS
 production-policy test. With verified Node.js 22.16.0, Windows passes 89/89 and
 Linux passes 90/90, including their real headless service lifecycle tests. The
-preceding `098ddf4` candidate makes the OpenHarmony compatibility wrappers run
+production Web controller was then rebuilt from locked dependencies and passed
+all five applicable Chrome desktop cases against real Windows and Linux daemon
+processes at repository candidate `4cdb929`. The preceding `098ddf4` candidate
+makes the OpenHarmony compatibility wrappers run
 a module clean before assembly and report the packaged `ets/modules.abc`
 digest. A clean checkout of that commit rebuilt Windows and Wasm from empty
 build trees and produced a fresh Release HAP. The preceding `b48c680` candidate
@@ -440,6 +443,16 @@ the realtime AudioWorklet; Firefox executed the real worklet and Wasm DSP in
 an offline audio graph because the headless runner exposes no realtime output
 device. Chrome also reloaded offline, started audio, played a note, and observed
 the core event. Actual Safari is not claimed.
+
+The desktop application path was refreshed at repository candidate `4cdb929`.
+Independent lockfile installs on Windows and in a clean Linux checkout reported
+zero vulnerabilities; both passed 12/12 Node tests, strict type checking, and
+the production Vite build. Windows system Chrome 151.0.7922.175 and Linux
+bundled Chrome for Testing 151.0.7922.34 each passed five applicable desktop
+cases with two capability-specific skips. Each service-controller run spawned
+the real platform daemon and verified authenticated WebSocket control, engine
+events, service recording, invalid-token rejection, IPC shutdown, and a clean
+process exit.
 
 With JDK 21, Android API 36, Build Tools 36.0.0, NDK 28.2.13676358, and CMake
 3.31.6 installed:

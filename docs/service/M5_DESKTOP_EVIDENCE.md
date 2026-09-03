@@ -10,6 +10,10 @@ user-service lifecycle. Candidate `00a0e50` makes missing Node fail at configure
 time so this native policy test can no longer disappear from the suite.
 A focused rerun of the service audits, JSON-RPC/backend checks, daemon runtime
 and process tests, and real Windows Startup-service smoke passed 9/9.
+The production Web controller was also rebuilt from the exact lockfile and
+rerun against real Windows and Linux daemon processes at repository candidate
+`4cdb929`; each platform passed all five applicable Chrome desktop cases with
+two capability-specific skips and zero npm vulnerabilities.
 
 ## Implemented surface
 
