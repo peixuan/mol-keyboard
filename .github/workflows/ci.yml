@@ -56,6 +56,21 @@ jobs:
           cmake --build --preset wasm-release
           ctest --preset wasm-release
 
+  coverage:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Configure and build coverage target
+        run: |
+          cmake --preset coverage-clang
+          cmake --build --preset coverage-clang
+      - name: Enforce core coverage thresholds
+        run: |
+          python3 tools/coverage_gate.py \
+            --build-dir build/coverage-clang \
+            --source-dir .
+
   android:
     runs-on: ubuntu-24.04
     steps:
