@@ -401,6 +401,13 @@ strict checking passed, and the production bundle built. The Emscripten
 configure used the Ninja executable shipped with Visual Studio because Ninja
 is not on this host's default `PATH`.
 
+## Known failures
+
+No locally reproducible implementation, build, test, sanitizer, analysis,
+package, or documentation failure is currently known. The unavailable external
+acceptance runs listed above remain open gates rather than skipped or passing
+tests.
+
 ## Known environment constraints
 
 - `cl`, Emscripten, ESP-IDF, and the Clang ASan runtime are activated through
