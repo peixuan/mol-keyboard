@@ -159,6 +159,9 @@ The device build is unsigned unless signing variables are supplied.
 UI→JNI→Oboe/AAudio→C 核心及后台/锁屏生命周期验证。iOS 完整应用源码也已实现，
 通过本地 WKWebView 界面连接 AudioUnit/AVAudioSession 与同一 C 核心；其 Xcode
 构建和真机验收仍须在 Apple 环境中完成。
+HarmonyOS 共享应用源码也已用官方 OpenHarmony API 12 公共 SDK 完成 Debug/Release
+兼容 HAP 构建，ArkTS 字节码及 arm64-v8a/x86_64 原生音频库均通过包内容审计；
+这不替代 DevEco 下的正式 HarmonyOS 构建和设备验收。
 
 ## Platform matrix / 平台矩阵
 
@@ -170,7 +173,7 @@ UI→JNI→Oboe/AAudio→C 核心及后台/锁屏生命周期验证。iOS 完整
 | Web/PWA | Wasm AudioWorklet, offline shell | supported-browser automation passed; Safari pending / 已支持浏览器自动化通过，Safari 待验 |
 | Android | Oboe/AAudio foreground service | dual-ABI builds plus Android 15 audio-focus/lifecycle simulation passed; device pending / 双 ABI 及 Android 15 音频焦点与生命周期仿真通过，真机待验 |
 | iOS | AudioUnit, AVAudioSession, offline WKWebView | implementation present; Xcode/device pending / 实现已完成，Xcode 与真机待验 |
-| HarmonyOS | OHAudio, AVSession, continuous task | source audit passed; DevEco/device pending / 源码审计通过，DevEco 与真机待验 |
+| HarmonyOS | OHAudio, AVSession, continuous task | OpenHarmony API 12 compatibility HAPs passed; formal DevEco/device pending / OpenHarmony API 12 兼容 HAP 通过，正式 DevEco 与真机待验 |
 | ESP32 | I2S, GPIO/BLE/Classic HID, A2DP Source | ESP-IDF image/map passed; board HIL pending / 固件与 map 通过，开发板 HIL 待验 |
 | ESP32-S3 | I2S, GPIO/BLE/USB HID | ESP-IDF image/map passed; board HIL pending / 固件与 map 通过，开发板 HIL 待验 |
 

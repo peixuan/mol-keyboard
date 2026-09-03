@@ -80,7 +80,10 @@ The HarmonyOS Stage application implementation is also complete, including the
 full native ArkUI surface, strict Node-API/OHAudio runtime, fast-to-normal
 latency fallback and reporting, AudioSession focus, AVSession controls,
 audio-playback continuous-task policy, private sequence persistence, and HAP
-build audit. This host has no DevEco Studio, HarmonyOS SDK/toolchain, signing
-identity, or physical device. HAP construction, installation, sound, background
-and screen-off playback, route/focus/interruption recovery, latency, and
-sustained playback are therefore not claimed.
+build audit. The official public OpenHarmony 5.0.0.71/API 12 SDK produces
+audited Debug and Release compatibility HAPs with both required native ABIs.
+This host still has no DevEco Studio, formal HarmonyOS SDK/toolchain, signing
+identity, emulator, or physical device. A formal signed HarmonyOS HAP,
+installation, sound, background and screen-off playback,
+route/focus/interruption recovery, latency, and sustained playback are therefore
+not claimed.

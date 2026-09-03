@@ -182,8 +182,11 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   30-key foreground mapping, strict Node-API controls, OHAudio fast request with
   normal fallback and effective latency reporting, AudioSession focus,
   AVSession media commands, official audio-playback continuous tasks, private
-  atomic recording persistence, and route/interruption restoration. Its HAP
-  pipeline audits real package contents, but no DevEco build is claimed here.
+  atomic recording persistence, and route/interruption restoration. The official
+  OpenHarmony 5.0.0.71/API 12 public SDK now builds and audits Debug and Release
+  compatibility HAPs with ArkTS bytecode plus AArch64 and x86-64 native audio
+  libraries. This is build evidence for the compatibility product; no formal
+  DevEco/HarmonyOS build or runtime result is claimed here.
 - The M9 firmware now provides a configurable 5x6 GPIO matrix; shared BLE HID
   on both targets; Classic HID and A2DP Source/AVRCP on ESP32; USB boot HID on
   ESP32-S3; NVS settings and transactional FAT sequences; persisted HID/A2DP
@@ -211,7 +214,8 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
 ## Blocked platform checks
 
 - Apple SDKs and DevEco/HarmonyOS SDKs are not available on this Windows host.
-  The macOS simulations do not change this constraint or platform status.
+  The public OpenHarmony SDK compatibility build and macOS simulations do not
+  change those formal platform constraints or runtime status.
 - Playwright's Windows WebKit port does not expose AudioWorklet and is not actual
   Safari. Current-stable Safari remains unverified until run on an Apple host.
 - No Bluetooth output was exposed for the Windows run. WSL exposes neither a
@@ -477,10 +481,12 @@ tests.
 - Cross-platform source checks are not promoted to device verification.
 
 The HarmonyOS application descriptors, project audit, and native source-check
-boundary pass locally. MSVC Debug passed 65/65 tests after adding the complete
-application and HAP audit. `platforms/harmony/build-app.sh release` fails closed
-with an actionable DevEco requirement on this host, as intended. Detailed
-evidence and pending physical acceptance are in
+boundary pass locally. Windows MSVC and Linux Clang pass 78/78 tests. The
+official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor 5.8.9 build and audit
+both Debug and Release compatibility HAPs; the Release artifact is an unsigned
+2,951,842-byte package containing ArkTS bytecode and both required native ABIs.
+`platforms/harmony/build-app.sh release` remains the fail-closed formal DevEco
+lane. Detailed evidence and pending formal/device acceptance are in
 `docs/mobile/M8_HARMONY_EVIDENCE.md`.
 
 ## Next highest-priority task

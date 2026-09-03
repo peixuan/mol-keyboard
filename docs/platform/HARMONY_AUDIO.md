@@ -9,24 +9,24 @@ and diagnostic snapshots. ArkTS never creates, copies, or renders PCM.
 ArkUI controls and foreground KeyEvent input
   -> AudioService (focus, AVSession, continuous task, private storage)
   -> strict Node-API boundary
-  -> OHAudio write callback
+  -> OHAudio API 12 S16 write callback
   -> shared fixed-memory ISO C11 engine
 ~~~
 
-The native host first requests a 48 kHz stereo float renderer with music usage
+The native host first requests a 48 kHz stereo S16 renderer with music usage
 and `AUDIOSTREAM_LATENCY_MODE_FAST`. If fast stream creation fails it retries
 with normal latency rather than hiding the failure. It then queries and reports
 the effective sample rate, channel count, format, callback frame size, renderer
 state, and actual latency mode before initializing the same caller-owned
 `mol_core` runtime used by the other platforms.
 
-The OHAudio write callback renders directly into the supplied buffer, accepts
-variable callback sizes, replaces non-finite values with silence, and performs
-no allocation, locking, logging, file access, Node-API call, or stream lifecycle
-operation. Output-device changes, forced interruptions, and renderer errors
-publish atomic status and request a control-thread rebuild. Persistent controls,
-the loaded sequence, transport, and eligible playback are restored after that
-rebuild.
+The OHAudio write callback renders bounded chunks into a fixed stack buffer,
+converts them to S16 in the supplied output buffer, accepts variable callback
+sizes, replaces non-finite values with silence, and performs no heap allocation,
+locking, logging, file access, Node-API call, or stream lifecycle operation.
+Output-device changes, forced interruptions, and renderer errors publish atomic
+status and request a control-thread rebuild. Persistent controls, the loaded
+sequence, transport, and eligible playback are restored after that rebuild.
 
 ## Application project
 
@@ -49,6 +49,20 @@ playback or metronome plus running transport needs sound. Idle backgrounding
 stops the stream, deactivates the audio session, and releases the AVSession.
 
 ## Reproducible build
+
+The official public OpenHarmony API 12 compatibility lane can be built on
+Windows or Linux after setting `HVIGORW` and `OHOS_BASE_SDK_HOME` and placing a
+JDK on `PATH`:
+
+~~~powershell
+platforms/harmony/build-openharmony-compat.ps1 Debug
+platforms/harmony/build-openharmony-compat.ps1 Release
+~~~
+
+Use `build-openharmony-compat.sh debug|release` on POSIX hosts. These wrappers
+sync the formal application's shared sources into an ignored compatibility
+module, build real ArkTS and native outputs, and require both ABI libraries in
+the resulting unsigned HAP.
 
 Install DevEco Studio with a HarmonyOS API 12 or newer SDK and native toolchain,
 then run from the repository root:
@@ -74,17 +88,21 @@ are never included by an OHOS build.
 
 The full application project, native bridge, OHAudio host, ArkUI surface,
 official lifecycle integrations, persistence, and audited HAP pipeline are
-implemented. Windows MSVC compiles the C++ boundary with warnings as errors;
-the repository audit checks the Stage declarations, exact keyboard table,
-complete control surface, private persistence, continuous-task/AVSession/
-AudioSession calls, and absence of ArkTS PCM rendering.
+implemented. The public OpenHarmony 5.0.0.71/API 12 toolchain builds and audits
+Debug and Release compatibility HAPs with ArkTS bytecode and both AArch64 and
+x86-64 native libraries. Windows MSVC and Linux Clang also compile the C++
+boundary with warnings as errors, and the repository audit checks the Stage
+declarations, exact keyboard table, complete control surface, private
+persistence, continuous-task/AVSession/AudioSession calls, and absence of ArkTS
+PCM rendering.
 
-No DevEco Studio/HarmonyOS SDK or physical HarmonyOS device is available on the
-current host. Therefore the application is `implementation-complete` and
-`source-checked`, but is not `build-verified`, `runtime-verified`, or
-`device-verified`. Real HAP construction, installation, audible performance,
-background playback, interruptions, output-route changes, latency, and
-sustained playback remain mandatory M8 acceptance work. See
+No DevEco Studio/HarmonyOS SDK, signing identity, emulator, or physical device
+is available on the current host. Therefore only the OpenHarmony compatibility
+artifact is `build-verified`; the formal HarmonyOS product remains
+`implementation-complete` and `source-checked`, and neither is
+`runtime-verified` or `device-verified`. Formal HAP construction, installation,
+audible performance, background playback, interruptions, output-route changes,
+latency, and sustained playback remain mandatory M8 acceptance work. See
 `docs/mobile/M8_HARMONY_EVIDENCE.md`.
 
 ## Platform references
