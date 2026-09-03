@@ -84,6 +84,13 @@ Record a cryptographic hash for every distributed artifact. Store public
 checksums and licenses beside downloads, but keep raw hardware logs free of
 credentials and personal/device identifiers.
 
+The OpenHarmony compatibility wrappers clean module output before assembly and
+print both the whole-HAP and packaged `ets/modules.abc` SHA-256 values. Retain
+both in build evidence. Hvigor ZIP timestamps can change the whole-HAP digest
+between otherwise content-identical clean runs, so compare extracted-entry and
+bytecode digests when investigating reproducibility; the final signed artifact
+still requires its own published whole-file checksum.
+
 Every latency report must name the exact candidate commit and effective route,
 device, sample rate, and buffer configuration. Retain the capture SHA-256 and
 all individual observations with the report. Synthetic latency fixtures are

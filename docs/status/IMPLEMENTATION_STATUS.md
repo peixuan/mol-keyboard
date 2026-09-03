@@ -43,7 +43,9 @@ models across MSVC, Linux GCC, Emscripten, Clang sanitizers, and AArch64 QEMU.
 The exact production HarmonyOS background-policy `.ets` source also executes
 without transformation under Node.js, is consumed directly by `AudioService`,
 and passes strict ArkTS compilation in Debug and Release compatibility HAPs.
-M0 through M9 are
+The compatibility wrappers now clean Hvigor output before every assembly and
+report the packaged ArkTS bytecode digest, preventing stale incremental
+`modules.abc` output from being mistaken for a current package. M0 through M9 are
 implementation-complete, but the Definition of Done is not complete: native
 ARM64 runtime, Apple and Harmony toolchains, current Safari, physical mobile
 devices, ESP32 hardware, physical audio routes, and instrumented end-to-end
@@ -51,15 +53,19 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`b48c680` (`test(harmony): execute background policy source`) is the latest
-locally validated code candidate. It makes `AudioService` consume a single
-production `.ets` state machine for user intent, foreground/background,
-playback, metronome/transport, continuous-task retention, idle release, and
-route recovery. Node.js imports and executes that exact source without
-transformation, while the OpenHarmony toolchain type-checks and compiles it
-into both HAP variants. Windows, Linux, Emscripten, targeted Clang audit, and
-AArch64 QEMU suites pass without claiming HarmonyOS service/runtime behavior.
-The preceding `bcde79a` candidate runs the unchanged production Node-API
+`098ddf4` (`fix(harmony): clean compatibility builds`) is the latest locally
+validated code candidate. The OpenHarmony compatibility wrappers now run a
+module clean before assembly and report the packaged `ets/modules.abc` digest.
+A clean checkout of this exact commit rebuilt Windows and Wasm from empty build
+trees and produced a fresh Release HAP. The preceding `b48c680` candidate makes
+`AudioService` consume a single production `.ets` state machine for user
+intent, foreground/background, playback, metronome/transport, continuous-task
+retention, idle release, and route recovery. Node.js imports and executes that
+exact source without transformation, while the OpenHarmony toolchain
+type-checks and compiles it into both HAP variants. Windows, Linux,
+Emscripten, targeted Clang audit, and AArch64 QEMU suites pass without claiming
+HarmonyOS service/runtime behavior. The preceding `bcde79a` candidate runs the
+unchanged production Node-API
 module inside a controlled N-API runtime, invokes all 11 exports, and verifies
 strict arity/type/handle/range rejection, status objects, bounded event arrays,
 native handle finalization, recording ArrayBuffer round trips, and public bridge
@@ -598,7 +604,23 @@ python3 tools/package_audit.py --archive <archive> \
   --report-dir <report-directory> --expected-version 0.1.0
 ```
 
-A clean local clone of `67a9e5138692991839121ae57c8df38abfa6d701` with no
+A clean local clone of `098ddf4360b03318f1efabd741bd0bcf6a76dbf7` with no
+copied repository build output or managed-dependency directory rebuilt 167
+MSVC targets and passed 89/89 LTO Release tests. A separate clean Emscripten
+build compiled 108 targets and passed 41/41 MinSizeRel tests. The same checkout
+ran the OpenHarmony Release wrapper from an empty output tree; its explicit
+clean, strict ArkTS checking, native compilation, packaging, and 13-entry audit
+passed. That run produced an unsigned 2,953,954-byte HAP with run-specific
+archive SHA-256
+`3AE2368D3A2F1901390B6C56164A26DE8A0AC07700DD512F84FBEE6664FAE312` and
+packaged `ets/modules.abc` SHA-256
+`C5DB99A0968F9514BC37BEEB6731E1E4BCF12BB3E14C640BB647C945077C545B`.
+The raw HAP ZIP digest is not used as a cross-run reproducibility identity
+because Hvigor records archive timestamps. Two independent clean clones of the
+unchanged application source produced byte-identical content for all 13
+extracted HAP entries, including the same bytecode digest.
+
+An earlier clean local clone of `67a9e5138692991839121ae57c8df38abfa6d701` with no
 copied repository build output or managed-dependency directory rebuilt 154
 MSVC targets and passed 82/82 LTO Release tests. A separate clean Emscripten
 build compiled 95 targets and passed 35/35 MinSizeRel tests. Both new Apple
@@ -635,9 +657,12 @@ passes 41/41, and Linux AArch64 QEMU passes 71/71.
 The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
 5.8.9 build and audit
 both Debug and Release compatibility HAPs; the Release artifact is an unsigned
-2,953,954-byte package with SHA-256
-`1569570FFA9D096026B2BB62EE800A90715D98FB41A36C9DCA093BBCF0A3F1B3`,
-containing ArkTS bytecode and both required native ABIs.
+2,953,954-byte package. The clean candidate run recorded archive SHA-256
+`3AE2368D3A2F1901390B6C56164A26DE8A0AC07700DD512F84FBEE6664FAE312` and
+stable packaged bytecode SHA-256
+`C5DB99A0968F9514BC37BEEB6731E1E4BCF12BB3E14C640BB647C945077C545B`;
+the raw archive hash includes timestamp metadata. The audited package contains
+ArkTS bytecode and both required native ABIs.
 `platforms/harmony/build-app.sh release` remains the fail-closed formal DevEco
 lane. Detailed evidence and pending formal/device acceptance are in
 `docs/mobile/M8_HARMONY_EVIDENCE.md`.

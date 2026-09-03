@@ -109,6 +109,10 @@ latency fallback and reporting, AudioSession focus, AVSession controls,
 audio-playback continuous-task policy, private sequence persistence, and HAP
 build audit. The official public OpenHarmony 5.0.0.71/API 12 SDK produces
 audited Debug and Release compatibility HAPs with both required native ABIs.
+The wrappers clean before assembly and report the packaged ArkTS bytecode
+digest. Independent clean builds have identical content for all 13 extracted
+entries, but the unsigned HAP ZIP itself records timestamps, so its whole-file
+hash is retained as run evidence rather than claimed as cross-run reproducible.
 The exact ECMAScript-compatible production background-policy `.ets` source
 executes without transformation under Node, and the same file passes strict
 ArkTS type checking and bytecode compilation in both compatibility HAPs.

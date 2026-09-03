@@ -54,19 +54,28 @@ isolated `openharmony` product and `entryOpenHarmony` module reuse generated
 copies of its ArkTS, resource, and native entry sources while narrowing the
 public-SDK descriptor to the tablet device type. The checked-in PowerShell and
 POSIX wrappers recreate
-those ignored copies before each build and reject a HAP unless it contains the
-module profile, resources, ArkTS bytecode, and both native ABIs.
+those ignored copies before each build, explicitly clean the module output, and
+reject a HAP unless it contains the module profile, resources, ArkTS bytecode,
+and both native ABIs. They also report the packaged bytecode digest so stale
+incremental output cannot be confused with the current source.
 
 The official OpenHarmony 5.0.0 Release public SDK 5.0.0.71 (API 12), Hvigor
 5.8.9 with the 5.8.9 OHOS plugin, Node.js 22.16.0, and Microsoft OpenJDK
 21.0.12.1 built both Debug and Release compatibility HAPs. The SDK archive
 SHA-256 was
 `F06A2A8AE38A3CF01C583557F5A4BB1E6E3626DF975599AA71F4A59E9AF70ECC`,
-matching its published checksum. The Release output was an unsigned 2,953,954
-byte HAP with SHA-256
-`1569570FFA9D096026B2BB62EE800A90715D98FB41A36C9DCA093BBCF0A3F1B3`.
+matching its published checksum. A clean checkout of
+`098ddf4360b03318f1efabd741bd0bcf6a76dbf7` produced an unsigned 2,953,954
+byte Release HAP with run-specific archive SHA-256
+`3AE2368D3A2F1901390B6C56164A26DE8A0AC07700DD512F84FBEE6664FAE312`.
 Its 13 audited entries include `ets/modules.abc`, `module.json`,
 `resources.index`, and `libmol_harmony_audio.so` for `arm64-v8a` and `x86_64`.
+The packaged bytecode SHA-256 is
+`C5DB99A0968F9514BC37BEEB6731E1E4BCF12BB3E14C640BB647C945077C545B`.
+Two independent clean clones of the unchanged application source produced
+identical SHA-256 values for all 13 extracted entries. Raw HAP ZIP digests can
+differ because Hvigor records archive timestamps, so the raw archive hash above
+identifies that run and is not presented as a reproducible package identity.
 LLVM inspection identifies those libraries as AArch64 and x86-64 ELF64 shared
 objects and confirms their Node-API registration plus API 12 OHAudio imports.
 
@@ -134,6 +143,8 @@ platforms/harmony/build-openharmony-compat.ps1 Release
 
 The equivalent POSIX commands are
 `platforms/harmony/build-openharmony-compat.sh debug` and `release`.
+Both wrappers perform the module clean automatically and print separate HAP
+archive and packaged-bytecode SHA-256 values.
 
 On a machine with DevEco Studio and a HarmonyOS API 12 or newer SDK/native
 toolchain, build the formal product with:
