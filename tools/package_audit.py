@@ -246,6 +246,8 @@ def run_headless_runtime_smoke(root: Path, runtime_root: Path) -> dict[str, obje
 
             if not isinstance(capabilities, dict) or not capabilities:
                 raise ValueError("packaged daemon returned no capabilities")
+            if capabilities.get("midi") is not True:
+                raise ValueError("packaged daemon did not report native MIDI support")
             if (
                 not isinstance(audio, dict)
                 or str(audio.get("backend", "")).lower() != "null"
@@ -277,6 +279,7 @@ def run_headless_runtime_smoke(root: Path, runtime_root: Path) -> dict[str, obje
             "mode": "headless-null-audio",
             "sample_rate": status["sample_rate"],
             "channel_count": status["channel_count"],
+            "midi_supported": capabilities["midi"],
             "recording_bytes": recording.stat().st_size,
             "benchmark_frames": benchmark["frames"],
             "non_finite_samples": benchmark["non_finite_samples"],
