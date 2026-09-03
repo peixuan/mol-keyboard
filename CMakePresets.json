@@ -136,6 +136,19 @@
       }
     },
     {
+      "name": "package-release",
+      "inherits": "base",
+      "displayName": "Portable Release Package",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "MOL_BUILD_TESTS": "OFF",
+        "MOL_VALIDATE_MOBILE_SOURCES": "OFF",
+        "MOL_ENABLE_ASSERTIONS": "OFF",
+        "MOL_ENABLE_LTO": "ON",
+        "MOL_PACKAGE_WEB_ASSETS": "ON"
+      }
+    },
+    {
       "name": "ci-macos",
       "inherits": "base",
       "cacheVariables": {
@@ -243,6 +256,7 @@
     { "name": "static-analysis-clang", "configurePreset": "static-analysis-clang" },
     { "name": "tsan-clang", "configurePreset": "tsan-clang" },
     { "name": "endurance", "configurePreset": "endurance" },
+    { "name": "package-release", "configurePreset": "package-release" },
     { "name": "ci-macos", "configurePreset": "ci-macos" },
     { "name": "wasm-debug", "configurePreset": "wasm-debug" },
     { "name": "wasm-release", "configurePreset": "wasm-release" },

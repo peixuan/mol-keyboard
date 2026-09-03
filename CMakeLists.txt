@@ -8,6 +8,7 @@ project(
   LANGUAGES C CXX)
 
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 include(cmake/MolOptions.cmake)
 include(cmake/MolWarnings.cmake)
 include(cmake/MolSanitizers.cmake)
@@ -51,6 +52,7 @@ set_target_properties(
   PROPERTIES C_EXTENSIONS OFF
              C_STANDARD_REQUIRED ON
              POSITION_INDEPENDENT_CODE ON
+             EXPORT_NAME core
              VERSION ${PROJECT_VERSION}
              SOVERSION ${PROJECT_VERSION_MAJOR}
              WINDOWS_EXPORT_ALL_SYMBOLS ON)
@@ -205,6 +207,40 @@ install(
   EXPORT mol_keyboardTargets
   NAMESPACE mol::
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/mol_keyboard)
+configure_package_config_file(
+  cmake/mol_keyboardConfig.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/mol_keyboardConfig.cmake
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/mol_keyboard)
+write_basic_package_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/mol_keyboardConfigVersion.cmake
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY SameMajorVersion)
+install(
+  FILES ${CMAKE_CURRENT_BINARY_DIR}/mol_keyboardConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/mol_keyboardConfigVersion.cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/mol_keyboard)
+
+install(
+  FILES README.md CHANGELOG.md LICENSE NOTICE PRIVACY.md THIRD_PARTY_NOTICES.md
+  DESTINATION ${CMAKE_INSTALL_DATADIR}/mol-keyboard)
+install(DIRECTORY docs/ DESTINATION ${CMAKE_INSTALL_DATADIR}/mol-keyboard/docs)
+install(DIRECTORY third_party/licenses/
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/mol-keyboard/licenses)
+install(DIRECTORY patches/builtin/ patches/compiled/ patches/schema/
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/mol-keyboard/patches)
+install(DIRECTORY examples/sequences/
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/mol-keyboard/examples/sequences)
+install(FILES sbom/mol-keyboard.spdx.json
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/mol-keyboard/sbom)
+
+if(MOL_PACKAGE_WEB_ASSETS)
+  if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/apps/web/dist/index.html")
+    message(FATAL_ERROR
+            "MOL_PACKAGE_WEB_ASSETS requires a completed apps/web production build")
+  endif()
+  install(DIRECTORY apps/web/dist/
+          DESTINATION ${CMAKE_INSTALL_DATADIR}/mol-keyboard/web)
+endif()
 
 if(EMSCRIPTEN AND DEFINED ENV{EMSDK_NODE})
   set(CMAKE_CROSSCOMPILING_EMULATOR "$ENV{EMSDK_NODE}")
@@ -273,3 +309,20 @@ if(CMAKE_SYSTEM_NAME STREQUAL "OHOS")
 elseif(MOL_VALIDATE_MOBILE_SOURCES AND NOT CMAKE_CROSSCOMPILING)
   add_subdirectory(platforms/harmony)
 endif()
+
+set(CPACK_PACKAGE_NAME "mol-keyboard")
+set(CPACK_PACKAGE_VENDOR "MoL Keyboard contributors")
+set(CPACK_PACKAGE_CONTACT "MoL Keyboard contributors")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Portable headless digital instrument engine")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_CHECKSUM SHA256)
+set(CPACK_PACKAGE_FILE_NAME
+    "mol-keyboard-${PROJECT_VERSION}-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_THREADS 0)
+if(WIN32)
+  set(CPACK_GENERATOR "ZIP")
+else()
+  set(CPACK_GENERATOR "TGZ")
+endif()
+include(CPack)
