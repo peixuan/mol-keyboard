@@ -145,14 +145,17 @@ if(DEFINED ENV{EMSDK_NODE} AND EXISTS "$ENV{EMSDK_NODE}")
 else()
   find_program(MOL_HARMONY_NODE_EXECUTABLE NAMES node node.exe NO_CMAKE_FIND_ROOT_PATH)
 endif()
-if(MOL_HARMONY_NODE_EXECUTABLE)
-  add_test(
-    NAME mol_harmony_audio_policy_simulation
-    COMMAND
-      ${MOL_HARMONY_NODE_EXECUTABLE}
-      ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_harmony_audio_policy.mjs
-      ${PROJECT_SOURCE_DIR}/platforms/harmony/app/entry/src/main/ets/audio/AudioPolicy.ets)
+if(NOT MOL_HARMONY_NODE_EXECUTABLE)
+  message(
+    FATAL_ERROR
+      "Node.js is required for the HarmonyOS production audio-policy test; set EMSDK_NODE or add node to PATH")
 endif()
+add_test(
+  NAME mol_harmony_audio_policy_simulation
+  COMMAND
+    ${MOL_HARMONY_NODE_EXECUTABLE}
+    ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_harmony_audio_policy.mjs
+    ${PROJECT_SOURCE_DIR}/platforms/harmony/app/entry/src/main/ets/audio/AudioPolicy.ets)
 
 add_test(
   NAME mol_ios_project_audit

@@ -86,6 +86,7 @@ foreach(_token
         "mol_harmony_audio_host_simulation_tests"
         "mol_harmony_napi_bridge_simulation_tests"
         "mol_harmony_audio_policy_simulation"
+        "Node.js is required for the HarmonyOS production audio-policy test"
         [[platforms/harmony/native/oh_audio_host.cpp]]
         [[platforms/harmony/native/napi_module.cpp]]
         [[platform/harmony_napi_sim.cpp]]
