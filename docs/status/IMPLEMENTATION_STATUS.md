@@ -53,12 +53,16 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`098ddf4` (`fix(harmony): clean compatibility builds`) is the latest locally
-validated code candidate. The OpenHarmony compatibility wrappers now run a
-module clean before assembly and report the packaged `ets/modules.abc` digest.
-A clean checkout of this exact commit rebuilt Windows and Wasm from empty build
-trees and produced a fresh Release HAP. The preceding `b48c680` candidate makes
-`AudioService` consume a single production `.ets` state machine for user
+`00a0e50` (`test: require Node for native policy checks`) is the latest locally
+validated code candidate. Native test configuration now fails closed when
+Node.js is unavailable, instead of silently omitting the exact HarmonyOS
+production-policy test. With verified Node.js 22.16.0, Windows passes 89/89 and
+Linux passes 90/90, including their real headless service lifecycle tests. The
+preceding `098ddf4` candidate makes the OpenHarmony compatibility wrappers run
+a module clean before assembly and report the packaged `ets/modules.abc`
+digest. A clean checkout of that commit rebuilt Windows and Wasm from empty
+build trees and produced a fresh Release HAP. The preceding `b48c680` candidate
+makes `AudioService` consume a single production `.ets` state machine for user
 intent, foreground/background, playback, metronome/transport, continuous-task
 retention, idle release, and route recovery. Node.js imports and executes that
 exact source without transformation, while the OpenHarmony toolchain
@@ -385,7 +389,9 @@ real systemd user unit lifecycle plus the production macOS service smoke
 unchanged through a controlled launchd model and
 the real Linux daemon/CLI. The daemon process used its null sink and a private
 Unix socket; the production Web UI additionally controlled it under bundled
-Chromium. Physical Linux devices and native Apple behavior remain unclaimed.
+Chromium. Node.js is a fail-closed native-test dependency: set `EMSDK_NODE` when
+it is not on `PATH`. Physical Linux devices and native Apple behavior remain
+unclaimed.
 
 Static/shared API parity is checked separately:
 
@@ -603,6 +609,19 @@ cpack --config build/package-release/CPackConfig.cmake -B build/packages
 python3 tools/package_audit.py --archive <archive> \
   --report-dir <report-directory> --expected-version 0.1.0
 ```
+
+A clean local clone of `75609b6f32c25f430cb618e9e56a04e9391406f6` with no
+copied repository build output compiled all 167 Linux GCC targets. Its first
+configure exposed that a missing Node executable silently reduced the suite to
+89 tests. The official Node.js 22.16.0 Linux x64 archive was then verified
+against its published SHA-256
+`F4CB75BB036F0D0EDDF6B79D9596DF1AAAB9DDCCD6A20BF489BE5ABE9467E84E`;
+with `EMSDK_NODE` pointing to that native binary, the checkout passed 90/90.
+This included the exact HarmonyOS production-policy source, the real systemd
+259 user-service lifecycle, and the controlled launchd model driving the real
+Linux daemon/CLI. Candidate `00a0e50` closes the discovered omission by making
+the no-Node configuration fail explicitly; both that negative configure probe
+and the complete 90/90 Linux suite pass on the resulting tree.
 
 A clean local clone of `098ddf4360b03318f1efabd741bd0bcf6a76dbf7` with no
 copied repository build output or managed-dependency directory rebuilt 167

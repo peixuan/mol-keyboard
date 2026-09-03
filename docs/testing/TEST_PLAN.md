@@ -16,7 +16,9 @@ are not committed.
 
 The default Debug and optimized Release presets compile with warnings as
 errors and run all applicable unit, integration, format, tool, service, source
-audit, and consumer tests:
+audit, and consumer tests. Node.js must be on `PATH`, or `EMSDK_NODE` must name
+its executable, so the exact production HarmonyOS policy test cannot disappear
+from a native suite:
 
 ```sh
 cmake --preset dev-debug

@@ -45,10 +45,15 @@ ctest --preset dev-debug
 ```
 
 On Windows, run these commands from a Visual Studio developer shell and ensure
-Ninja is on `PATH`. Linux uses the same presets with GCC or Clang.
+Ninja is on `PATH`. Linux uses the same presets with GCC or Clang. Native test
+presets also require Node.js for the exact HarmonyOS production-policy test;
+set `EMSDK_NODE` to the executable when `node` is not on `PATH`. Configuration
+fails rather than silently omitting that test.
 
 Windows 用户需在 Visual Studio 开发者终端中运行，并确保 `PATH` 中包含 Ninja；Linux
-可用同一组预设配合 GCC 或 Clang。
+可用同一组预设配合 GCC 或 Clang。原生测试还需要 Node.js 执行精确的 HarmonyOS
+生产策略源码；若 `PATH` 中没有 `node`，请将 `EMSDK_NODE` 指向其可执行文件。缺少它时
+配置会直接失败，而不会静默漏掉测试。
 
 Use `profile-tiny`, `profile-standard`, or `profile-full` in place of
 `dev-debug` to build and test that resource profile with Release optimization

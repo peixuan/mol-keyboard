@@ -27,6 +27,8 @@ Do not change the public C API major merely to match a product release. Follow
 
 1. Begin from a clean checkout of the exact candidate commit with no ignored
    SDK, dependency, or build directory copied into it.
+   Put Node.js on `PATH` or set `EMSDK_NODE`; a native test configuration must
+   fail if the production HarmonyOS policy test cannot be registered.
 2. Re-run the dependency license audit, verify every lock/hash against its
    authoritative source, and update the SPDX SBOM and notices.
 3. Run MSVC, GCC, Clang, Emscripten, coverage, static-analysis, sanitizer/fuzz,

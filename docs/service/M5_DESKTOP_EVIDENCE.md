@@ -1,9 +1,13 @@
 # M5 Desktop Headless Evidence
 
 Verified on 2026-09-03 at commit `c87e1a1`; the desktop-first regression and
-device-free acceptance were refreshed through code candidate `098ddf4`. A clean
-checkout of that exact candidate rebuilt 167 Windows LTO Release targets and
+device-free acceptance were refreshed through code candidate `00a0e50`. A clean
+checkout of candidate `098ddf4` rebuilt 167 Windows LTO Release targets and
 passed 89/89 tests; its clean Wasm build compiled 108 targets and passed 41/41.
+A separate clean checkout of `75609b6` compiled all 167 Linux GCC targets and,
+with verified Node.js 22.16.0, passed 90/90 including the real systemd
+user-service lifecycle. Candidate `00a0e50` makes missing Node fail at configure
+time so this native policy test can no longer disappear from the suite.
 A focused rerun of the service audits, JSON-RPC/backend checks, daemon runtime
 and process tests, and real Windows Startup-service smoke passed 9/9.
 
