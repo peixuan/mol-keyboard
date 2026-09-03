@@ -28,9 +28,9 @@ All notable changes to this project will be documented in this file.
   persistent settings/sequences, physical recovery, optional local Web
   configuration, target-specific A2DP/USB support, and fail-closed HIL tooling.
 - Added release coverage, static-analysis, sanitizer/fuzz, ThreadSanitizer,
-  endurance, size, license/SBOM, package-audit, and clean-checkout gates with
-  evidence. External device, Apple/Harmony, Safari, and physical latency gates
-  remain required before v1.0.0.
+  endurance, size, license/SBOM, extracted-package headless runtime, and
+  clean-checkout gates with evidence. External device, Apple/Harmony, Safari,
+  and physical latency gates remain required before v1.0.0.
 - Added reproducible Windows ARM64 and Linux AArch64 cross-build targets for the
   complete headless product, plus native ARM64 CI runners.
 - Added explicit static/shared `mol_core` builds, a hidden-by-default 47-symbol

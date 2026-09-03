@@ -25,7 +25,7 @@ gates are complete. Native and Wasm
 regression, Release+LTO Tiny/Standard/Full profiles, static/shared ABI
 verification, coverage, static analysis, ASan/UBSan with all eleven fuzzers,
 Linux ThreadSanitizer, optimized endurance, release-size budgets, dependency/license
-and SBOM audits, Windows/Linux package audits, Android packaging, and clean
+and SBOM audits, extracted Windows/Linux package headless lifecycles, Android packaging, and clean
 checkout reproduction pass. Complete Windows ARM64 and Linux AArch64 desktop
 products now cross-build through checked-in presets, closing their local build
 gap. Linux AArch64 also passes an end-to-end QEMU product gate and 71/71 target
@@ -53,10 +53,20 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`e64e8f0` (`test: verify installed SDK consumers`) is the latest locally
-validated code candidate. Its exact tree at documentation commit `cc3af78` was
-also reproduced from a new clone with empty build trees on Windows, Linux, and
-Emscripten. Every ordinary native test configuration now installs
+`83c2316` (`test(packaging): exercise extracted headless product`) is the latest
+locally validated code candidate. The package audit now requires all three
+desktop service definitions, safely extracts the archive, and starts the
+packaged daemon with no UI, a null audio backend, private state, and private IPC.
+The packaged CLI verifies capabilities, preset and tempo changes, note input,
+recording persistence, playback, latency status, self-test, doctor, a finite
+4,096-frame benchmark, all-notes-off, zero-exit shutdown, and endpoint cleanup.
+Fresh optimized Windows and Linux archives both pass this lifecycle locally;
+the checked-in Linux release job and new Windows package job enforce it when
+published. The new workflow path is YAML-validated but remains unexecuted for
+this unpushed commit.
+The preceding `e64e8f0` candidate adds the installed SDK consumer gate. Its exact
+tree at documentation commit `cc3af78` was also reproduced from a new clone with
+empty build trees on Windows, Linux, and Emscripten. Every ordinary native test configuration now installs
 the SDK into an empty isolated prefix, disables CMake package registries,
 requires exactly one installed `mol_keyboardConfig.cmake`, compiles every one of
 the 14 public headers independently as C11 and C++17, and runs independent C11
@@ -632,13 +642,18 @@ recovery completed 30 rebuild cycles in 1.42 seconds.
 The refreshed release size gate passed at 505,468 bytes for the stripped core,
 943,392 bytes for daemon plus CLI, 22,978 bytes for gzip-compressed Wasm, and
 157,413 bytes for deployable Web resources. Dependency locks, notices,
-licenses, npm audit, and SPDX SBOM validation passed. CPack package audits each found 146
-required files, including `mol-latency-probe`, and passed installed daemon/CLI
-smoke tests: the Windows AMD64 ZIP is 1,291,580 bytes with SHA-256
-`0d419cce06880e24ca871548bbbbe8f1a4ef0f59c38f56bd75baf2157907b7ab`;
-the Linux x86_64 TGZ is 1,676,870 bytes with SHA-256
-`255bc2069c9d33b8506f2d03d9d8732a26295308ebdb6dd7862202e95e6b5492`.
-They are unsigned 0.1.0 candidate archives built from `4f77f56`, not releases.
+licenses, npm audit, and SPDX SBOM validation passed. Current CPack package
+audits each found 146 required files, including `mol-latency-probe` and every
+desktop service definition, then ran the extracted daemon and CLI through the
+complete no-UI null-audio lifecycle. The Windows AMD64 ZIP is 1,318,557 bytes
+with SHA-256
+`66106000227b4556d4ec469df5c1d2bff42711e3ad7c7fde95cb3824247ce918`;
+its recording is 327 bytes. The Linux x86_64 TGZ is 1,701,529 bytes with SHA-256
+`68e5f853b9cd3955715553cd819c58cc4ceda936583b130fc494df47b2cf3956`;
+its recording is 326 bytes. Both report schema 2, 48 kHz stereo, 4,096 finite
+benchmark frames, no non-finite samples, exit code zero, and successful IPC
+cleanup. They are unsigned 0.1.0 candidate archives built from the `83c2316`
+tree, not releases.
 
 ```sh
 python3 tools/release_size_gate.py \

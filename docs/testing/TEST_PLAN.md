@@ -161,7 +161,11 @@ USB, I2S, acoustic, power, thermal, watchdog, and endurance claims are excluded.
 The release size gate strips a copy of the native archive, gzip-compresses Wasm,
 and measures every deployable Web resource except source maps. All limits are
 exclusive. CPack produces checksummed ZIP/TGZ distributions whose contents,
-CMake target, daemon version, and CLI help are audited after extraction.
+CMake target, daemon version, CLI help, and all desktop service definitions are
+audited after extraction. The audit then starts the extracted daemon without a
+UI and uses the extracted CLI to verify control, recording/playback, diagnostics,
+finite rendering, clean shutdown, and IPC cleanup. Linux and Windows package
+jobs run this fail-closed lifecycle.
 
 End-to-end latency uses a physical stimulus and captured acoustic/electrical
 response. Report P50/P95/max separately for built-in or wired, USB, OS Bluetooth,
