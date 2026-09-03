@@ -125,11 +125,24 @@ static void test_rejected_inputs(void) {
                                      &patch) == MOL_ERROR_INVALID_ARGUMENT);
   EXPECT_TRUE(mol_patch_compile_json("{\"\\u12xz\":1}", strlen("{\"\\u12xz\":1}"), &patch) ==
               MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_patch_compile_json("{\"bad\nkey\":1}", strlen("{\"bad\nkey\":1}"), &patch) ==
+              MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_patch_compile_json("{\"\\u12", strlen("{\"\\u12"), &patch) ==
+              MOL_ERROR_INVALID_ARGUMENT);
   EXPECT_TRUE(mol_patch_compile_json("{\"bad\\q\":1}", strlen("{\"bad\\q\":1}"), &patch) ==
               MOL_ERROR_INVALID_ARGUMENT);
   EXPECT_TRUE(mol_patch_compile_json("{\"bad\\", strlen("{\"bad\\"), &patch) ==
               MOL_ERROR_INVALID_ARGUMENT);
   EXPECT_TRUE(mol_patch_compile_json("{\"id\":\"unterminated", strlen("{\"id\":\"unterminated"),
+                                     &patch) == MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_patch_compile_json("{\"format_version\":18446744073709551616}",
+                                     strlen("{\"format_version\":18446744073709551616}"),
+                                     &patch) == MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_patch_compile_json("{\"format_version\":1.0}",
+                                     strlen("{\"format_version\":1.0}"), &patch) ==
+              MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_patch_compile_json("{\"format_version\":1 \"id\":\"grand-piano\"}",
+                                     strlen("{\"format_version\":1 \"id\":\"grand-piano\"}"),
                                      &patch) == MOL_ERROR_INVALID_ARGUMENT);
 
   EXPECT_TRUE(mol_patch_encode(&patch, binary, sizeof(binary), NULL) == MOL_ERROR_INVALID_ARGUMENT);
