@@ -44,6 +44,21 @@ if(MOL_BUILD_TESTS)
   mol_enable_optional_instrumentation(mol_daemon_runtime_tests)
   add_test(NAME mol_daemon_runtime_tests COMMAND mol_daemon_runtime_tests)
 
+  if(NOT APPLE)
+    add_executable(mol_macos_input_simulation_tests
+                   test_physical_input_macos_sim.cpp physical_input_macos.cpp)
+    target_include_directories(
+      mol_macos_input_simulation_tests
+      PRIVATE ${PROJECT_SOURCE_DIR}/tests/platform/macos_stubs ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(mol_macos_input_simulation_tests
+                          PRIVATE mol::service_control mol::core Threads::Threads)
+    set_target_properties(mol_macos_input_simulation_tests
+                          PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
+    mol_enable_warnings(mol_macos_input_simulation_tests)
+    mol_enable_optional_instrumentation(mol_macos_input_simulation_tests)
+    add_test(NAME mol_macos_input_simulation_tests COMMAND mol_macos_input_simulation_tests)
+  endif()
+
   add_executable(mol_daemon_process_tests test_daemon_process.cpp)
   add_dependencies(mol_daemon_process_tests mol-keyboardd)
   target_link_libraries(mol_daemon_process_tests PRIVATE mol::local_ipc mol::json Threads::Threads)
