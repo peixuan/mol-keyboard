@@ -58,9 +58,11 @@ playback continuation and completion, the metronome-plus-transport rule,
 engine reset, route restoration, foreground/background media-services reset,
 restart failure, route-revision saturation, and invalid/null calls. The same
 production C source passed as part of Windows MSVC Release 80/80, Linux GCC
-80/80, and Emscripten MinSizeRel 33/33 suites. This validates deterministic
-application policy only; it does not simulate or claim UIKit, AVAudioSession,
-RemoteIO, OS notifications, actual background scheduling, or an audio route.
+80/80, Emscripten MinSizeRel 33/33, and ASan/UBSan 47/47 suites; Clang static
+analysis also includes this production translation unit. This validates
+deterministic application policy only; it does not simulate or claim UIKit,
+AVAudioSession, RemoteIO, OS notifications, actual background scheduling, or an
+audio route.
 
 The source was formatted with Visual Studio ClangFormat 22 and passed
 `git diff --check`. The property lists parsed as XML, the asset catalogs parsed

@@ -44,7 +44,9 @@ the emulator option disabled. Windows MSVC Release and Linux x86_64 GCC pass
 80/80 tests; Emscripten MinSizeRel passes 33/33. System Chrome on Windows and
 bundled Chromium on Linux each pass the five applicable desktop application
 cases, including a real platform daemon process and authenticated service
-controller. The earlier `61b3342` candidate adds the
+controller. Current core coverage remains 94.10%, Clang static analysis passes
+40 production translation units, and ASan/UBSan passes 47/47 with all eleven
+fuzzers. The earlier `61b3342` candidate adds the
 exact-production-source CoreAudio lifecycle simulation, and `18e6e7d` adds the
 corresponding IOHID lifecycle simulation. The earlier `240b207` candidate's
 dual-ABI Debug and instrumentation APKs, unsigned Release/R8/lintVital package,
@@ -368,7 +370,7 @@ cmake --build --preset fuzz-clang
 ctest --preset fuzz-clang --output-on-failure
 ```
 
-The ASan/UBSan configuration passed 45/45 tests. Patch, Mol Sequence, service
+The current ASan/UBSan configuration passed 47/47 tests. Patch, Mol Sequence, service
 configuration, JSON-RPC, MolWireEventV1, MIDI, latency/audio captures, ESP32
 settings/Web forms, and HID-report libFuzzer smoke sessions each ran for 20
 seconds and produced no finding. Accepted MIDI inputs are also reparsed and
@@ -472,7 +474,7 @@ object tools after the build. The LLVM-MinGW archive used locally was
 
 Coverage passed at 94.10% overall, including 95.95% queue/memory, 97.78%
 music-state, 97.49% Patch, and 95.57% Sequence coverage. Clang static analysis
-passed all 38 first-party production translation units. Linux Clang
+passed all 40 first-party production translation units. Linux Clang
 ThreadSanitizer passed 40/40 tests in 15.62 seconds. The refreshed GCC 15
 optimized endurance suite passed 2/2 in 270.38 seconds: the engine simulated
 1,800 seconds in 268.567 seconds (6.70x realtime, approximately 14.92% of one
