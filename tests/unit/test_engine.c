@@ -189,8 +189,9 @@ static void test_command_and_parameter_boundaries(void) {
   mol_engine_config_t config = mol_engine_config_default();
   mol_engine_t* engine = NULL;
   mol_command_t command = boundary_command(MOL_COMMAND_NOTE_ON);
-  static const float valid_parameters[12] = {0.5f,  1.0f,  0.5f, 10.0f, 0.5f, 0.5f,
-                                             0.25f, 10.0f, 0.5f, 0.5f,  0.5f, -1.0f};
+  static const float valid_parameters[13] = {0.5f,  1.0f,  0.5f, 10.0f, 0.5f,
+                                             0.5f,  0.25f, 10.0f, 0.5f, 0.5f,
+                                             0.5f,  -1.0f, 0.75f};
   EXPECT_TRUE(mol_engine_init(storage.bytes, sizeof(storage.bytes), &config, &engine) == MOL_OK);
 
   EXPECT_TRUE(mol_engine_submit(NULL, &command) == MOL_ERROR_INVALID_ARGUMENT);
@@ -254,7 +255,7 @@ static void test_command_and_parameter_boundaries(void) {
   command = boundary_command((mol_command_type_t)UINT32_MAX);
   EXPECT_TRUE(mol_engine_submit(engine, &command) == MOL_ERROR_UNSUPPORTED);
 
-  for (uint32_t parameter = 1u; parameter <= 12u; ++parameter) {
+  for (uint32_t parameter = 1u; parameter <= 13u; ++parameter) {
     command = boundary_command(MOL_COMMAND_SET_PARAMETER);
     command.payload.parameter.parameter = parameter;
     command.payload.parameter.value = valid_parameters[parameter - 1u];
@@ -286,6 +287,9 @@ static void test_command_and_parameter_boundaries(void) {
   command.payload.parameter.parameter = 999u;
   command.payload.parameter.value = 0.0f;
   EXPECT_TRUE(mol_engine_submit(engine, &command) == MOL_ERROR_UNSUPPORTED);
+  command.payload.parameter.parameter = MOL_PARAMETER_MODULATION;
+  command.payload.parameter.value = 1.01f;
+  EXPECT_TRUE(mol_engine_submit(engine, &command) == MOL_ERROR_INVALID_ARGUMENT);
   mol_engine_shutdown(engine);
 }
 

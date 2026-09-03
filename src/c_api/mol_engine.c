@@ -138,6 +138,7 @@ struct mol_engine {
   float sustain;
   float pitch_bend;
   float pitch_bend_ratio;
+  float modulation;
   int32_t octave_shift;
   int32_t transpose;
   mol_scale_type_t scale_type;
@@ -399,6 +400,9 @@ static void mol_record_initial_parameters(mol_engine_t* engine) {
   mol_record_parameter_value(engine, MOL_PARAMETER_REVERB_MIX, engine->reverb.mix.target);
 #endif
   mol_record_parameter_value(engine, MOL_PARAMETER_LIMITER_CEILING_DB, engine->limiter_ceiling_db);
+  if (engine->modulation != 0.0f) {
+    mol_record_parameter_value(engine, MOL_PARAMETER_MODULATION, engine->modulation);
+  }
 }
 
 static void mol_push_note_event(mol_engine_t* engine, mol_event_type_t event_type,
@@ -1200,6 +1204,9 @@ static void mol_process_parameter(mol_engine_t* engine, mol_parameter_id_t param
       mol_dsp_limiter_configure(&engine->limiter[1], engine->config.sample_rate, value, 0.0001f,
                                 0.05f);
       break;
+    case MOL_PARAMETER_MODULATION:
+      engine->modulation = value;
+      break;
     default:
       break;
   }
@@ -1240,6 +1247,7 @@ static void mol_apply_sequence_initial_state(mol_engine_t* engine) {
   engine->sustain = initial->sustain;
   engine->pitch_bend = initial->pitch_bend;
   engine->pitch_bend_ratio = powf(2.0f, initial->pitch_bend / 6.0f);
+  engine->modulation = 0.0f;
   engine->octave_shift = (int32_t)initial->octave_shift;
   engine->transpose = (int32_t)initial->transpose;
   engine->scale_type = initial->scale_type;
@@ -1749,7 +1757,9 @@ static float mol_render_voice(mol_engine_t* engine, mol_voice_t* voice) {
     }
   }
   if (voice->stage != MOL_VOICE_IDLE) {
-    float vibrato = mol_dsp_lfo_process(&voice->vibrato) * (float)voice->patch.vibrato_depth_cents;
+    float vibrato_depth =
+        (float)voice->patch.vibrato_depth_cents + engine->modulation * 50.0f;
+    float vibrato = mol_dsp_lfo_process(&voice->vibrato) * vibrato_depth;
     float increment =
         voice->phase_increment * engine->pitch_bend_ratio * powf(2.0f, vibrato / 1200.0f);
     voice->envelope = mol_dsp_adsr_process(&voice->amplitude);
@@ -2122,6 +2132,7 @@ void mol_engine_reset(mol_engine_t* engine) {
     engine->sustain = 0.0f;
     engine->pitch_bend = 0.0f;
     engine->pitch_bend_ratio = 1.0f;
+    engine->modulation = 0.0f;
     engine->octave_shift = 0;
     engine->transpose = 0;
     engine->scale_type = MOL_SCALE_CHROMATIC;
@@ -2223,6 +2234,8 @@ static mol_result_t mol_validate_parameter(const mol_engine_t* engine, mol_param
       return value >= MOL_LIMITER_CEILING_MIN_DB && value <= MOL_LIMITER_CEILING_MAX_DB
                  ? MOL_OK
                  : MOL_ERROR_INVALID_ARGUMENT;
+    case MOL_PARAMETER_MODULATION:
+      return value >= 0.0f && value <= 1.0f ? MOL_OK : MOL_ERROR_INVALID_ARGUMENT;
     default:
       return MOL_ERROR_UNSUPPORTED;
   }

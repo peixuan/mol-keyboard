@@ -36,8 +36,10 @@ master transition ramp and clears effect state where needed.
 ADSR times are converted to per-frame coefficients at setup or state change.
 Zero attack and decay are supported without division by zero. Velocity follows
 the Patch curve before voice gain. Vibrato is a bounded low-frequency phase
-modulation; pitch bend, portamento, octave, transpose, scale, and chord mapping
-are resolved through the common music state rather than platform code.
+modulation. The public 0--1 modulation parameter adds at most 50 cents of
+vibrato depth, providing a deterministic target for MIDI CC1. Pitch bend,
+portamento, octave, transpose, scale, and chord mapping are resolved through the
+common music state rather than platform code.
 
 ## Effects
 
