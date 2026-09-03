@@ -8,7 +8,11 @@ interface KeySpec {
   note: number;
 }
 
-const PRESETS = [
+interface SelectOption {
+  value: string;
+}
+
+const PRESETS: SelectOption[] = [
   { value: 'Grand Piano / 大钢琴' },
   { value: 'Electric Piano / 电钢琴' },
   { value: 'Harpsichord / 大键琴' },
@@ -29,7 +33,7 @@ const PRESETS = [
   { value: 'Music Box / 八音盒' },
 ];
 
-const SCALES = [
+const SCALES: SelectOption[] = [
   { value: 'Chromatic / 半音阶' },
   { value: 'Major / 大调' },
   { value: 'Natural minor / 自然小调' },
@@ -40,19 +44,19 @@ const SCALES = [
   { value: 'Mixolydian / 混合利底亚' },
 ];
 
-const TONICS = [
+const TONICS: SelectOption[] = [
   { value: 'C' }, { value: 'C♯' }, { value: 'D' }, { value: 'D♯' },
   { value: 'E' }, { value: 'F' }, { value: 'F♯' }, { value: 'G' },
   { value: 'G♯' }, { value: 'A' }, { value: 'A♯' }, { value: 'B' },
 ];
 
-const SCALE_MAPPINGS = [
+const SCALE_MAPPINGS: SelectOption[] = [
   { value: 'Nearest / 最近' },
   { value: 'Down / 向下' },
   { value: 'Up / 向上' },
 ];
 
-const CHORDS = [
+const CHORDS: SelectOption[] = [
   { value: 'Off / 关闭' },
   { value: 'Major / 大三和弦' },
   { value: 'Minor / 小三和弦' },
@@ -65,7 +69,7 @@ const CHORDS = [
   { value: 'Octave / 八度' },
 ];
 
-const ARPEGGIATORS = [
+const ARPEGGIATORS: SelectOption[] = [
   { value: 'Off / 关闭' },
   { value: 'Up / 上行' },
   { value: 'Down / 下行' },
@@ -75,23 +79,23 @@ const ARPEGGIATORS = [
   { value: 'Seeded random / 固定随机' },
 ];
 
-const ARPEGGIATOR_RATES = [
+const ARPEGGIATOR_RATES: SelectOption[] = [
   { value: '1/4' }, { value: '1/8' }, { value: '1/8T' },
   { value: '1/16' }, { value: '1/16T' }, { value: '1/32' },
 ];
 
-const PORTAMENTO_MODES = [
+const PORTAMENTO_MODES: SelectOption[] = [
   { value: 'Off / 关闭' },
   { value: 'Legato / 连奏' },
   { value: 'Always / 始终' },
 ];
 
-const METER_NUMERATORS = [
+const METER_NUMERATORS: SelectOption[] = [
   { value: '2' }, { value: '3' }, { value: '4' }, { value: '5' },
   { value: '6' }, { value: '7' }, { value: '9' }, { value: '12' },
 ];
 
-const METER_DENOMINATORS = [{ value: '4' }, { value: '8' }];
+const METER_DENOMINATORS: SelectOption[] = [{ value: '4' }, { value: '8' }];
 
 const KEYBOARD_KEYS: KeySpec[] = [
   { label: '1', keyCode: KeyCode.KEYCODE_1, note: 48 },
@@ -158,7 +162,7 @@ struct Index {
   @State masterGain: number = 0.82;
   @State octave: number = 0;
   @State transpose: number = 0;
-  @State scale: number = 0;
+  @State scaleIndex: number = 0;
   @State tonic: number = 0;
   @State scaleMapping: number = 0;
   @State chord: number = 0;
@@ -193,7 +197,7 @@ struct Index {
     this.masterGain = settings.masterGain;
     this.octave = settings.octave;
     this.transpose = settings.transpose;
-    this.scale = settings.scale;
+    this.scaleIndex = settings.scale;
     this.tonic = settings.tonic;
     this.scaleMapping = settings.scaleMapping;
     this.chord = settings.chord;
@@ -301,7 +305,7 @@ struct Index {
   }
 
   private applyScale(): void {
-    this.audio.setScale(this.scale, this.tonic, this.scaleMapping);
+    this.audio.setScale(this.scaleIndex, this.tonic, this.scaleMapping);
   }
 
   private applyArpeggiator(): void {
@@ -442,11 +446,11 @@ struct Index {
           .width('100%')
         Row({ space: 8 }) {
           Select(SCALES)
-            .selected(this.scale)
-            .value(SCALES[this.scale].value)
+            .selected(this.scaleIndex)
+            .value(SCALES[this.scaleIndex].value)
             .layoutWeight(2)
             .onSelect((index: number): void => {
-              this.scale = index;
+              this.scaleIndex = index;
               this.applyScale();
             })
           Select(TONICS)

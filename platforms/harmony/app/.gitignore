@@ -1,6 +1,11 @@
 /build/
 /entry/build/
 /entry/.cxx/
+/entry-openharmony/build/
+/entry-openharmony/.cxx/
+/entry-openharmony/src/main/ets/
+/entry-openharmony/src/main/resources/
+/entry-openharmony/src/main/cpp/
 /.hvigor/
 /node_modules/
 /oh_modules/

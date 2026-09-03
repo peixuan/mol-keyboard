@@ -13,8 +13,7 @@ typedef enum {
   AUDIOSTREAM_SUCCESS = 0,
   AUDIOSTREAM_ERROR_INVALID_PARAM = 1,
   AUDIOSTREAM_ERROR_ILLEGAL_STATE = 2,
-  AUDIOSTREAM_ERROR_SYSTEM = 3,
-  AUDIOSTREAM_ERROR_UNSUPPORTED_FORMAT = 4
+  AUDIOSTREAM_ERROR_SYSTEM = 3
 } OH_AudioStream_Result;
 
 typedef enum { AUDIOSTREAM_TYPE_RENDERER = 1, AUDIOSTREAM_TYPE_CAPTURER = 2 } OH_AudioStream_Type;
@@ -23,8 +22,7 @@ typedef enum {
   AUDIOSTREAM_SAMPLE_U8 = 0,
   AUDIOSTREAM_SAMPLE_S16LE = 1,
   AUDIOSTREAM_SAMPLE_S24LE = 2,
-  AUDIOSTREAM_SAMPLE_S32LE = 3,
-  AUDIOSTREAM_SAMPLE_F32LE = 4
+  AUDIOSTREAM_SAMPLE_S32LE = 3
 } OH_AudioStream_SampleFormat;
 
 typedef enum {
@@ -74,15 +72,17 @@ typedef enum {
 typedef struct OH_AudioStreamBuilderStruct OH_AudioStreamBuilder;
 typedef struct OH_AudioRendererStruct OH_AudioRenderer;
 
-typedef OH_AudioData_Callback_Result (*OH_AudioRenderer_OnWriteDataCallback)(
-    OH_AudioRenderer* renderer, void* userData, void* audioData, int32_t audioDataSize);
+typedef enum { AUDIOSTREAM_EVENT_ROUTING_CHANGED = 0 } OH_AudioStream_Event;
+typedef struct OH_AudioRenderer_Callbacks_Struct {
+  int32_t (*OH_AudioRenderer_OnWriteData)(OH_AudioRenderer*, void*, void*, int32_t);
+  int32_t (*OH_AudioRenderer_OnStreamEvent)(OH_AudioRenderer*, void*, OH_AudioStream_Event);
+  int32_t (*OH_AudioRenderer_OnInterruptEvent)(OH_AudioRenderer*, void*,
+                                                OH_AudioInterrupt_ForceType,
+                                                OH_AudioInterrupt_Hint);
+  int32_t (*OH_AudioRenderer_OnError)(OH_AudioRenderer*, void*, OH_AudioStream_Result);
+} OH_AudioRenderer_Callbacks;
 typedef void (*OH_AudioRenderer_OutputDeviceChangeCallback)(
     OH_AudioRenderer* renderer, void* userData, OH_AudioStream_DeviceChangeReason reason);
-typedef void (*OH_AudioRenderer_OnInterruptCallback)(OH_AudioRenderer* renderer, void* userData,
-                                                     OH_AudioInterrupt_ForceType type,
-                                                     OH_AudioInterrupt_Hint hint);
-typedef void (*OH_AudioRenderer_OnErrorCallback)(OH_AudioRenderer* renderer, void* userData,
-                                                 OH_AudioStream_Result error);
 
 OH_AudioStream_Result OH_AudioStreamBuilder_Create(OH_AudioStreamBuilder** builder,
                                                    OH_AudioStream_Type type);
@@ -101,15 +101,11 @@ OH_AudioStream_Result OH_AudioStreamBuilder_SetRendererInfo(OH_AudioStreamBuilde
                                                             OH_AudioStream_Usage usage);
 OH_AudioStream_Result OH_AudioStreamBuilder_SetRendererInterruptMode(OH_AudioStreamBuilder* builder,
                                                                      OH_AudioInterrupt_Mode mode);
-OH_AudioStream_Result OH_AudioStreamBuilder_SetRendererWriteDataCallback(
-    OH_AudioStreamBuilder* builder, OH_AudioRenderer_OnWriteDataCallback callback, void* userData);
+OH_AudioStream_Result OH_AudioStreamBuilder_SetRendererCallback(
+    OH_AudioStreamBuilder* builder, OH_AudioRenderer_Callbacks callbacks, void* userData);
 OH_AudioStream_Result OH_AudioStreamBuilder_SetRendererOutputDeviceChangeCallback(
     OH_AudioStreamBuilder* builder, OH_AudioRenderer_OutputDeviceChangeCallback callback,
     void* userData);
-OH_AudioStream_Result OH_AudioStreamBuilder_SetRendererInterruptCallback(
-    OH_AudioStreamBuilder* builder, OH_AudioRenderer_OnInterruptCallback callback, void* userData);
-OH_AudioStream_Result OH_AudioStreamBuilder_SetRendererErrorCallback(
-    OH_AudioStreamBuilder* builder, OH_AudioRenderer_OnErrorCallback callback, void* userData);
 OH_AudioStream_Result OH_AudioStreamBuilder_GenerateRenderer(OH_AudioStreamBuilder* builder,
                                                              OH_AudioRenderer** audioRenderer);
 

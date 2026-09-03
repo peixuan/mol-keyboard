@@ -6,8 +6,7 @@
     "daemon": true,
     "incremental": true,
     "parallel": true,
-    "typeCheck": true,
-    "optimizationStrategy": "performance"
+    "typeCheck": true
   },
   "logging": {
     "level": "info"

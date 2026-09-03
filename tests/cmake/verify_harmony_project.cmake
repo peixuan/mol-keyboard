@@ -5,25 +5,65 @@ if(NOT DEFINED MOL_SOURCE_DIR)
 endif()
 
 set(_app "${MOL_SOURCE_DIR}/platforms/harmony/app")
+set(_project_profile "${_app}/build-profile.json5")
 set(_module "${_app}/entry/src/main/module.json5")
+set(_compat_module "${_app}/entry-openharmony/src/main/module.json5")
+set(_compat_profile "${_app}/entry-openharmony/build-profile.json5")
 set(_service "${_app}/entry/src/main/ets/audio/AudioService.ets")
 set(_page "${_app}/entry/src/main/ets/pages/Index.ets")
 set(_native "${MOL_SOURCE_DIR}/platforms/harmony/native/napi_module.cpp")
+set(_audio_host "${MOL_SOURCE_DIR}/platforms/harmony/native/oh_audio_host.cpp")
 set(_types "${_app}/entry/src/main/cpp/types/libmol_harmony_audio/index.d.ts")
+set(_compat_script "${MOL_SOURCE_DIR}/platforms/harmony/build-openharmony-compat.sh")
+set(_compat_ps_script "${MOL_SOURCE_DIR}/platforms/harmony/build-openharmony-compat.ps1")
 
 foreach(_required
         "${_app}/AppScope/app.json5"
-        "${_app}/build-profile.json5"
+        "${_project_profile}"
         "${_app}/entry/build-profile.json5"
         "${_app}/entry/src/main/cpp/CMakeLists.txt"
+        "${_compat_module}"
+        "${_compat_profile}"
         "${_module}"
         "${_service}"
         "${_page}"
+        "${_audio_host}"
         "${_types}"
+        "${_compat_script}"
+        "${_compat_ps_script}"
         "${_app}/AppScope/resources/base/media/app_icon.png"
         "${_app}/entry/src/main/resources/base/media/startIcon.png")
   if(NOT EXISTS "${_required}")
     message(FATAL_ERROR "HarmonyOS application input is missing: ${_required}")
+  endif()
+endforeach()
+
+file(READ "${_project_profile}" _project_profile_text)
+foreach(_token
+        [["runtimeOS": "HarmonyOS"]]
+        [["runtimeOS": "OpenHarmony"]]
+        [["name": "entryOpenHarmony"]]
+        [["compatibleSdkVersion": 12]])
+  if(NOT _project_profile_text MATCHES "${_token}")
+    message(FATAL_ERROR "Harmony project profile is missing ${_token}")
+  endif()
+endforeach()
+
+file(READ "${_compat_module}" _compat_module_text)
+foreach(_token [["name": "entryOpenHarmony"]] [["tablet"]] "audioPlayback")
+  if(NOT _compat_module_text MATCHES "${_token}")
+    message(FATAL_ERROR "OpenHarmony compatibility module is missing ${_token}")
+  endif()
+endforeach()
+
+file(READ "${_compat_profile}" _compat_profile_text)
+foreach(_token
+        [["./src/main/cpp/CMakeLists.txt"]]
+        [["arm64-v8a"]]
+        [["x86_64"]]
+        [["runtimeOS": "OpenHarmony"]])
+  if(NOT _compat_profile_text MATCHES "${_token}")
+    message(FATAL_ERROR "OpenHarmony compatibility profile is missing ${_token}")
   endif()
 endforeach()
 
@@ -64,6 +104,10 @@ foreach(_token "PRESETS" "SCALES" "CHORDS" "ARPEGGIATORS" "PORTAMENTO_MODES")
     message(FATAL_ERROR "HarmonyOS UI is missing ${_token}")
   endif()
 endforeach()
+if(NOT _page_text MATCHES "interface SelectOption" OR
+   NOT _page_text MATCHES "@State scaleIndex")
+  message(FATAL_ERROR "HarmonyOS UI constants must satisfy strict ArkTS typing")
+endif()
 
 file(GLOB_RECURSE _arkts_sources "${_app}/entry/src/main/ets/*.ets")
 foreach(_source IN LISTS _arkts_sources)
@@ -71,6 +115,39 @@ foreach(_source IN LISTS _arkts_sources)
   if(_arkts_text MATCHES "AudioRenderer|writeData")
     message(FATAL_ERROR "ArkTS must not render PCM: ${_source}")
   endif()
+endforeach()
+
+file(READ "${_audio_host}" _audio_host_text)
+foreach(_token
+        "AUDIOSTREAM_SAMPLE_S16LE"
+        "OH_AudioStreamBuilder_SetRendererCallback"
+        "kRenderChunkFrames"
+        "mol_platform_audio_render_f32")
+  if(NOT _audio_host_text MATCHES "${_token}")
+    message(FATAL_ERROR "HarmonyOS API 12 audio host is missing ${_token}")
+  endif()
+endforeach()
+foreach(_forbidden
+        "AUDIOSTREAM_SAMPLE_F32LE"
+        "SetRendererInterruptCallback"
+        "SetRendererErrorCallback")
+  if(_audio_host_text MATCHES "${_forbidden}")
+    message(FATAL_ERROR "HarmonyOS audio host uses a post-API-12 interface: ${_forbidden}")
+  endif()
+endforeach()
+
+foreach(_script "${_compat_script}" "${_compat_ps_script}")
+  file(READ "${_script}" _script_text)
+  foreach(_token
+          "product=openharmony"
+          "entryOpenHarmony@default"
+          "libs/arm64-v8a/libmol_harmony_audio.so"
+          "libs/x86_64/libmol_harmony_audio.so"
+          "ets/modules.abc")
+    if(NOT _script_text MATCHES "${_token}")
+      message(FATAL_ERROR "OpenHarmony compatibility build audit is missing ${_token}: ${_script}")
+    endif()
+  endforeach()
 endforeach()
 
 file(READ "${_native}" _native_text)

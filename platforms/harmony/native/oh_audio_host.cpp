@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "oh_audio_host.h"
 
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -15,7 +16,9 @@ namespace {
 
 constexpr std::int32_t kRequestedSampleRate = 48000;
 constexpr std::int32_t kChannelCount = 2;
-constexpr std::int32_t kBytesPerFrame = kChannelCount * static_cast<std::int32_t>(sizeof(float));
+constexpr std::int32_t kBytesPerFrame =
+    kChannelCount * static_cast<std::int32_t>(sizeof(std::int16_t));
+constexpr std::uint32_t kRenderChunkFrames = 256U;
 constexpr std::size_t kMaximumSequenceBytes = std::size_t{2U} * 1024U * 1024U;
 
 struct SequenceWriter {
@@ -80,8 +83,8 @@ mol_command_t make_command(std::uint32_t command_type, std::uint64_t gesture_id)
 
 }  // namespace
 
-OH_AudioData_Callback_Result write_data_callback(OH_AudioRenderer* renderer, void* user_data,
-                                                 void* audio_data, std::int32_t audio_data_size) {
+std::int32_t write_data_callback(OH_AudioRenderer* renderer, void* user_data, void* audio_data,
+                                 std::int32_t audio_data_size) {
   (void)renderer;
   auto* host = static_cast<AudioHost*>(user_data);
   if (host == nullptr || audio_data == nullptr || audio_data_size <= 0) {
@@ -102,26 +105,53 @@ OH_AudioData_Callback_Result write_data_callback(OH_AudioRenderer* renderer, voi
   }
 
   const std::uint32_t frame_count = static_cast<std::uint32_t>(audio_data_size / kBytesPerFrame);
-  auto* output = static_cast<float*>(audio_data);
-  const mol_result_t result = mol_platform_audio_render_f32(&host->runtime_, output, frame_count);
-  if (result != MOL_OK) {
-    std::memset(audio_data, 0, static_cast<std::size_t>(audio_data_size));
-    host->render_failures_.fetch_add(1U, std::memory_order_relaxed);
-  } else {
-    std::uint32_t non_finite = 0U;
-    const std::size_t sample_count = static_cast<std::size_t>(frame_count) * kChannelCount;
-    for (std::size_t index = 0; index < sample_count; ++index) {
-      if (!std::isfinite(output[index])) {
-        output[index] = 0.0F;
+  auto* output = static_cast<std::int16_t*>(audio_data);
+  std::array<float, kRenderChunkFrames * static_cast<std::size_t>(kChannelCount)> scratch{};
+  std::uint32_t non_finite = 0U;
+  std::uint32_t rendered = 0U;
+  bool render_failed = false;
+  while (rendered < frame_count) {
+    const std::uint32_t remaining = frame_count - rendered;
+    const std::uint32_t chunk_frames =
+        remaining < kRenderChunkFrames ? remaining : kRenderChunkFrames;
+    if (mol_platform_audio_render_f32(&host->runtime_, scratch.data(), chunk_frames) != MOL_OK) {
+      render_failed = true;
+      break;
+    }
+    const std::size_t chunk_samples =
+        static_cast<std::size_t>(chunk_frames) * static_cast<std::size_t>(kChannelCount);
+    const std::size_t output_offset =
+        static_cast<std::size_t>(rendered) * static_cast<std::size_t>(kChannelCount);
+    for (std::size_t index = 0; index < chunk_samples; ++index) {
+      float sample = scratch[index];
+      if (!std::isfinite(sample)) {
+        sample = 0.0F;
         ++non_finite;
       }
+      if (sample > 1.0F) sample = 1.0F;
+      if (sample < -1.0F) sample = -1.0F;
+      output[output_offset + index] =
+          static_cast<std::int16_t>(std::lrint(sample * 32767.0F));
     }
-    host->non_finite_samples_.fetch_add(non_finite, std::memory_order_relaxed);
+    rendered += chunk_frames;
   }
+  if (render_failed) {
+    std::memset(audio_data, 0, static_cast<std::size_t>(audio_data_size));
+    host->render_failures_.fetch_add(1U, std::memory_order_relaxed);
+  }
+  host->non_finite_samples_.fetch_add(non_finite, std::memory_order_relaxed);
   host->callback_count_.fetch_add(1U, std::memory_order_relaxed);
   host->rendered_frames_.fetch_add(frame_count, std::memory_order_relaxed);
   host->callbacks_in_flight_.fetch_sub(1U, std::memory_order_release);
   return AUDIO_DATA_CALLBACK_RESULT_VALID;
+}
+
+std::int32_t stream_event_callback(OH_AudioRenderer* renderer, void* user_data,
+                                   OH_AudioStream_Event event) {
+  (void)renderer;
+  (void)user_data;
+  (void)event;
+  return 0;
 }
 
 void output_device_change_callback(OH_AudioRenderer* renderer, void* user_data,
@@ -136,12 +166,13 @@ void output_device_change_callback(OH_AudioRenderer* renderer, void* user_data,
   }
 }
 
-void interrupt_callback(OH_AudioRenderer* renderer, void* user_data,
-                        OH_AudioInterrupt_ForceType force_type, OH_AudioInterrupt_Hint hint) {
+std::int32_t interrupt_callback(OH_AudioRenderer* renderer, void* user_data,
+                                OH_AudioInterrupt_ForceType force_type,
+                                OH_AudioInterrupt_Hint hint) {
   (void)renderer;
   auto* host = static_cast<AudioHost*>(user_data);
   if (host == nullptr) {
-    return;
+    return AUDIO_DATA_CALLBACK_RESULT_INVALID;
   }
   host->interruptions_.fetch_add(1U, std::memory_order_relaxed);
   if (force_type == AUDIOSTREAM_INTERRUPT_FORCE &&
@@ -152,9 +183,11 @@ void interrupt_callback(OH_AudioRenderer* renderer, void* user_data,
   if (hint == AUDIOSTREAM_INTERRUPT_HINT_RESUME) {
     host->needs_restart_.store(true, std::memory_order_release);
   }
+  return 0;
 }
 
-void error_callback(OH_AudioRenderer* renderer, void* user_data, OH_AudioStream_Result error) {
+std::int32_t error_callback(OH_AudioRenderer* renderer, void* user_data,
+                            OH_AudioStream_Result error) {
   (void)renderer;
   auto* host = static_cast<AudioHost*>(user_data);
   if (host != nullptr) {
@@ -162,6 +195,7 @@ void error_callback(OH_AudioRenderer* renderer, void* user_data, OH_AudioStream_
     host->active_.store(false, std::memory_order_release);
     host->needs_restart_.store(true, std::memory_order_release);
   }
+  return 0;
 }
 
 namespace {
@@ -178,7 +212,7 @@ OH_AudioStream_Result create_renderer(AudioHost* host, OH_AudioStream_LatencyMod
     result = OH_AudioStreamBuilder_SetChannelCount(builder, kChannelCount);
   }
   if (result == AUDIOSTREAM_SUCCESS) {
-    result = OH_AudioStreamBuilder_SetSampleFormat(builder, AUDIOSTREAM_SAMPLE_F32LE);
+    result = OH_AudioStreamBuilder_SetSampleFormat(builder, AUDIOSTREAM_SAMPLE_S16LE);
   }
   if (result == AUDIOSTREAM_SUCCESS) {
     result = OH_AudioStreamBuilder_SetEncodingType(builder, AUDIOSTREAM_ENCODING_TYPE_RAW);
@@ -194,17 +228,13 @@ OH_AudioStream_Result create_renderer(AudioHost* host, OH_AudioStream_LatencyMod
         OH_AudioStreamBuilder_SetRendererInterruptMode(builder, AUDIOSTREAM_INTERRUPT_MODE_SHARE);
   }
   if (result == AUDIOSTREAM_SUCCESS) {
-    result = OH_AudioStreamBuilder_SetRendererWriteDataCallback(builder, write_data_callback, host);
+    const OH_AudioRenderer_Callbacks callbacks{write_data_callback, stream_event_callback,
+                                               interrupt_callback, error_callback};
+    result = OH_AudioStreamBuilder_SetRendererCallback(builder, callbacks, host);
   }
   if (result == AUDIOSTREAM_SUCCESS) {
     result = OH_AudioStreamBuilder_SetRendererOutputDeviceChangeCallback(
         builder, output_device_change_callback, host);
-  }
-  if (result == AUDIOSTREAM_SUCCESS) {
-    result = OH_AudioStreamBuilder_SetRendererInterruptCallback(builder, interrupt_callback, host);
-  }
-  if (result == AUDIOSTREAM_SUCCESS) {
-    result = OH_AudioStreamBuilder_SetRendererErrorCallback(builder, error_callback, host);
   }
   if (result == AUDIOSTREAM_SUCCESS) {
     result = OH_AudioStreamBuilder_GenerateRenderer(builder, renderer);
@@ -261,9 +291,9 @@ OH_AudioStream_Result AudioHost::start() {
     result = OH_AudioRenderer_GetLatencyMode(renderer_, &latency_mode);
   }
   if (result != AUDIOSTREAM_SUCCESS || sample_rate <= 0 || channel_count != kChannelCount ||
-      sample_format != AUDIOSTREAM_SAMPLE_F32LE) {
+      sample_format != AUDIOSTREAM_SAMPLE_S16LE) {
     if (result == AUDIOSTREAM_SUCCESS) {
-      result = AUDIOSTREAM_ERROR_UNSUPPORTED_FORMAT;
+      result = AUDIOSTREAM_ERROR_INVALID_PARAM;
     }
     record_result(last_error_, result);
     stop();

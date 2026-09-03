@@ -53,13 +53,13 @@ class AudioHost final {
   [[nodiscard]] AudioStatus status();
 
  private:
-  friend OH_AudioData_Callback_Result write_data_callback(OH_AudioRenderer*, void*, void*,
-                                                          std::int32_t);
+  friend std::int32_t write_data_callback(OH_AudioRenderer*, void*, void*, std::int32_t);
+  friend std::int32_t stream_event_callback(OH_AudioRenderer*, void*, OH_AudioStream_Event);
   friend void output_device_change_callback(OH_AudioRenderer*, void*,
                                             OH_AudioStream_DeviceChangeReason);
-  friend void interrupt_callback(OH_AudioRenderer*, void*, OH_AudioInterrupt_ForceType,
-                                 OH_AudioInterrupt_Hint);
-  friend void error_callback(OH_AudioRenderer*, void*, OH_AudioStream_Result);
+  friend std::int32_t interrupt_callback(OH_AudioRenderer*, void*, OH_AudioInterrupt_ForceType,
+                                        OH_AudioInterrupt_Hint);
+  friend std::int32_t error_callback(OH_AudioRenderer*, void*, OH_AudioStream_Result);
 
   mol_result_t submit_note(std::uint32_t command_type, std::uint8_t note, float velocity,
                            std::uint64_t gesture_id);

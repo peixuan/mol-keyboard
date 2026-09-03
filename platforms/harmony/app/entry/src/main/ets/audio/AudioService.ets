@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { audio } from '@kit.AudioKit';
 import { avSession } from '@kit.AVSessionKit';
-import { common, wantAgent } from '@kit.AbilityKit';
+import { common, wantAgent, WantAgent } from '@kit.AbilityKit';
 import { preferences } from '@kit.ArkData';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { backgroundTaskManager } from '@kit.BackgroundTasksKit';
@@ -125,7 +125,7 @@ export class AudioService {
 
   private readonly onAudioSessionDeactivated =
     (event: audio.AudioSessionDeactivatedEvent): void => {
-      console.warn(`MoL audio session deactivated: ${event.deactivatedReason}`);
+      console.warn(`MoL audio session deactivated: ${event.reason}`);
       this.focusActive = false;
       if (this.runtime.status().active) {
         this.runtime.submitControl(NativeCommands.ALL_SOUND_OFF);
@@ -605,7 +605,7 @@ export class AudioService {
       wantAgentFlags: [wantAgent.WantAgentFlags.UPDATE_PRESENT_FLAG],
     };
     try {
-      const agent: wantAgent.WantAgent = await wantAgent.getWantAgent(agentInfo);
+      const agent: WantAgent = await wantAgent.getWantAgent(agentInfo);
       await backgroundTaskManager.startBackgroundRunning(context,
         backgroundTaskManager.BackgroundMode.AUDIO_PLAYBACK, agent);
       this.continuousTaskActive = true;
@@ -647,7 +647,7 @@ export class AudioService {
           requestCode: 1,
           wantAgentFlags: [wantAgent.WantAgentFlags.UPDATE_PRESENT_FLAG],
         };
-        const agent: wantAgent.WantAgent = await wantAgent.getWantAgent(agentInfo);
+        const agent: WantAgent = await wantAgent.getWantAgent(agentInfo);
         await this.mediaSession.setLaunchAbility(agent);
         await this.mediaSession.setAVMetadata({
           assetId: 'mol-keyboard-sequence',
@@ -812,12 +812,12 @@ export class AudioService {
 
   private persistNumber(key: string, value: number): void {
     this.settingStore?.putSync(key, value);
-    this.settingStore?.flushSync();
+    void this.settingStore?.flush();
   }
 
   private persistBoolean(key: string, value: boolean): void {
     this.settingStore?.putSync(key, value);
-    this.settingStore?.flushSync();
+    void this.settingStore?.flush();
   }
 
   private inRange(value: number, minimum: number, maximum: number): boolean {
