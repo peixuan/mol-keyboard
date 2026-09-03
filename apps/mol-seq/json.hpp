@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <vector>
 
@@ -14,7 +15,7 @@ namespace molseq {
 struct Json {
   enum class Type { Null, Boolean, Number, String, Array, Object };
   using Array = std::vector<Json>;
-  using Object = std::map<std::string, Json>;
+  using Object = std::map<std::string, Json, std::less<>>;
 
   Type type = Type::Null;
   bool boolean = false;
@@ -42,8 +43,8 @@ struct Json {
 Json parse_json(const std::string& source);
 std::string write_json(const Json& value);
 
-const Json& require_member(const Json& object, const std::string& name);
-const Json* optional_member(const Json& object, const std::string& name);
+const Json& require_member(const Json& object, std::string_view name);
+const Json* optional_member(const Json& object, std::string_view name);
 std::uint64_t json_u64(const Json& value, std::uint64_t maximum);
 std::int64_t json_i64(const Json& value, std::int64_t minimum, std::int64_t maximum);
 double json_double(const Json& value, double minimum, double maximum);

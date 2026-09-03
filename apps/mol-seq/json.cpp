@@ -384,14 +384,15 @@ std::string write_json(const Json& value) {
   return stream.str();
 }
 
-const Json& require_member(const Json& object, const std::string& name) {
+const Json& require_member(const Json& object, std::string_view name) {
   if (object.type != Json::Type::Object) throw std::runtime_error("expected JSON object");
   const auto found = object.object.find(name);
-  if (found == object.object.end()) throw std::runtime_error("missing JSON member: " + name);
+  if (found == object.object.end())
+    throw std::runtime_error("missing JSON member: " + std::string(name));
   return found->second;
 }
 
-const Json* optional_member(const Json& object, const std::string& name) {
+const Json* optional_member(const Json& object, std::string_view name) {
   if (object.type != Json::Type::Object) throw std::runtime_error("expected JSON object");
   const auto found = object.object.find(name);
   return found == object.object.end() ? nullptr : &found->second;

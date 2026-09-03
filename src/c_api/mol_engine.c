@@ -2452,8 +2452,7 @@ mol_result_t mol_engine_render_interleaved_f32(mol_engine_t* engine, float* outp
   if (result != MOL_OK || output == NULL) {
     return result != MOL_OK ? result : MOL_ERROR_INVALID_ARGUMENT;
   }
-  if ((size_t)channel_count > SIZE_MAX / sizeof(*output) ||
-      (size_t)frame_count > SIZE_MAX / ((size_t)channel_count * sizeof(*output))) {
+  if ((size_t)frame_count > (SIZE_MAX / sizeof(*output)) / channel_count) {
     return MOL_ERROR_OVERFLOW;
   }
   for (frame = 0u; frame < frame_count; ++frame) {
