@@ -39,6 +39,15 @@ requires the installed package configuration, compiles each of the 14 public
 headers independently in both C11 and C++17 modes, and runs standalone C and C++
 consumers against the installed static or shared library.
 
+Desktop MIDI tests feed fragmented/running-status streams through the bounded
+production decoder and cover channel filtering, repeated-gesture ownership,
+realtime/System Exclusive isolation, controllers, bend endpoints, programs,
+panic commands, queue rejection, and disconnect cleanup. Linux additionally
+opens the production raw-MIDI adapter on a kernel FIFO and exercises its real
+`poll`/`read` thread. The exact CoreMIDI source executes against a controlled API
+model under both MSVC and Linux GCC. These are device-free integration results;
+only a real endpoint and instrument can satisfy physical MIDI acceptance.
+
 ## Cross-target conformance
 
 Emscripten Debug and MinSizeRel run the portable suite under pinned Node. Native

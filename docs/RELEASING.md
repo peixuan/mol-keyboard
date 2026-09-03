@@ -71,7 +71,8 @@ The audit requires its CPack `.sha256`, all product/legal/SDK files, every
 desktop service definition, exported `mol::core`, the expected daemon version,
 and a working CLI help path. It also launches the extracted daemon with no UI
 and drives the extracted CLI through control, recording/playback, diagnostics,
-finite rendering, all-notes-off, zero-exit shutdown, and IPC cleanup. Run the
+finite rendering, all-notes-off, zero-exit shutdown, and IPC cleanup. The
+desktop package must report native MIDI support. Run the
 audit on the package's target operating system; native executables are not
 cross-host smoke tested.
 

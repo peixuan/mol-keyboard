@@ -62,6 +62,16 @@ crossing below the threshold releases only gestures whose physical key is no
 longer held. `ALL_NOTES_OFF` follows normal release semantics, while
 `ALL_SOUND_OFF` immediately clears gestures, arpeggiator state, and voices.
 
+Realtime MIDI 1.0 uses a bounded streaming parser with running status and
+interleaved realtime-byte handling. Note On velocity zero is Note Off. CC1 maps
+to the public 0--1 modulation parameter, CC64 remains continuous, pitch bend
+maps its asymmetric 14-bit endpoints exactly to -1 and +1, and General MIDI
+programs use the same built-in-preset mapping as `.mid` import. CC121 resets
+sustain, pitch bend, and modulation; CC123 and CC120 map to All Notes Off and
+All Sound Off. Every endpoint offers Omni or one-based Channel 1--16 filtering.
+The parser and gesture stacks are fixed-capacity; a fifth overlapping Note On
+for the same channel/note releases the oldest of the four retained gestures.
+
 Portamento is monophonic and uses last-note priority. `LEGATO_ONLY` glides when
 a previous monophonic gesture is still held; `ALWAYS` also glides from the last
 target pitch after a separated note. The configured 0--2000 ms time is converted

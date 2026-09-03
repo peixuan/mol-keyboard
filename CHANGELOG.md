@@ -13,6 +13,10 @@ All notable changes to this project will be documented in this file.
 - Added the `mol-keyboardd` desktop service and `molctl` client with bounded
   local IPC and JSON-RPC, realtime miniaudio output, native keyboard adapters,
   hotplug recovery, atomic configuration, diagnostics, and user startup assets.
+- Added bounded realtime MIDI 1.0 input with running-status parsing, channel
+  filtering, Note/velocity/pressure, CC1 modulation, CC64 sustain, pitch bend,
+  program changes, panic controls, and native WinMM, Linux raw-MIDI, and
+  CoreMIDI adapters.
 - Added sanitizer-backed fuzzing for all six required Patch, Sequence, service
   configuration, JSON-RPC, Wire, and MIDI parser boundaries, plus the latency
   capture, WAV analyzer, ESP32 settings/Web-form, and HID report parsers.

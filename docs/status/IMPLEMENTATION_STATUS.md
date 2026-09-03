@@ -53,14 +53,22 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`83c2316` (`test(packaging): exercise extracted headless product`) is the latest
-locally validated code candidate. The package audit now requires all three
+`a52bc00` (`test(packaging): require native MIDI capability`) is the latest
+locally validated code candidate. It adds a bounded streaming MIDI 1.0 decoder,
+public CC1 modulation, native WinMM/Linux raw-MIDI/CoreMIDI adapters, explicit
+Omni or Channel 1--16 filtering, truthful service capability/device reporting,
+and feature-off support. Windows LTO Release passes 93/93, Linux GCC passes
+95/95, and Emscripten MinSizeRel passes 42/42. Linux runs the exact raw-MIDI
+adapter through a kernel FIFO; the exact CoreMIDI source passes controlled API
+execution under MSVC and GCC. No physical MIDI or native Apple claim is made.
+The package audit requires all three
 desktop service definitions, safely extracts the archive, and starts the
 packaged daemon with no UI, a null audio backend, private state, and private IPC.
 The packaged CLI verifies capabilities, preset and tempo changes, note input,
 recording persistence, playback, latency status, self-test, doctor, a finite
 4,096-frame benchmark, all-notes-off, zero-exit shutdown, and endpoint cleanup.
-Fresh optimized Windows and Linux archives both pass this lifecycle locally;
+Fresh optimized Windows and Linux archives both pass this lifecycle locally
+and must report native MIDI support;
 the checked-in Linux release job and new Windows package job enforce it when
 published. The new workflow path is YAML-validated but remains unexecuted for
 this unpushed commit.
@@ -413,23 +421,24 @@ cmake --build --preset dev-release
 ctest --preset dev-release --output-on-failure
 ```
 
-MSVC 19.51.36248 passes 91/91 tests in the current LTO Release build; the prior
+MSVC 19.51.36248 passes 93/93 tests in the current LTO Release build; the prior
 Debug build passed 78/78. These runs include the iOS production lifecycle
 policy, exact HarmonyOS production policy source, strict Web form protocol, and
 HIL evidence-parser tests in addition to
 the independent daemon process, realtime runtime, local IPC, all service
-methods, CLI validation, configuration restart, recording/playback, the macOS
-IOHID/CoreAudio lifecycle simulations, and prior core/tool coverage. Dedicated
+methods, CLI validation, configuration restart, recording/playback, native
+WinMM MIDI and bounded decoder paths, the macOS IOHID/CoreAudio/CoreMIDI
+lifecycle simulations, and prior core/tool coverage. Dedicated
 GNU 15 Release+LTO presets pass 91/91 for Tiny, 92/92 for Standard, and 91/91
 for Full with the required Node.js and Python runtimes. The Full run exercises
 64 voices, 4,096 sequence events, the complete desktop daemon, and the expanded
 fixed host arenas.
 
-Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 92/92
+Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 95/95
 tests; the prior Clang 21.1.8 candidate passed 78/78. The current suite runs a
 real systemd user unit lifecycle plus the production macOS service smoke
-unchanged through a controlled launchd model and
-the real Linux daemon/CLI. The daemon process used its null sink and a private
+unchanged through a controlled launchd model, the production raw-MIDI adapter
+through a kernel FIFO, and the real Linux daemon/CLI. The daemon process used its null sink and a private
 Unix socket; the production Web UI additionally controlled it under bundled
 Chromium. Node.js is a fail-closed native-test dependency: set `EMSDK_NODE` when
 it is not on `PATH`. Physical Linux devices and native Apple behavior remain
@@ -645,14 +654,15 @@ The refreshed release size gate passed at 505,468 bytes for the stripped core,
 licenses, npm audit, and SPDX SBOM validation passed. Current CPack package
 audits each found 146 required files, including `mol-latency-probe` and every
 desktop service definition, then ran the extracted daemon and CLI through the
-complete no-UI null-audio lifecycle. The Windows AMD64 ZIP is 1,318,557 bytes
+complete no-UI null-audio lifecycle and required native MIDI capability. The
+Windows AMD64 ZIP is 1,328,430 bytes
 with SHA-256
-`66106000227b4556d4ec469df5c1d2bff42711e3ad7c7fde95cb3824247ce918`;
-its recording is 327 bytes. The Linux x86_64 TGZ is 1,701,529 bytes with SHA-256
-`68e5f853b9cd3955715553cd819c58cc4ceda936583b130fc494df47b2cf3956`;
+`a6d83dee02dcdb6c10dd774d84d587fc53611d9e0020bf39fb2f1f4f0f088237`;
+its recording is 327 bytes. The Linux x86_64 TGZ is 1,714,599 bytes with SHA-256
+`648105f02ce5765859c7e209a50e6718458f34b6c347624403a76d45af9fd6fc`;
 its recording is 326 bytes. Both report schema 2, 48 kHz stereo, 4,096 finite
 benchmark frames, no non-finite samples, exit code zero, and successful IPC
-cleanup. They are unsigned 0.1.0 candidate archives built from the `83c2316`
+cleanup. They are unsigned 0.1.0 candidate archives built from the `a52bc00`
 tree, not releases.
 
 ```sh
@@ -745,7 +755,7 @@ tests.
 
 The HarmonyOS application descriptors, project audit, executable production
 policy/bridge/host simulations, and native source-check boundary pass locally.
-Windows MSVC Release passes 91/91 tests, Linux GCC passes 92/92, Emscripten
+Windows MSVC Release passes 93/93 tests, Linux GCC passes 95/95, Emscripten
 passes 42/42, and Linux AArch64 QEMU passes 71/71.
 The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
 5.8.9 build and audit

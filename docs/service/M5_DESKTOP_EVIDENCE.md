@@ -1,7 +1,9 @@
 # M5 Desktop Headless Evidence
 
-Verified on 2026-09-03 at commit `c87e1a1`; the desktop-first regression and
-device-free acceptance were refreshed through code candidate `00a0e50`. A clean
+Verified on 2026-09-04 through code candidate `a52bc00`. The current Windows
+LTO Release suite passes 93/93, Linux GCC passes 95/95 with native Linux Node
+22.16.0, and Emscripten MinSizeRel passes 42/42. The desktop-first regression
+and device-free acceptance began at candidate `00a0e50`. A clean
 checkout of candidate `098ddf4` rebuilt 167 Windows LTO Release targets and
 passed 89/89 tests; its clean Wasm build compiled 108 targets and passed 41/41.
 A separate clean checkout of `75609b6` compiled all 167 Linux GCC targets and,
@@ -26,6 +28,10 @@ two capability-specific skips and zero npm vulnerabilities.
 - Windows Raw Input, Linux evdev, and macOS IOHIDManager adapters map physical
   keys into the same gesture-owned command model. Detach and shutdown release
   every owned gesture.
+- Native WinMM, Linux raw-MIDI, and CoreMIDI adapters feed the same bounded
+  command queue. Their streaming MIDI 1.0 decoder covers notes, velocity, poly
+  pressure, CC1, CC64, pitch bend, programs, panic controls, repeated-note
+  gesture ownership, running status, and Omni or Channel 1--16 filtering.
 - Local control uses a remote-rejecting Windows Named Pipe or a mode-0600 Unix
   domain socket. Frames are little-endian length-prefixed and limited to 64
   KiB. Client I/O is time-bounded, incomplete clients are isolated, and no LAN
@@ -66,8 +72,8 @@ two capability-specific skips and zero npm vulnerabilities.
 | Configuration | Result | Relevant evidence |
 |---|---:|---|
 | Windows MSVC Debug | 78/78 | local IPC recovery, all 41 RPC methods, runtime callback, independent daemon process, CLI, recording/playback, rendering, macOS interface simulations |
-| Windows MSVC LTO Release | 90/90 | current optimized suite plus fail-closed Web acceptance audit, real temporary Startup-shortcut product lifecycle, portable service-asset audits, and mobile policy/native-boundary simulations |
-| Linux x86_64 GCC (WSL) | 91/91 | current Unix socket/null-audio product suite, fail-closed Web acceptance audit, real systemd user-service lifecycle, executable macOS LaunchAgent orchestration simulation, portable Windows service audit, and mobile policy/native-boundary simulations |
+| Windows MSVC LTO Release | 93/93 | current optimized suite, WinMM enumeration and MIDI stream tests, fail-closed Web acceptance audit, real temporary Startup-shortcut product lifecycle, portable service-asset audits, and mobile policy/native-boundary simulations |
+| Linux x86_64 GCC (WSL) | 95/95 | current Unix socket/null-audio product suite, production raw-MIDI adapter on a kernel FIFO, fail-closed Web acceptance audit, real systemd user-service lifecycle, executable macOS LaunchAgent orchestration simulation, portable Windows service audit, and mobile policy/native-boundary simulations |
 | Linux x86_64 Clang (WSL) | 78/78 | Unix socket mode/cleanup, null-audio service process, CLI lifecycle, Linux adapter compilation, macOS interface simulations |
 | Linux AArch64 QEMU 10.2.1 | 71/71 | target core/DSP/music tests, 18-preset metrics, mobile policy/native-boundary simulations, null playback, nested daemon process, CLI/render lifecycle |
 | Windows Clang ASan/UBSan | 47/47 | all sanitizer-enabled portable/control tests and eleven 20-second parser fuzz sessions; current Harmony policy audit/source cases pass targeted validation |
@@ -89,6 +95,14 @@ working local IPC, healthy realtime counters, and the active 48 kHz stereo
 WASAPI output. The offline benchmark rendered 96,000 frames with zero
 non-finite samples at 80.68 times realtime, and RPC shutdown returned process
 exit code 0.
+
+The Windows host exposed no MIDI endpoint, so the real WinMM enumeration path
+ran but physical MIDI input was unavailable. Linux executed the production
+raw-MIDI directory/open/poll/read adapter against a named kernel FIFO and the
+exact CoreMIDI source executed against controlled API models under both MSVC
+and Linux GCC. Those MIDI byte streams are simulation, not a physical keyboard
+or native Apple result. A separate `MOL_ENABLE_MIDI=OFF` build compiled the
+daemon and parser and passed its three applicable runtime/backend/MIDI tests.
 
 The host exposed no Bluetooth output during this run, so `doctor` correctly
 reported that fact and directed the user to system pairing. No Bluetooth

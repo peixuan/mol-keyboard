@@ -27,6 +27,14 @@ do not provide Apple framework headers or ABI, native launchd behavior, system
 permissions, hardware routes, or native macOS
 scheduling, so macOS remains below `build-verified` and `runtime-verified`.
 
+Desktop realtime MIDI is implemented with WinMM, Linux raw-MIDI, and CoreMIDI.
+The bounded decoder, channel filters, controllers, panic behavior, and detach
+cleanup pass portable tests; Linux additionally executes its production adapter
+against a kernel FIFO, and the exact CoreMIDI source executes against controlled
+API models under MSVC and GCC. The Windows host exposed no MIDI endpoint. These
+results do not prove USB/Bluetooth transport, driver behavior, hot-unplug,
+instrument compatibility, physical latency, or native CoreMIDI execution.
+
 The complete Windows ARM64 and Linux AArch64 products cross-build and their
 object formats were inspected as COFF-ARM64 and AArch64 ELF respectively. They
 have not executed on a native ARM64 host. QEMU 10.2.1 now passes 71/71 Linux

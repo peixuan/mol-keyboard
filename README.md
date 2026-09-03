@@ -183,9 +183,9 @@ HarmonyOS 共享应用源码也已用官方 OpenHarmony API 12 公共 SDK 完成
 
 | Target / 目标 | Implementation / 实现 | Current evidence / 当前证据 |
 | --- | --- | --- |
-| Windows | daemon, CLI, WASAPI, Raw Input | x64 app, real temporary Startup shortcut/service lifecycle, and ARM64 cross-build passed; ARM64 runtime pending / x64 应用、真实临时启动快捷方式/服务生命周期及 ARM64 交叉构建通过，ARM64 运行待验 |
-| Linux | daemon, CLI, native audio/evdev host | x86_64 runtime and real systemd user service plus AArch64 QEMU product and 71-test suite passed; native ARM64 and physical devices pending / x86_64 运行、真实 systemd 用户服务及 AArch64 QEMU 产品与 71 项测试通过，原生 ARM64 与物理设备待验 |
-| macOS | daemon, CoreAudio, IOHIDManager | source and LaunchAgent orchestration simulations pass; native Apple gate pending / 源码及 LaunchAgent 编排仿真通过，原生 Apple 门禁待验 |
+| Windows | daemon, CLI, WASAPI, Raw Input, WinMM MIDI | x64 app, real temporary Startup shortcut/service lifecycle, and ARM64 cross-build passed; MIDI byte-stream simulation passed; ARM64 and physical MIDI runtime pending / x64 应用、真实临时启动快捷方式/服务生命周期及 ARM64 交叉构建通过，MIDI 字节流仿真通过，ARM64 与物理 MIDI 运行待验 |
+| Linux | daemon, CLI, native audio/evdev/raw-MIDI host | x86_64 runtime and real systemd user service plus AArch64 QEMU product and 71-test suite passed; kernel-FIFO MIDI simulation passed; native ARM64 and physical devices pending / x86_64 运行、真实 systemd 用户服务及 AArch64 QEMU 产品与 71 项测试通过，内核 FIFO MIDI 仿真通过，原生 ARM64 与物理设备待验 |
+| macOS | daemon, CoreAudio, IOHIDManager, CoreMIDI | production-source API simulations and LaunchAgent orchestration simulation pass; native Apple gate pending / 生产源码 API 与 LaunchAgent 编排仿真通过，原生 Apple 门禁待验 |
 | Web/PWA | Wasm AudioWorklet, offline shell | supported-browser automation passed; Safari pending / 已支持浏览器自动化通过，Safari 待验 |
 | Android | Oboe/AAudio foreground service | dual-ABI builds plus Android 15 audio-focus/lifecycle simulation passed; device pending / 双 ABI 及 Android 15 音频焦点与生命周期仿真通过，真机待验 |
 | iOS | AudioUnit, AVAudioSession, offline WKWebView | production background policy and hardware-key ownership simulations pass; fail-closed Simulator UI/bridge gate checked in; Apple run/device pending / 生产后台策略及硬件键所有权仿真通过，已纳入失败关闭的模拟器 UI/桥接门禁，Apple 运行与真机待验 |
@@ -196,6 +196,20 @@ HarmonyOS 共享应用源码也已用官方 OpenHarmony API 12 公共 SDK 完成
 See the evidence-linked
 [`PLATFORM_MATRIX.md`](docs/status/PLATFORM_MATRIX.md) for exact qualification
 levels. 详细资格等级与证据链接见该文档。
+
+Desktop MIDI is enabled by default and can be removed with
+`-DMOL_ENABLE_MIDI=OFF`. `molctl devices input` reports every accessible native
+endpoint as an Omni entry and as Channel 1 through Channel 16 entries; attach the
+listed ID with `molctl input attach ID`. WinMM, Linux raw-MIDI, and CoreMIDI IDs
+are stable only for their operating-system endpoint and should be selected from
+the current device list. MIDI input covers notes and velocity, poly pressure,
+CC1 modulation, continuous CC64 sustain, pitch bend, General MIDI program
+mapping, reset controllers, All Notes Off, and All Sound Off.
+
+桌面 MIDI 默认启用，也可用 `-DMOL_ENABLE_MIDI=OFF` 移除。`molctl devices input`
+会把每个可访问的原生端点列为 Omni 以及 Channel 1 至 Channel 16 条目；请使用列表中的
+ID 执行 `molctl input attach ID`。支持音符与力度、复音压力、CC1 调制、连续 CC64 延音、
+弯音、General MIDI 音色映射、控制器复位、All Notes Off 与 All Sound Off。
 
 ## Builds and packages / 构建与打包
 

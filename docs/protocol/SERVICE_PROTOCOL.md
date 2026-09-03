@@ -50,6 +50,13 @@ The v1 service registers exactly these groups:
 `events` array contains bounded copies from the engine event queue; the network
 thread never calls from the audio callback.
 
+`system.getCapabilities.midi` reports whether the service binary contains its
+native MIDI adapter; it does not imply that hardware is connected.
+`input.listDevices` marks MIDI entries with `midi_input: true` and physical
+entries with `physical_input: true`. Each native MIDI endpoint is exposed as an
+Omni entry and sixteen channel-filtered entries. Clients must attach an ID from
+the current list rather than constructing platform IDs.
+
 ## State and lifecycle
 
 Mutations are serialized by the daemon dispatcher and submitted to the audio
