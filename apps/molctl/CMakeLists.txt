@@ -55,4 +55,14 @@ if(MOL_BUILD_TESTS)
       mol_linux_systemd_user_service_smoke
       PROPERTIES RUN_SERIAL TRUE TIMEOUT 50 SKIP_RETURN_CODE 77)
   endif()
+  if(WIN32)
+    add_test(
+      NAME mol_windows_startup_service_smoke
+      COMMAND
+        powershell -NoProfile -ExecutionPolicy Bypass -File
+        ${PROJECT_SOURCE_DIR}/platforms/windows/run-startup-smoke.ps1
+        -Daemon $<TARGET_FILE:mol-keyboardd> -Controller $<TARGET_FILE:molctl>)
+    set_tests_properties(mol_windows_startup_service_smoke
+                         PROPERTIES RUN_SERIAL TRUE TIMEOUT 50)
+  endif()
 endif()

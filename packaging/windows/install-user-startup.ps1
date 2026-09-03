@@ -5,7 +5,10 @@ param(
     [string] $Executable,
 
     [Parameter()]
-    [string] $Arguments = ''
+    [string] $Arguments = '',
+
+    [Parameter()]
+    [string] $StartupDirectory = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -14,9 +17,16 @@ if ([IO.Path]::GetExtension($resolvedExecutable) -ne '.exe') {
     throw 'Executable must point to mol-keyboardd.exe.'
 }
 
-$startup = [Environment]::GetFolderPath([Environment+SpecialFolder]::Startup)
+$startup = if ([string]::IsNullOrWhiteSpace($StartupDirectory)) {
+    [Environment]::GetFolderPath([Environment+SpecialFolder]::Startup)
+} else {
+    (Resolve-Path -LiteralPath $StartupDirectory -ErrorAction Stop).Path
+}
 if ([string]::IsNullOrWhiteSpace($startup)) {
     throw 'The current user Startup folder is unavailable.'
+}
+if (-not (Test-Path -LiteralPath $startup -PathType Container)) {
+    throw 'The selected Startup folder is not a directory.'
 }
 
 $shortcutPath = Join-Path $startup 'MoL Keyboard Service.lnk'
