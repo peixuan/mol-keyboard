@@ -247,7 +247,7 @@ class AudioForegroundService : Service(), AudioManager.OnAudioFocusChangeListene
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK,
             -> {
-                resumeAfterFocus = userStarted && allowsBackgroundContinuation()
+                resumeAfterFocus = userStarted && (uiForeground || allowsBackgroundContinuation())
                 stopRuntimeForInterruption()
             }
         }

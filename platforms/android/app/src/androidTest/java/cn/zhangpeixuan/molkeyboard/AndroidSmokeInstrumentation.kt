@@ -3,8 +3,13 @@ package cn.zhangpeixuan.molkeyboard
 
 import android.app.Activity
 import android.app.Instrumentation
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
+import android.media.AudioManager
 import android.os.Bundle
+import android.os.IBinder
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.view.View
@@ -79,13 +84,16 @@ class AndroidSmokeInstrumentation : Instrumentation() {
             check(rendered.getInt("renderFailures") == 0)
             check(rendered.getInt("nonFiniteSamples") == 0)
 
+            val focusEvidence = verifyAudioFocusInterruption(webView)
             val backgroundEvidence =
-                verifyBackgroundLifecycle(activity, webView, rendered.getLong("callbackCount"))
+                verifyBackgroundLifecycle(activity, webView, focusEvidence.resumedCallbacks)
 
             results.putString("audioApi", rendered.getInt("audioApi").toString())
             results.putString("callbacks", rendered.getLong("callbackCount").toString())
             results.putString("frames", rendered.getLong("renderedFrames").toString())
             results.putString("sampleRate", rendered.getInt("sampleRate").toString())
+            results.putString("focusInterrupted", focusEvidence.interrupted.toString())
+            results.putString("focusResumedCallbacks", focusEvidence.resumedCallbacks.toString())
             results.putString("backgroundCallbacks", backgroundEvidence.backgroundCallbacks.toString())
             results.putString("lockedCallbacks", backgroundEvidence.lockedCallbacks.toString())
             results.putString("idleBackgroundStopped", "true")
@@ -175,6 +183,65 @@ class AndroidSmokeInstrumentation : Instrumentation() {
         )
     }
 
+    private fun verifyAudioFocusInterruption(webView: WebView): FocusEvidence {
+        val connected = CountDownLatch(1)
+        val service = AtomicReference<AudioForegroundService>()
+        val connection = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+                service.set((binder as? AudioForegroundService.LocalBinder)?.service)
+                connected.countDown()
+            }
+
+            override fun onServiceDisconnected(name: ComponentName?) {
+                service.set(null)
+            }
+        }
+        check(
+            targetContext.bindService(
+                Intent(targetContext, AudioForegroundService::class.java),
+                connection,
+                Context.BIND_AUTO_CREATE,
+            ),
+        ) { "Could not bind the audio service for focus simulation" }
+        try {
+            check(connected.await(EVALUATION_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+                "Audio service binding timed out"
+            }
+            val audioService = requireNotNull(service.get())
+            onMainThread { audioService.onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) }
+            waitForRuntimeActivity(webView, active = false)
+            onMainThread { audioService.onAudioFocusChange(AudioManager.AUDIOFOCUS_GAIN) }
+        } finally {
+            targetContext.unbindService(connection)
+        }
+        var status = waitForRuntimeActivity(webView, active = true)
+        val deadline = SystemClock.uptimeMillis() + AUDIO_TIMEOUT_MS
+        while (status.optLong("callbackCount") == 0L && SystemClock.uptimeMillis() < deadline) {
+            SystemClock.sleep(POLL_INTERVAL_MS)
+            status = bridgeRequest(
+                webView,
+                """{"version":1,"method":"runtime.status","params":{}}""",
+            )
+        }
+        check(status.getLong("callbackCount") > 0L) { "Audio did not resume after focus gain" }
+        check(status.getInt("renderFailures") == 0)
+        check(status.getInt("nonFiniteSamples") == 0)
+        return FocusEvidence(interrupted = true, resumedCallbacks = status.getLong("callbackCount"))
+    }
+
+    private fun onMainThread(action: () -> Unit) {
+        val latch = CountDownLatch(1)
+        val failure = AtomicReference<Throwable>()
+        targetContext.mainExecutor.execute {
+            runCatching(action).onFailure(failure::set)
+            latch.countDown()
+        }
+        check(latch.await(EVALUATION_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+            "Main-thread operation timed out"
+        }
+        failure.get()?.let { throw it }
+    }
+
     private fun controlRequest(commandType: Int, integer0: Int = 0): String =
         """{"version":1,"method":"command.submit","params":{"type":$commandType,"gesture":0,"i0":$integer0,"i1":0,"i2":0,"i3":0,"f0":0,"f1":0}}"""
 
@@ -210,6 +277,10 @@ class AndroidSmokeInstrumentation : Instrumentation() {
     }
 
     private fun waitForActiveRuntime(webView: WebView): JSONObject {
+        return waitForRuntimeActivity(webView, active = true)
+    }
+
+    private fun waitForRuntimeActivity(webView: WebView, active: Boolean): JSONObject {
         val deadline = SystemClock.uptimeMillis() + AUDIO_TIMEOUT_MS
         var last = JSONObject()
         while (SystemClock.uptimeMillis() < deadline) {
@@ -220,11 +291,11 @@ class AndroidSmokeInstrumentation : Instrumentation() {
                 )
             }.onSuccess {
                 last = it
-                if (last.optBoolean("active")) return last
+                if (last.optBoolean("active") == active) return last
             }
             SystemClock.sleep(POLL_INTERVAL_MS)
         }
-        error("The native audio runtime did not start: $last")
+        error("The native audio runtime did not reach active=$active: $last")
     }
 
     private fun bridgeRequest(webView: WebView, request: String): JSONObject {
@@ -272,4 +343,9 @@ class AndroidSmokeInstrumentation : Instrumentation() {
 private data class BackgroundEvidence(
     val backgroundCallbacks: Long,
     val lockedCallbacks: Long,
+)
+
+private data class FocusEvidence(
+    val interrupted: Boolean,
+    val resumedCallbacks: Long,
 )
