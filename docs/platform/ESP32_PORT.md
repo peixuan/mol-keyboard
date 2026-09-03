@@ -1,9 +1,12 @@
-# ESP32 I2S Port
+# ESP32 Device Port
 
 The reference firmware builds the exact portable `mol_core` sources as an
-ESP-IDF component and streams stereo PCM16 through ESP-IDF's standard-mode I2S
-TX driver. It uses six fixed 128-frame DMA descriptors by default and does not
-require PSRAM.
+ESP-IDF component. Both targets stream stereo PCM16 through ESP-IDF's
+standard-mode I2S TX driver, host BLE keyboards, scan a 5x6 GPIO matrix, load
+settings from NVS, and store sequences transactionally on a FAT wear-levelled
+partition. The original ESP32 also hosts Classic Bluetooth keyboards and an
+A2DP Source; ESP32-S3 instead hosts USB boot keyboards and never advertises
+Classic A2DP. The default firmware does not require PSRAM.
 
 ## Reference wiring
 
@@ -51,9 +54,51 @@ The scan task has static storage, priority 12 on core 0, and a 1 ms period by
 default. It assigns a unique gesture to every press and sends note commands
 through a static bounded queue. Only the audio task calls the engine. A dropped
 transition schedules a source-wide all-notes-off recovery to prevent a stuck
-voice. Holding key index 29 for three seconds requests configuration mode and
-also releases the GPIO source. Every pin, timing, velocity, ghost policy, task
-setting, configuration key, and queue bound is configurable in Kconfig.
+voice. The default physical recovery operations are one-shot gestures:
+
+- hold key 29 for three seconds to enter configuration mode;
+- hold keys 29 and 28 for five seconds to clear stored HID/A2DP peers and
+  remove Bluetooth bonds;
+- hold keys 29 and 27 for ten seconds to erase settings, sequences, Web
+  credentials, and pairing state, then restart with safe defaults.
+
+Every operation first releases the GPIO source. Every pin, timing, velocity,
+ghost policy, task setting, recovery key, and queue bound is configurable in
+Kconfig. The pure state machine has host tests for debounce, ghost suppression,
+one-shot holds, cancellation, and chord precedence.
+
+## HID and A2DP hosts
+
+The bounded boot-keyboard translator accepts only keyboard interfaces and
+maps HID usages into the same gesture/command queue used by GPIO. BLE and
+Classic discovery, reconnect, report delivery, and bond removal run outside
+the audio task. A newly connected peer address is persisted by the control
+task. ESP32-S3 additionally uses Espressif's pinned USB host/HID components;
+its internal PHY uses GPIO 19/20 and requires an external current-limited 5 V
+VBUS source.
+
+On the original ESP32, A2DP uses the ESP-IDF Source and AVRCP Controller APIs.
+The audio task only performs a bounded copy into a fixed PCM ring and never
+waits for SBC encoding or the Bluetooth stack. Discovery, authentication,
+connect/reconnect, media control, delay reporting, and peer persistence are
+handled by lower-priority control callbacks. I2S remains active as the safe
+fallback. ESP32-S3 compiles the A2DP capability out.
+
+## Optional local Web configuration
+
+`./build-target.ps1 -Target <target> -WebUi` creates an explicit 4 MiB firmware
+variant. The default build contains no HTTP server. A Web build still exposes
+nothing until the physical configuration hold is completed and persisted
+settings permit the UI. It then starts a WPA2 SoftAP and binds HTTP only to that
+interface for a ten-minute default window. The random 16-hex AP password and
+32-hex form token live in NVS; only the password is printed after physical
+authorization, and the token is never logged.
+
+The page has no external resources. POST requests require the exact AP Origin,
+the exact form content type, a constant-time token match, a body no larger than
+512 bytes, known unique fields, strict percent encoding, and finite bounded
+numeric values. Settings are queued to the isolated control task, so neither
+HTTP nor NVS work enters the audio task. Factory reset erases the credentials.
 
 ## Runtime model and diagnostics
 
@@ -87,21 +132,29 @@ After activating the pinned ESP-IDF environment:
 cd platforms/esp32
 ./build-target.ps1 -Target esp32
 ./build-target.ps1 -Target esp32s3
+./build-target.ps1 -Target esp32 -WebUi
+./build-target.ps1 -Target esp32s3 -WebUi
 ```
 
 Target configuration is stored in each build directory, so both target builds
 coexist without sharing an `sdkconfig`. On 2026-09-03, ESP-IDF 6.1 and GNU
 15.2.0 produced these map-backed results:
 
-| Target | Application image | `libmol_core.a` | Internal memory used / available |
+| Target | Application image | `libmol_core.a` | Data-memory map |
 |---|---:|---:|---:|
-| ESP32 | 161,312 bytes | 26,133 bytes | 156,940 / 180,736 bytes |
-| ESP32-S3 | 187,136 bytes | 26,383 bytes | 182,519 / 341,760 bytes |
+| ESP32 | 1,018,096 bytes | 26,790 bytes | DRAM 101,892 / 124,580 bytes |
+| ESP32-S3 | 796,656 bytes | 26,519 bytes | DIRAM 148,923 / 341,760 bytes |
+| ESP32 + Web | 1,550,992 bytes | 27,015 bytes | DRAM 117,984 / 124,580 bytes |
+| ESP32-S3 + Web | 1,302,032 bytes | 27,087 bytes | DIRAM 187,975 / 341,760 bytes |
 
 The component builds the complete M3 Tiny graph and stores all 18 fixed
-120-byte compiled Patches in flash. The host reserves a 131,072-byte static
-engine arena and now uses all 12 Tiny voices; a matching native budget test
-guards that exact configuration. No PSRAM is required by this baseline.
+120-byte compiled Patches in flash. Its complete code and read-only archive is
+under 28 KiB, far below the 512 KiB gate. The host reserves 37,888 bytes for an
+eight-voice engine; the target query currently requires 37,664 bytes. This is
+below the 256 KiB working-memory gate and requires no PSRAM. The Web profile's
+original-ESP32 link margin is intentionally called out for runtime heap HIL;
+build success is not treated as device proof.
 
-HID input, persistence, the configuration service, and original-ESP32 A2DP
-Source remain M9 work. ESP32-S3 never advertises Classic Bluetooth A2DP Source.
+The exact flash, serial-monitor, input, I2S-capture, A2DP, and 30-minute
+acceptance procedure is in `docs/hardware/M9_ESP32_EVIDENCE.md`. No physical
+board result is claimed until that procedure produces a passing report.

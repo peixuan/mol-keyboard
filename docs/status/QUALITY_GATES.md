@@ -11,8 +11,8 @@
 | M6 Web/PWA | implementation complete; Safari acceptance pending | Production PWA, standalone and authenticated service modes, Chrome/Edge/Firefox AudioWorklet automation, mobile-layout automation, offline lifecycle, MessagePort fallback, and SAB path pass; current-stable Safari requires an Apple host |
 | M7 Android and iOS | implementation complete; platform acceptance pending | Android dual-ABI Debug/Release/lint builds pass and the packaged x86_64 app is runtime-verified through AAudio, foreground notification, background, screen-off, and idle shutdown. The complete iOS application and Xcode pipeline are source-reviewed; all Apple builds and physical mobile acceptance remain explicit gates |
 | M8 HarmonyOS | implementation complete; platform acceptance pending | Complete Stage/ArkUI application, strict Node-API/OHAudio path, actual low-latency status and fallback, AudioSession/AVSession/official continuous-task lifecycle, private storage, and audited HAP pipeline are source-checked; DevEco builds and physical-device acceptance remain explicit gates |
-| M9 ESP32 product | not started | Depends on portable core gates |
-| M10 v1.0.0 release | not started | All earlier gates required |
+| M9 ESP32 product | implementation complete; hardware acceptance pending | Default and optional-Web ESP32/ESP32-S3 firmware builds pass with GPIO, BLE/Classic/USB HID capability split, NVS/FAT persistence, physical recovery, isolated control, original-ESP32 A2DP Source, AP-only Web configuration, map budgets, and a fail-closed 30-minute HIL runner; no physical board evidence is available on this host |
+| M10 v1.0.0 release | active; external acceptance blocked | Locally actionable regression, coverage, sanitizer/fuzz, size, license/SBOM, packaging, and clean-checkout gates remain to be refreshed; Apple/Harmony/physical-device gates prevent a truthful v1.0.0 tag |
 
 The status `build-verified`, `runtime-verified`, or `device-verified` is used only
 after the corresponding real check succeeds.

@@ -2,7 +2,9 @@
 
 ## Current milestone
 
-M9 ESP32 product work is active. The Android, iOS, and HarmonyOS application
+M9 ESP32 product implementation is complete and build-verified for both target
+families and both optional-Web variants; physical acceptance remains blocked.
+M10 release-gate refresh is active. The Android, iOS, and HarmonyOS application
 implementations are complete; Android is dual-ABI build-verified and
 runtime-verified on an Android 15 x86_64 emulator, while iOS and HarmonyOS
 remain source-reviewed because their platform SDKs are unavailable on this
@@ -12,11 +14,10 @@ the M6 Web/PWA implementation are complete.
 
 ## Last verified commit
 
-`ae80d9c` (`feat(harmony): add native ArkUI application`) is the last locally
-validated product-code commit. The HarmonyOS native source boundary, project
-audit, and unaffected portable targets passed locally; the HarmonyOS target
-itself is not called build-verified. The validation below was run on
-2026-09-03. Documentation changes do not alter binaries.
+`754a333` (`test(esp32): validate hardware session logs`) is the last locally
+validated commit. MSVC Debug passed 71/71 tests and all four ESP-IDF firmware
+variants built with the pinned toolchain. Physical ESP32 evidence remains
+explicitly unclaimed. The validation below was run on 2026-09-03.
 
 ## Completed requirements
 
@@ -120,12 +121,25 @@ itself is not called build-verified. The validation below was run on
   AVSession media commands, official audio-playback continuous tasks, private
   atomic recording persistence, and route/interruption restoration. Its HAP
   pipeline audits real package contents, but no DevEco build is claimed here.
+- The M9 firmware now provides a configurable 5x6 GPIO matrix; shared BLE HID
+  on both targets; Classic HID and A2DP Source/AVRCP on ESP32; USB boot HID on
+  ESP32-S3; NVS settings and transactional FAT sequences; persisted HID/A2DP
+  peers; physical configuration, clear-pairing, and factory-reset gestures; an
+  isolated bounded control task; and an optional physically authorized WPA2
+  SoftAP Web configuration service with strict Origin/token/form validation.
+- ESP-IDF 6.1 built the default ESP32/ESP32-S3 images at 1,018,096 and 796,656
+  bytes and the 4 MiB Web variants at 1,550,992 and 1,302,032 bytes. The core
+  archive remains below 28 KiB and the queried eight-voice engine uses 37,664
+  bytes of its 37,888-byte arena. A host-tested HIL verifier now fails on reset,
+  underrun, watchdog, queue, persistence, capability, input, or real I2S-capture
+  violations.
 
 ## In-progress work
 
-- M9: extend the existing build-verified ESP32/ESP32-S3 I2S baseline into the
-  complete device product, starting with the remaining portable GPIO/input,
-  persistence, configuration, capability, and hardware-test infrastructure.
+- M10: refresh every locally actionable release gate, including Release,
+  sanitizer/fuzz, coverage, size, dependency/SBOM, packaging, documentation,
+  and clean-checkout reproduction. Do not tag v1.0.0 while external acceptance
+  remains missing.
 
 ## Blocked platform checks
 
@@ -135,9 +149,9 @@ itself is not called build-verified. The validation below was run on
 - No Bluetooth output was exposed for the Windows run. WSL exposes neither a
   physical evdev keyboard nor native Linux audio hardware. Those M5 acceptance
   paths and macOS compilation/runtime remain unverified.
-- Physical Android/Apple/Harmony/ESP32 devices, signing credentials, and
-  long-run device time are not available. The Android emulator result is not
-  promoted to device verification.
+- Physical Android/Apple/Harmony/ESP32 devices, I2S capture equipment, signing
+  credentials, and long-run device time are not available. The Android emulator
+  result and ESP-IDF builds are not promoted to device verification.
 
 ## Exact validation commands and results
 
@@ -152,7 +166,9 @@ cmake --build --preset dev-release
 ctest --preset dev-release --output-on-failure
 ```
 
-MSVC 19.51.36248 passed 63/63 tests in Debug and LTO Release. This includes an
+MSVC 19.51.36248 passed 71/71 tests in Debug after M9. The prior LTO Release
+run passed 63/63 and must be refreshed for M10. The current Debug run includes
+the strict Web form protocol and HIL evidence-parser tests in addition to the
 independent daemon process, realtime runtime, local IPC, all service methods,
 CLI validation, configuration restart, recording/playback, and prior core/tool
 coverage. A separate Tiny profile passed 21/21; a Standard build with Chorus,
@@ -221,17 +237,18 @@ and produced no finding.
 With the pinned ESP-IDF environment active, from `platforms/esp32`:
 
 ```powershell
-idf.py -B build-esp32 build
-idf.py -B build-esp32 size-components
-idf.py -B build-esp32s3 build
-idf.py -B build-esp32s3 size-components
+./build-target.ps1 -Target esp32
+./build-target.ps1 -Target esp32s3
+./build-target.ps1 -Target esp32 -WebUi
+./build-target.ps1 -Target esp32s3 -WebUi
 ```
 
-Both ESP-IDF 6.1/GNU 15.2.0 targets rebuilt successfully with the shared
-sequence startup check. ESP32 uses 147,164 of 180,736 bytes reported internal
-DRAM (33,572 free); ESP32-S3 uses 172,655 of 341,760 bytes reported internal
-memory (169,105 free). These are build/map results, not physical playback
-results.
+All four ESP-IDF 6.1/GNU 15.2.0 variants rebuilt successfully. Default/Web
+image sizes are 1,018,096/1,550,992 bytes for ESP32 and
+796,656/1,302,032 bytes for ESP32-S3. Default ESP32 reports 101,892 of 124,580
+bytes DRAM; its Web variant reports 117,984 bytes. Default ESP32-S3 reports
+148,923 of 341,760 bytes DIRAM; its Web variant reports 187,975 bytes. These
+are build/map results, not physical playback results.
 
 ## Known environment constraints
 
@@ -248,6 +265,7 @@ evidence and pending physical acceptance are in
 
 ## Next highest-priority task
 
-Complete the locally actionable M9 ESP32 product requirements. Keep physical
-ESP32/ESP32-S3, A2DP radio, I2S signal, and 30-minute hardware claims explicit
-until matching boards and instruments are available.
+Run the complete M10 local release-gate matrix and produce auditable reports.
+Keep v1.0.0, Apple/Harmony, physical mobile, Safari, ESP32/ESP32-S3, A2DP radio,
+I2S signal, and 30-minute hardware claims blocked until the required hosts,
+boards, and instruments are available.

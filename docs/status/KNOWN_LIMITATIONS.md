@@ -12,10 +12,14 @@ mobile layout, but its Windows port does not expose AudioWorklet and is not
 actual Safari. Current-stable Safari and physical mobile audio/lifecycle claims
 therefore remain an Apple-device gate.
 
-The ESP-IDF firmware contains a build-verified I2S host and shared-sequence
-startup check, but has not run on a physical board. I2S signal, sound, timing,
-Bluetooth/GPIO input, sustained operation, and ESP32 Classic A2DP Source remain
-unverified.
+The M9 ESP-IDF implementation is complete and all four ESP32/ESP32-S3 default
+and optional-Web variants build. It has not run on a physical board. I2S
+signal, sound, timing, GPIO/BLE/Classic/USB input, NVS/FAT power-cycle recovery,
+physical AP authorization, sustained operation, and ESP32 Classic A2DP Source
+remain unverified. The ESP32 Web map leaves 6,596 bytes in the primary DRAM
+layout before runtime allocations, so its Wi-Fi/Bluetooth heap watermark is a
+mandatory HIL result, not an inferred capability. The fail-closed procedure is
+documented in `docs/hardware/M9_ESP32_EVIDENCE.md`.
 
 Android now provides a complete dual-ABI application and is runtime-verified on
 an Android 15 x86_64 emulator, including AAudio rendering, legal foreground
