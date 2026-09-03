@@ -13,3 +13,5 @@ All notable changes to this project will be documented in this file.
 - Added the `mol-keyboardd` desktop service and `molctl` client with bounded
   local IPC and JSON-RPC, realtime miniaudio output, native keyboard adapters,
   hotplug recovery, atomic configuration, diagnostics, and user startup assets.
+- Added sanitizer-backed fuzzing for all six required Patch, Sequence, service
+  configuration, JSON-RPC, Wire, and MIDI parser boundaries.

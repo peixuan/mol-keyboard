@@ -14,10 +14,11 @@ the M6 Web/PWA implementation are complete.
 
 ## Last verified commit
 
-`754a333` (`test(esp32): validate hardware session logs`) is the last locally
-validated commit. MSVC Debug passed 71/71 tests and all four ESP-IDF firmware
-variants built with the pinned toolchain. Physical ESP32 evidence remains
-explicitly unclaimed. The validation below was run on 2026-09-03.
+`c4df960` (`test(fuzz): cover config and MIDI parsers`) is the last locally
+validated commit. MSVC Debug and LTO Release passed 71/71 tests; Clang
+ASan/UBSan passed 40/40 tests with all six required parser fuzzers. All four
+ESP-IDF firmware variants also build with the pinned toolchain. Physical ESP32
+evidence remains explicitly unclaimed. Validation below ran on 2026-09-03.
 
 ## Completed requirements
 
@@ -166,8 +167,7 @@ cmake --build --preset dev-release
 ctest --preset dev-release --output-on-failure
 ```
 
-MSVC 19.51.36248 passed 71/71 tests in Debug after M9. The prior LTO Release
-run passed 63/63 and must be refreshed for M10. The current Debug run includes
+MSVC 19.51.36248 passed 71/71 tests in Debug and LTO Release. These runs include
 the strict Web form protocol and HIL evidence-parser tests in addition to the
 independent daemon process, realtime runtime, local IPC, all service methods,
 CLI validation, configuration restart, recording/playback, and prior core/tool
@@ -221,7 +221,7 @@ API 2, 48 kHz, 36,480 rendered frames at the foreground checkpoint, 162
 background callbacks, 263 screen-off callbacks, no render/non-finite failure,
 successful idle shutdown, and instrumentation code `-1`.
 
-For sanitizer and Patch fuzz validation, activate the Visual Studio environment
+For sanitizer and parser fuzz validation, activate the Visual Studio environment
 and place Clang 22 on `PATH`:
 
 ```powershell
@@ -230,9 +230,10 @@ cmake --build --preset fuzz-clang
 ctest --preset fuzz-clang --output-on-failure
 ```
 
-The ASan/UBSan configuration passed 30/30 tests. Patch, Mol Sequence,
-MolWireEventV1, and JSON-RPC libFuzzer smoke sessions each ran for 20 seconds
-and produced no finding.
+The ASan/UBSan configuration passed 40/40 tests. Patch, Mol Sequence, service
+configuration, JSON-RPC, MolWireEventV1, and MIDI libFuzzer smoke sessions each
+ran for 20 seconds and produced no finding. Accepted MIDI inputs are also
+reparsed and compared through the canonical sequence JSON representation.
 
 With the pinned ESP-IDF environment active, from `platforms/esp32`:
 

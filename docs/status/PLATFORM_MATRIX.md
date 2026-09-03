@@ -5,7 +5,7 @@ toolchain result recorded here.
 
 | Platform | Status | Verified | Toolchain / device | Command and evidence |
 |---|---|---|---|---|
-| Windows x64 | runtime-verified (M5 headless service) | 2026-09-03 | VS 2026 18.8.0; MSVC 19.51.36248; miniaudio 0.11.25; WASAPI; Raw Input; Clang sanitizers | Debug/Release 63/63; independent daemon/CLI over Named Pipe; real 48 kHz output and physical input adapter; ASan/UBSan 30/30 with four parser fuzzers; Bluetooth output not exposed |
+| Windows x64 | runtime-verified (M5 headless service) | 2026-09-03 | VS 2026 18.8.0; MSVC 19.51.36248; miniaudio 0.11.25; WASAPI; Raw Input; Clang sanitizers | Debug/LTO Release 71/71; independent daemon/CLI over Named Pipe; real 48 kHz output and physical input adapter; ASan/UBSan 40/40 with six parser fuzzers; Bluetooth output not exposed |
 | Windows arm64 | planned | — | Not evaluated | Pending |
 | Linux x86_64 | runtime-verified (M5 service, WSL/null audio) | 2026-09-03 | WSL; Clang 21.1.8 | 63/63 tests; independent daemon/CLI over mode-0600 Unix socket; evdev and native audio hardware not exposed |
 | Linux aarch64 | planned | — | Not available on this host | Pending CI or device |
