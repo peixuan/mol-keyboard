@@ -77,7 +77,11 @@ test("controls a real authenticated desktop service", async ({ page }, testInfo)
     () => true,
     () => false,
   );
-  test.skip(!executableExists, `Build mol-keyboardd first or set MOL_DAEMON (looked for ${executable})`);
+  if (!executableExists) {
+    throw new Error(
+      `Desktop service executable is required; build mol-keyboardd or set MOL_DAEMON (looked for ${executable})`,
+    );
+  }
 
   const state = await mkdtemp(path.join(os.tmpdir(), "mol-web-service-e2e-"));
   const localEndpoint =

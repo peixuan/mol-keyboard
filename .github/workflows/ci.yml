@@ -159,6 +159,25 @@ jobs:
           cmake --preset wasm-release
           cmake --build --preset wasm-release
           ctest --preset wasm-release
+      - name: Build native daemon for browser acceptance
+        shell: bash
+        run: |
+          source "$EMSDK/emsdk_env.sh"
+          cmake --preset ci-linux-gcc
+          cmake --build --preset ci-linux-gcc
+      - name: Install locked Web dependencies and browsers
+        shell: bash
+        run: |
+          source "$EMSDK/emsdk_env.sh"
+          npm --prefix apps/web ci
+          node apps/web/scripts/run-browser-tests.mjs install --with-deps chromium firefox webkit
+      - name: Test production Web application with real daemon
+        shell: bash
+        run: |
+          source "$EMSDK/emsdk_env.sh"
+          npm --prefix apps/web test
+          MOL_DAEMON="$PWD/build/ci-linux-gcc/apps/mol-keyboardd/mol-keyboardd" \
+            npm --prefix apps/web run test:browser
 
   release-size:
     runs-on: ubuntu-24.04

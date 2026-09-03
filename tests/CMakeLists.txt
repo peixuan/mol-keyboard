@@ -135,6 +135,12 @@ mol_enable_optional_instrumentation(mol_esp32_hid_keyboard_tests)
 add_test(NAME mol_esp32_hid_keyboard_tests COMMAND mol_esp32_hid_keyboard_tests)
 
 add_test(
+  NAME mol_web_project_audit
+  COMMAND
+    ${CMAKE_COMMAND} -DMOL_SOURCE_DIR=${PROJECT_SOURCE_DIR} -P
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_web_project.cmake)
+
+add_test(
   NAME mol_harmony_project_audit
   COMMAND
     ${CMAKE_COMMAND} -DMOL_SOURCE_DIR=${PROJECT_SOURCE_DIR} -P
