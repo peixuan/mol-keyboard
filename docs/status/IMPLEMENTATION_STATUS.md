@@ -17,8 +17,8 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`ad020e2` (`fix(build): cache LTO capability checks`) is the latest locally
-validated implementation commit. MSVC Debug/LTO Release and Linux Clang pass
+`16b7df8` (`docs: record ABI and latency tooling evidence`) is the latest
+locally validated candidate commit. MSVC Debug/LTO Release and Linux Clang pass
 76/76 tests; Emscripten MinSizeRel passes 31/31. Windows and Linux shared-core
 builds pass 74/74 public-boundary tests, expose exactly the 47 version 1.0 API
 symbols, and Linux ABI Compliance Checker reports 100% binary and source
@@ -368,16 +368,16 @@ in 284.807 seconds (6.32x realtime, approximately 15.82% of one core), emitted
 230,136 events, and produced no non-finite samples. Runtime recovery completed
 30 rebuild cycles in 1.55 seconds.
 
-The release size gate passed at 510,340 bytes for the stripped core, 943,392
-bytes for daemon plus CLI, 22,943 bytes for gzip-compressed Wasm, and 157,413
-bytes for deployable Web resources. Dependency locks, notices, licenses, npm
-audit, and SPDX SBOM validation passed. CPack package audits each found 143
-required files and passed installed daemon/CLI smoke tests: the Windows AMD64
-ZIP is 1,267,534 bytes with SHA-256
-`921d15be9bd93fec23d569ced210c0b566e9d8a3f4342401ada30406468027af`;
-the Linux x86_64 TGZ is 1,662,777 bytes with SHA-256
-`f32e51e73e3973c9d1dc74ac8dcf645031a9dfe225654f3fb8fbc6e8fd8bc4b4`.
-They are unsigned 0.1.0 candidate archives built from `3a1da43`, not releases.
+The refreshed release size gate passed at 510,220 bytes for the stripped core,
+943,392 bytes for daemon plus CLI, 22,943 bytes for gzip-compressed Wasm, and
+157,413 bytes for deployable Web resources. Dependency locks, notices,
+licenses, npm audit, and SPDX SBOM validation passed. CPack package audits each found 146
+required files, including `mol-latency-probe`, and passed installed daemon/CLI
+smoke tests: the Windows AMD64 ZIP is 1,291,607 bytes with SHA-256
+`28c94f7cc8a93653e94cd665be2841ff04baa02cac6c4ec7188cdbc5894b3c56`;
+the Linux x86_64 TGZ is 1,683,387 bytes with SHA-256
+`89e650a5d6f59bab17c0b8711404a8a9f0c766e66f0c046adfa930399884b70d`.
+They are unsigned 0.1.0 candidate archives built from `16b7df8`, not releases.
 
 ```sh
 python3 tools/release_size_gate.py \

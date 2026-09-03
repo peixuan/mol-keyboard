@@ -49,7 +49,7 @@ archive and deterministic gzip level 9 for Wasm:
 
 | Measurement | Actual | Exclusive limit | Result |
 | --- | ---: | ---: | --- |
-| Stripped `mol_core` archive | 510,340 B | 1,048,576 B | pass |
+| Stripped `mol_core` archive | 510,220 B | 1,048,576 B | pass |
 | Headless daemon + CLI | 943,392 B | 5,242,880 B | pass |
 | Compressed Standard Wasm | 22,943 B | 1,572,864 B | pass |
 | Web core resources, excluding maps | 157,413 B | 2,097,152 B | pass |
@@ -58,14 +58,16 @@ The Web total includes HTML, JavaScript, CSS, manifest, service worker, icons,
 and the paired AudioWorklet JavaScript and Wasm artifacts. It excludes only
 source maps and contains no optional samples.
 
-Audited CPack outputs from code candidate `3a1da43` contained 143 files each,
-including both worklet artifacts. The Windows AMD64 ZIP was 1,267,534 bytes
-with SHA-256
-`921d15be9bd93fec23d569ced210c0b566e9d8a3f4342401ada30406468027af`.
-The Linux x86_64 TGZ was 1,662,777 bytes with SHA-256
-`f32e51e73e3973c9d1dc74ac8dcf645031a9dfe225654f3fb8fbc6e8fd8bc4b4`.
-Both installed daemon/CLI smoke tests passed. These are unsigned local 0.1.0
-pre-release artifacts, not v1.0.0 releases.
+Audited CPack outputs from code candidate `16b7df8` contained 146 files each,
+including both worklet artifacts, the complete C SDK/export header, the latency
+probe, and its physical measurement procedure. The Windows AMD64 ZIP was
+1,291,607 bytes with SHA-256
+`28c94f7cc8a93653e94cd665be2841ff04baa02cac6c4ec7188cdbc5894b3c56`.
+The Linux x86_64 TGZ was 1,683,387 bytes with SHA-256
+`89e650a5d6f59bab17c0b8711404a8a9f0c766e66f0c046adfa930399884b70d`.
+Both installed daemon/CLI smoke tests passed, and the audit requires the latency
+probe executable. These are unsigned local 0.1.0 pre-release artifacts, not
+v1.0.0 releases.
 
 ## ESP-IDF build budgets
 
