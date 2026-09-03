@@ -73,6 +73,7 @@ def required_paths(root: Path) -> list[str]:
         f"bin/mol-seq{executable_suffix}",
         f"bin/mol-render{executable_suffix}",
         f"bin/mol-audio-analyze{executable_suffix}",
+        f"bin/mol-latency-probe{executable_suffix}",
         "include/mol/engine.h",
         "include/mol/mol.h",
         "lib/cmake/mol_keyboard/mol_keyboardConfig.cmake",

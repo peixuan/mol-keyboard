@@ -43,6 +43,12 @@ mol_add_fuzzer(fuzz_wire_parser fuzz_wire_parser.c)
 mol_add_fuzzer(fuzz_jsonrpc_dispatch fuzz_jsonrpc_dispatch.cpp)
 mol_add_fuzzer(fuzz_config_parser fuzz_config_parser.cpp)
 mol_add_fuzzer(fuzz_midi_parser fuzz_midi_parser.cpp)
+mol_add_fuzzer(fuzz_latency_capture fuzz_latency_capture.c)
+target_sources(fuzz_latency_capture PRIVATE ${PROJECT_SOURCE_DIR}/apps/mol-render/sha256.c)
+target_include_directories(fuzz_latency_capture PRIVATE ${PROJECT_SOURCE_DIR}/apps/mol-render)
+if(WIN32)
+  target_compile_definitions(fuzz_latency_capture PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
 target_link_libraries(fuzz_jsonrpc_dispatch PRIVATE mol::jsonrpc)
 target_link_libraries(fuzz_config_parser PRIVATE mol::service_control)
 target_link_libraries(fuzz_midi_parser PRIVATE mol::midi)
@@ -131,3 +137,11 @@ add_test(
     fuzz_midi_parser -max_total_time=20 -max_len=1048576 -timeout=5
     -artifact_prefix=${_mol_midi_artifacts}/ ${_mol_midi_corpus})
 set_tests_properties(fuzz_midi_parser_smoke PROPERTIES TIMEOUT 45)
+
+set(_mol_latency_artifacts "${CMAKE_CURRENT_BINARY_DIR}/artifacts/latency_capture")
+file(MAKE_DIRECTORY "${_mol_latency_artifacts}")
+add_test(
+  NAME fuzz_latency_capture_smoke
+  COMMAND fuzz_latency_capture -max_total_time=20 -max_len=1048576 -timeout=5
+          -artifact_prefix=${_mol_latency_artifacts}/)
+set_tests_properties(fuzz_latency_capture_smoke PROPERTIES TIMEOUT 45)

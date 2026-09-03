@@ -283,6 +283,7 @@ if(MOL_BUILD_TOOLS)
   add_subdirectory(apps/mol-seq)
   add_subdirectory(apps/mol-render)
   add_subdirectory(tools/audio-analyze)
+  add_subdirectory(tools/latency-probe)
 endif()
 
 set(_mol_desktop_audio_available OFF)
