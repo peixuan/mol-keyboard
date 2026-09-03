@@ -16,17 +16,20 @@ It does not contain code or assets from an earlier MoL Keyboard project.
 
 ## Current status / 当前状态
 
-The M0-M4 quality gates and the M5 desktop and M6 Web/PWA implementations are
-complete. The Android application is dual-ABI build-verified and
-runtime-verified on an Android 15 emulator. The complete iOS application source
-and Xcode build pipeline are present; Apple toolchain and device acceptance are
-still explicitly pending. Platform claims are recorded only after real builds or runtime checks. See
+The portable core, music/DSP, recording/tooling, desktop, Web/PWA, Android,
+iOS, HarmonyOS, and ESP32 implementations are present. Native, Wasm, Android
+emulator, and all four ESP-IDF builds have current evidence; Apple, DevEco,
+physical mobile/ESP32 hardware, Safari, and measured end-to-end latency remain
+release blockers. This repository is therefore a 0.1.0 prerelease and is not
+tagged v1.0.0. Platform claims are recorded only after real builds or runtime checks. See
 [`docs/status/IMPLEMENTATION_STATUS.md`](docs/status/IMPLEMENTATION_STATUS.md)
 and [`docs/status/PLATFORM_MATRIX.md`](docs/status/PLATFORM_MATRIX.md) for current
 evidence.
 
-开发首先验证适合裸机环境的 ISO C11 核心。平台支持只在真实构建或运行验证后声明；当前证据
-请查看上述状态文档。
+可移植核心、音乐与 DSP、录音工具、桌面、Web/PWA、Android、iOS、HarmonyOS 和
+ESP32 实现均已落地。Native、Wasm、Android 模拟器及四个 ESP-IDF 构建已有当前证据；
+Apple、DevEco、移动与 ESP32 真机、Safari 以及真实端到端延迟仍是发布门禁。因此当前版本
+仍为 0.1.0 预发布版，不标记为 v1.0.0。平台支持只在真实构建或运行验证后声明。
 
 ## Quick start / 快速开始
 
@@ -39,11 +42,10 @@ ctest --preset dev-debug
 ```
 
 On Windows, run these commands from a Visual Studio developer shell and ensure
-Ninja is on `PATH`. Other platform commands will be added only with verified
-implementations.
+Ninja is on `PATH`. Linux uses the same presets with GCC or Clang.
 
-Windows 用户需在 Visual Studio 开发者终端中运行，并确保 `PATH` 中包含 Ninja。其他平台
-命令会随真实验证的实现逐步补充。
+Windows 用户需在 Visual Studio 开发者终端中运行，并确保 `PATH` 中包含 Ninja；Linux
+可用同一组预设配合 GCC 或 Clang。
 
 Render the included sequence to a deterministic 24-bit mono WAV without an audio device:
 
@@ -101,6 +103,8 @@ executes in the complete offline-capable Web/PWA instrument and builds into
 ESP32/ESP32-S3 firmware with a configurable I2S host. From `apps/web`, run
 `npm ci` followed by `npm run build` or `npm run test:browser`.
 
+![MoL Keyboard Web instrument](docs/screenshots/web-instrument.png)
+
 The Android application packages the same local UI and renders exclusively
 through JNI, Oboe/AAudio, and the C core. Build it with
 `platforms/android/build-app.ps1 Debug` (or `build-app.sh` on POSIX hosts); see
@@ -120,6 +124,53 @@ The device build is unsigned unless signing variables are supplied.
 UI→JNI→Oboe/AAudio→C 核心及后台/锁屏生命周期验证。iOS 完整应用源码也已实现，
 通过本地 WKWebView 界面连接 AudioUnit/AVAudioSession 与同一 C 核心；其 Xcode
 构建和真机验收仍须在 Apple 环境中完成。
+
+## Platform matrix / 平台矩阵
+
+| Target / 目标 | Implementation / 实现 | Current evidence / 当前证据 |
+| --- | --- | --- |
+| Windows | daemon, CLI, WASAPI, Raw Input | MSVC tests and real WASAPI service run passed / 测试及真实 WASAPI 服务运行通过 |
+| Linux | daemon, CLI, native audio/evdev host | GCC/Clang and WSL lifecycle passed; physical devices pending / 构建与 WSL 生命周期通过，物理设备待验 |
+| macOS | daemon, CoreAudio, IOHIDManager | source present; Apple build/runtime pending / 源码已实现，Apple 构建运行待验 |
+| Web/PWA | Wasm AudioWorklet, offline shell | supported-browser automation passed; Safari pending / 已支持浏览器自动化通过，Safari 待验 |
+| Android | Oboe/AAudio foreground service | dual-ABI builds and Android 15 emulator passed; device pending / 双 ABI 与模拟器通过，真机待验 |
+| iOS | AudioUnit, AVAudioSession, offline WKWebView | implementation present; Xcode/device pending / 实现已完成，Xcode 与真机待验 |
+| HarmonyOS | OHAudio, AVSession, continuous task | source audit passed; DevEco/device pending / 源码审计通过，DevEco 与真机待验 |
+| ESP32 | I2S, GPIO/BLE/Classic HID, A2DP Source | ESP-IDF image/map passed; board HIL pending / 固件与 map 通过，开发板 HIL 待验 |
+| ESP32-S3 | I2S, GPIO/BLE/USB HID | ESP-IDF image/map passed; board HIL pending / 固件与 map 通过，开发板 HIL 待验 |
+
+See the evidence-linked
+[`PLATFORM_MATRIX.md`](docs/status/PLATFORM_MATRIX.md) for exact qualification
+levels. 详细资格等级与证据链接见该文档。
+
+## Builds and packages / 构建与打包
+
+Activate the pinned Emscripten SDK before the Wasm commands:
+
+```powershell
+& .\.cache\emsdk\emsdk_env.ps1
+cmake --preset wasm-release
+cmake --build --preset wasm-release
+ctest --preset wasm-release
+npm.cmd --prefix apps\web ci
+npm.cmd --prefix apps\web run build
+```
+
+激活仓库固定的 Emscripten SDK 后，可用上述命令构建并测试 Wasm 与生产 Web 包。
+构建完成 Web 资源后，可生成含本地程序、C SDK、文档、示例、许可证与 SBOM 的便携包：
+
+```powershell
+cmake --preset package-release
+cmake --build --preset package-release
+cpack --config build/package-release/CPackConfig.cmake -B build/packages
+```
+
+Android, iOS, HarmonyOS, and ESP-IDF exact toolchain commands are documented
+under `platforms` and `docs/platform`. Portable packages are unsigned; mobile
+store signing credentials are intentionally external.
+
+Android、iOS、HarmonyOS 与 ESP-IDF 的固定工具链命令见 `platforms` 和
+`docs/platform`。便携包不带签名；移动商店签名凭据必须保存在仓库之外。
 
 ## Platform boundaries / 平台边界
 
@@ -143,6 +194,15 @@ system volume remain outside the engine's control.
 
 MoL Keyboard 使用保守的数字增益与限幅，但扬声器、耳机和系统音量不受引擎完全控制，
 因此软件不能保证实际声压级安全。
+
+Current limitations include unmeasured physical end-to-end latency, unverified
+Apple/DevEco builds, and missing physical mobile and ESP32 long-run evidence.
+The exact remaining gates are maintained in
+[`KNOWN_LIMITATIONS.md`](docs/status/KNOWN_LIMITATIONS.md) and are not hidden by
+generic “cross-platform” language.
+
+当前限制包括尚未实测的物理端到端延迟、尚未完成的 Apple/DevEco 构建，以及移动与
+ESP32 真机长时间证据。准确的剩余门禁记录在上述限制文档中，不以笼统的“跨平台”表述掩盖。
 
 ## License / 许可证
 
