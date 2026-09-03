@@ -83,7 +83,10 @@ mol_result_t mol_wire_event_v1_encode(const mol_wire_event_v1_t* event, uint8_t*
   if (result != MOL_OK) return result;
   if (output == NULL || capacity < MOL_WIRE_EVENT_V1_SIZE) return MOL_ERROR_BUFFER_TOO_SMALL;
   memset(output, 0, MOL_WIRE_EVENT_V1_SIZE);
-  memcpy(output, "MOLW", 4u);
+  output[0] = 'M';
+  output[1] = 'O';
+  output[2] = 'L';
+  output[3] = 'W';
   write_u16(output + 4u, MOL_WIRE_FORMAT_VERSION);
   write_u16(output + 6u, event->type);
   write_u16(output + 8u, MOL_WIRE_EVENT_V1_SIZE);

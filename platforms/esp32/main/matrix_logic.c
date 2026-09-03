@@ -8,6 +8,9 @@ static uint32_t key_mask(uint32_t key_count) {
 }
 
 static uint32_t row_bits(uint32_t bits, uint32_t row, uint32_t columns) {
+  if (columns == 0u || row > 31u / columns) {
+    return 0u;
+  }
   return (bits >> (row * columns)) & key_mask(columns);
 }
 

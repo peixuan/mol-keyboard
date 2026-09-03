@@ -14,7 +14,7 @@ namespace {
 
 constexpr std::uint32_t kChannelCount = 2U;
 constexpr std::int32_t kBufferBurstCount = 2;
-constexpr std::size_t kMaximumSequenceBytes = 2U * 1024U * 1024U;
+constexpr std::size_t kMaximumSequenceBytes = std::size_t{2U} * 1024U * 1024U;
 
 struct SequenceWriter {
   std::vector<std::uint8_t>* bytes;

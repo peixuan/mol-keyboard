@@ -273,8 +273,10 @@ class Parser {
 
   void parse_literal(const char* literal) {
     for (std::size_t index = 0u; literal[index] != '\0'; ++index) {
-      if (position_ >= source_.size() || source_[position_++] != literal[index])
-        fail("invalid literal");
+      if (position_ >= source_.size()) fail("invalid literal");
+      const char current = source_[position_];
+      ++position_;
+      if (current != literal[index]) fail("invalid literal");
     }
   }
 

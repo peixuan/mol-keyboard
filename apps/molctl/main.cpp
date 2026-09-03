@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <exception>
 #include <filesystem>
 #include <initializer_list>
 #include <limits>
@@ -443,8 +444,6 @@ void print_scalar(const Json& value) {
       std::fputs(value.boolean ? "yes" : "no", stdout);
       break;
     case Json::Type::Number:
-      std::fputs(value.text.c_str(), stdout);
-      break;
     case Json::Type::String:
       std::fputs(value.text.c_str(), stdout);
       break;
@@ -539,7 +538,7 @@ int execute_rpc(const Options& options, Invocation& invocation) {
 
 }  // namespace
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) try {
   Options options;
   if (!parse_global_options(argc, argv, options) ||
       (options.arguments.size() == 1u && options.arguments[0] == "--help")) {
@@ -577,4 +576,7 @@ int main(int argc, char** argv) {
   if (!invocation.service_recording.empty())
     std::filesystem::remove(invocation.service_recording, ignored);
   return result;
+} catch (const std::exception& error) {
+  std::fprintf(stderr, "molctl failed: %s\n", error.what());
+  return 1;
 }

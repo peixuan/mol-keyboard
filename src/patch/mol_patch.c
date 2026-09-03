@@ -128,8 +128,13 @@ static int mol_patch_parse_string(mol_patch_json_parser_t* parser, mol_patch_tex
       escape = parser->data[parser->offset++];
       if (escape == 'u') {
         for (uint32_t index = 0u; index < 4u; ++index) {
-          if (parser->offset >= parser->size ||
-              !mol_patch_hex_digit(parser->data[parser->offset++])) {
+          char digit;
+          if (parser->offset >= parser->size) {
+            return 0;
+          }
+          digit = parser->data[parser->offset];
+          ++parser->offset;
+          if (!mol_patch_hex_digit(digit)) {
             return 0;
           }
         }
@@ -488,7 +493,7 @@ static void mol_patch_write_payload(const mol_patch_t* patch, uint8_t* payload) 
                               patch->delay_send_milli,
                               patch->reverb_send_milli};
   for (uint32_t index = 0u; index < 22u; ++index) {
-    mol_patch_write_u32(payload + index * 4u, (uint32_t)values[index]);
+    mol_patch_write_u32(payload + (size_t)index * 4u, (uint32_t)values[index]);
   }
 }
 
@@ -522,7 +527,7 @@ mol_result_t mol_patch_encode(const mol_patch_t* patch, uint8_t* output, size_t 
 static void mol_patch_read_payload(mol_patch_t* patch, const uint8_t* payload) {
   int32_t values[22];
   for (uint32_t index = 0u; index < 22u; ++index) {
-    values[index] = (int32_t)mol_patch_read_u32(payload + index * 4u);
+    values[index] = (int32_t)mol_patch_read_u32(payload + (size_t)index * 4u);
   }
   patch->synthesis_model = (uint32_t)values[0];
   patch->waveform = (uint32_t)values[1];

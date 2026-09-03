@@ -39,7 +39,8 @@ static void mol_sha256_transform(mol_sha256_t* hash, const uint8_t block[64]) {
   uint32_t f;
   uint32_t g;
   uint32_t h;
-  for (uint32_t index = 0u; index < 16u; ++index) words[index] = mol_read_be32(block + index * 4u);
+  for (uint32_t index = 0u; index < 16u; ++index)
+    words[index] = mol_read_be32(block + (size_t)index * 4u);
   for (uint32_t index = 16u; index < 64u; ++index) {
     uint32_t s0 = mol_rotr(words[index - 15u], 7u) ^ mol_rotr(words[index - 15u], 18u) ^
                   (words[index - 15u] >> 3u);
@@ -115,9 +116,10 @@ void mol_sha256_finish(mol_sha256_t* hash, uint8_t digest[32]) {
     hash->block[56u + index] = (uint8_t)(bit_count >> ((7u - index) * 8u));
   mol_sha256_transform(hash, hash->block);
   for (uint32_t index = 0u; index < 8u; ++index) {
-    digest[index * 4u] = (uint8_t)(hash->state[index] >> 24u);
-    digest[index * 4u + 1u] = (uint8_t)(hash->state[index] >> 16u);
-    digest[index * 4u + 2u] = (uint8_t)(hash->state[index] >> 8u);
-    digest[index * 4u + 3u] = (uint8_t)hash->state[index];
+    size_t offset = (size_t)index * 4u;
+    digest[offset] = (uint8_t)(hash->state[index] >> 24u);
+    digest[offset + 1u] = (uint8_t)(hash->state[index] >> 16u);
+    digest[offset + 2u] = (uint8_t)(hash->state[index] >> 8u);
+    digest[offset + 3u] = (uint8_t)hash->state[index];
   }
 }

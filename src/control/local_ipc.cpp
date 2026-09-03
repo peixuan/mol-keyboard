@@ -61,8 +61,8 @@ bool read_exact(HANDLE handle, void* output, std::size_t size) {
   auto* bytes = static_cast<unsigned char*>(output);
   while (size != 0u) {
     DWORD received = 0u;
-    const DWORD chunk = static_cast<DWORD>(
-        size > static_cast<std::size_t>(MAXDWORD) ? MAXDWORD : static_cast<DWORD>(size));
+    const DWORD chunk =
+        size > static_cast<std::size_t>(MAXDWORD) ? MAXDWORD : static_cast<DWORD>(size);
     OVERLAPPED overlapped{};
     overlapped.hEvent = CreateEventA(nullptr, TRUE, FALSE, nullptr);
     if (overlapped.hEvent == nullptr) return false;
@@ -87,8 +87,8 @@ bool write_exact(HANDLE handle, const void* input, std::size_t size) {
   const auto* bytes = static_cast<const unsigned char*>(input);
   while (size != 0u) {
     DWORD sent = 0u;
-    const DWORD chunk = static_cast<DWORD>(
-        size > static_cast<std::size_t>(MAXDWORD) ? MAXDWORD : static_cast<DWORD>(size));
+    const DWORD chunk =
+        size > static_cast<std::size_t>(MAXDWORD) ? MAXDWORD : static_cast<DWORD>(size);
     OVERLAPPED overlapped{};
     overlapped.hEvent = CreateEventA(nullptr, TRUE, FALSE, nullptr);
     if (overlapped.hEvent == nullptr) return false;

@@ -1240,8 +1240,8 @@ static void mol_apply_sequence_initial_state(mol_engine_t* engine) {
   engine->sustain = initial->sustain;
   engine->pitch_bend = initial->pitch_bend;
   engine->pitch_bend_ratio = powf(2.0f, initial->pitch_bend / 6.0f);
-  engine->octave_shift = initial->octave_shift;
-  engine->transpose = initial->transpose;
+  engine->octave_shift = (int32_t)initial->octave_shift;
+  engine->transpose = (int32_t)initial->transpose;
   engine->scale_type = initial->scale_type;
   engine->scale_tonic = initial->scale_tonic;
   engine->scale_mapping = initial->scale_mapping;
@@ -2425,7 +2425,6 @@ mol_result_t mol_engine_submit(mol_engine_t* engine, const mol_command_t* comman
     case MOL_COMMAND_PLAYBACK_START:
     case MOL_COMMAND_PLAYBACK_STOP:
     case MOL_COMMAND_LOAD_SEQUENCE:
-      break;
     case MOL_COMMAND_ALL_NOTES_OFF:
     case MOL_COMMAND_ALL_SOUND_OFF:
     case MOL_COMMAND_RESET_ENGINE:

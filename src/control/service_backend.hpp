@@ -16,7 +16,7 @@ molseq::Json parse_service_config(std::string_view source);
 
 class ServiceBackend final : public RpcBackend {
  public:
-  ServiceBackend(ServiceRuntime& runtime, std::filesystem::path state_directory);
+  ServiceBackend(ServiceRuntime& runtime, const std::filesystem::path& state_directory);
 
   molseq::Json invoke(std::string_view method, const molseq::Json& params) override;
   [[nodiscard]] const std::filesystem::path& recordings_directory() const noexcept {

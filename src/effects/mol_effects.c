@@ -196,7 +196,7 @@ void mol_reverb_configure(mol_reverb_t* reverb, float* buffer, uint32_t capacity
     offset += length;
   }
   mol_dsp_smoother_configure(&reverb->predelay_frames, sample_rate, 0.03f,
-                             12.0f * sample_rate / 1000.0f);
+                             12.0f * (float)sample_rate / 1000.0f);
   mol_dsp_smoother_configure(&reverb->size, sample_rate, 0.03f, 0.62f);
   mol_dsp_smoother_configure(&reverb->damping, sample_rate, 0.03f, 0.38f);
   mol_dsp_smoother_configure(&reverb->mix, sample_rate, 0.03f, 0.32f);
@@ -207,8 +207,8 @@ void mol_reverb_set(mol_reverb_t* reverb, float predelay_ms, float size, float d
     return;
   }
   mol_dsp_smoother_set_target(&reverb->predelay_frames,
-                              mol_dsp_clamp(predelay_ms * reverb->sample_rate / 1000.0f, 0.0f,
-                                            (float)reverb->predelay_capacity - 2.0f));
+                              mol_dsp_clamp(predelay_ms * (float)reverb->sample_rate / 1000.0f,
+                                            0.0f, (float)reverb->predelay_capacity - 2.0f));
   mol_dsp_smoother_set_target(&reverb->size, mol_dsp_clamp(size, 0.0f, 1.0f));
   mol_dsp_smoother_set_target(&reverb->damping, mol_dsp_clamp(damping, 0.0f, 0.99f));
   mol_dsp_smoother_set_target(&reverb->mix, mol_dsp_clamp(mix, 0.0f, 1.0f));

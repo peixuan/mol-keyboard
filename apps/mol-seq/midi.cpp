@@ -18,7 +18,7 @@
 namespace molseq {
 namespace {
 
-constexpr std::size_t kMaximumMidiBytes = 128u * 1024u * 1024u;
+constexpr std::size_t kMaximumMidiBytes = std::size_t{128u} * 1024u * 1024u;
 constexpr std::uint32_t kExportPpqn = 480u;
 
 struct RawEvent {
@@ -229,7 +229,7 @@ void append_channel(std::vector<std::uint8_t>& track, std::uint64_t delta, std::
 }
 
 std::uint32_t tempo_to_microseconds(float bpm) {
-  return static_cast<std::uint32_t>(60000000.0 / static_cast<double>(bpm) + 0.5);
+  return static_cast<std::uint32_t>(std::round(60000000.0 / static_cast<double>(bpm)));
 }
 
 std::uint64_t frames_to_ticks(std::uint64_t delta_frames, std::uint32_t time_base,
@@ -239,7 +239,7 @@ std::uint64_t frames_to_ticks(std::uint64_t delta_frames, std::uint32_t time_bas
   const long double result = numerator / denominator;
   if (result > static_cast<long double>(UINT64_MAX))
     throw std::runtime_error("sequence duration exceeds MIDI range");
-  return static_cast<std::uint64_t>(result + 0.5L);
+  return static_cast<std::uint64_t>(std::round(result));
 }
 
 }  // namespace

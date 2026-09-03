@@ -12,7 +12,7 @@
 namespace molseq {
 namespace {
 
-constexpr std::size_t kMaximumFileBytes = 128u * 1024u * 1024u;
+constexpr std::size_t kMaximumFileBytes = std::size_t{128u} * 1024u * 1024u;
 
 struct CommandName {
   mol_command_type_t type;

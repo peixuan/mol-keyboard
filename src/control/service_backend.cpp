@@ -407,10 +407,11 @@ molseq::Json parse_service_config(std::string_view source) {
   return config;
 }
 
-ServiceBackend::ServiceBackend(ServiceRuntime& runtime, std::filesystem::path state_directory)
+ServiceBackend::ServiceBackend(ServiceRuntime& runtime,
+                               const std::filesystem::path& state_directory)
     : config_(make_default_config()),
       runtime_(runtime),
-      state_directory_(std::filesystem::absolute(std::move(state_directory)).lexically_normal()),
+      state_directory_(std::filesystem::absolute(state_directory).lexically_normal()),
       recordings_directory_(state_directory_ / "recordings"),
       config_path_(state_directory_ / "config.json") {
   std::error_code error;

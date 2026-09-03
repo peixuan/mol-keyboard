@@ -13,7 +13,7 @@ namespace {
 
 using AudioHost = mol::harmony::AudioHost;
 
-constexpr std::size_t kMaximumRecordingBytes = 2U * 1024U * 1024U;
+constexpr std::size_t kMaximumRecordingBytes = std::size_t{2U} * 1024U * 1024U;
 constexpr std::uint32_t kMaximumEvents = 64U;
 constexpr std::uint32_t kEventFieldCount = 5U;
 
@@ -191,7 +191,8 @@ napi_value poll_events(napi_env environment, napi_callback_info info) {
   mol_event_t events[kMaximumEvents]{};
   const std::uint32_t count = host->poll_events(events, kMaximumEvents);
   napi_value result = nullptr;
-  if (napi_create_array_with_length(environment, count * kEventFieldCount, &result) != napi_ok) {
+  if (napi_create_array_with_length(environment, static_cast<std::size_t>(count) * kEventFieldCount,
+                                    &result) != napi_ok) {
     return nullptr;
   }
   for (std::uint32_t index = 0U; index < count; ++index) {

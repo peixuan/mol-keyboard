@@ -11,6 +11,8 @@
 namespace {
 
 mol::android::AudioHost* from_handle(jlong handle) {
+  // JNI transports native handles through the pointer-sized jlong ABI.
+  // NOLINTNEXTLINE(performance-no-int-to-ptr)
   return reinterpret_cast<mol::android::AudioHost*>(static_cast<std::intptr_t>(handle));
 }
 

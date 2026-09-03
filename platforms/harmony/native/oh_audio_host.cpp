@@ -16,7 +16,7 @@ namespace {
 constexpr std::int32_t kRequestedSampleRate = 48000;
 constexpr std::int32_t kChannelCount = 2;
 constexpr std::int32_t kBytesPerFrame = kChannelCount * static_cast<std::int32_t>(sizeof(float));
-constexpr std::size_t kMaximumSequenceBytes = 2U * 1024U * 1024U;
+constexpr std::size_t kMaximumSequenceBytes = std::size_t{2U} * 1024U * 1024U;
 
 struct SequenceWriter {
   std::uint8_t* bytes;

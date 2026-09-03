@@ -109,15 +109,19 @@ class WindowsRawInput final : public PhysicalInputAdapter {
 
  private:
   static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam) {
+    // Win32 stores application pointers in pointer-sized integer message fields by contract.
     WindowsRawInput* self =
+        // NOLINTNEXTLINE(performance-no-int-to-ptr)
         reinterpret_cast<WindowsRawInput*>(GetWindowLongPtrW(window, GWLP_USERDATA));
     if (message == WM_NCCREATE) {
+      // NOLINTNEXTLINE(performance-no-int-to-ptr)
       const auto* create = reinterpret_cast<const CREATESTRUCTW*>(lparam);
       self = static_cast<WindowsRawInput*>(create->lpCreateParams);
       SetWindowLongPtrW(window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
     }
     if (self == nullptr) return DefWindowProcW(window, message, wparam, lparam);
     if (message == WM_INPUT) {
+      // NOLINTNEXTLINE(performance-no-int-to-ptr)
       self->handle_input(reinterpret_cast<HRAWINPUT>(lparam));
       return 0;
     }

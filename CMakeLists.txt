@@ -126,7 +126,7 @@ if(NOT CMAKE_CROSSCOMPILING AND (MOL_BUILD_TOOLS OR MOL_BUILD_DAEMON OR MOL_BUIL
                                                          CXX_STANDARD_REQUIRED ON)
   mol_enable_warnings(mol_sequence_document)
   mol_enable_optional_instrumentation(mol_sequence_document)
-  if(MSVC)
+  if(WIN32)
     target_compile_definitions(mol_sequence_document PRIVATE _CRT_SECURE_NO_WARNINGS)
   endif()
 
@@ -169,7 +169,7 @@ if(NOT CMAKE_CROSSCOMPILING AND (MOL_BUILD_TOOLS OR MOL_BUILD_DAEMON OR MOL_BUIL
   set_target_properties(mol_local_ipc PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
   mol_enable_warnings(mol_local_ipc)
   mol_enable_optional_instrumentation(mol_local_ipc)
-  if(MSVC)
+  if(WIN32)
     target_compile_definitions(mol_local_ipc PRIVATE _CRT_SECURE_NO_WARNINGS)
   endif()
   if(WIN32)

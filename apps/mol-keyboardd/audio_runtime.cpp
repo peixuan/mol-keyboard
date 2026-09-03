@@ -210,7 +210,8 @@ class AudioRuntime::Impl {
 
   mutable std::mutex control_mutex;
   ma_context context{};
-  ma_device device{};
+  // miniaudio requires callers to zero-initialize this C API storage before ma_device_init.
+  ma_device device{};  // NOLINT(bugprone-invalid-enum-default-initialization)
   bool context_initialized = false;
   bool device_initialized = false;
   bool device_started = false;

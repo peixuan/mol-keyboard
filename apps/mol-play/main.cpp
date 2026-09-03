@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <string>
 #include <thread>
 
@@ -280,7 +281,8 @@ int play(const Options& options, ma_context* context) {
   static PlaybackState state{};
   ma_device_id selected_id{};
   ma_device_config device_config = ma_device_config_init(ma_device_type_playback);
-  ma_device device{};
+  // miniaudio requires callers to zero-initialize this C API storage before ma_device_init.
+  ma_device device{};  // NOLINT(bugprone-invalid-enum-default-initialization)
 
   if (!options.device_id.empty() && !decode_device_id(options.device_id, &selected_id)) {
     std::fprintf(stderr, "Invalid device ID; copy the complete value from --list-devices\n");
@@ -410,7 +412,7 @@ int play(const Options& options, ma_context* context) {
 
 }  // namespace
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) try {
   Options options;
   if (!parse_options(argc, argv, &options)) {
     return 2;
@@ -431,4 +433,7 @@ int main(int argc, char** argv) {
   const int exit_code = options.list_devices ? list_devices(&context) : play(options, &context);
   ma_context_uninit(&context);
   return exit_code;
+} catch (const std::exception& error) {
+  std::fprintf(stderr, "Playback failed: %s\n", error.what());
+  return 1;
 }

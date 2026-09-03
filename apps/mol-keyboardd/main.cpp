@@ -156,22 +156,22 @@ bool install_signal_handlers() {
 }  // namespace
 
 int main(int argc, char** argv) {
-  Options options;
-  if (!parse_options(argc, argv, options)) return 2;
-  if (options.help) {
-    print_usage(argv[0]);
-    return 0;
-  }
-  if (options.version) {
-    std::printf("mol-keyboardd %s (API %u)\n", mol_get_version_string(), mol_get_api_version());
-    return 0;
-  }
-  if (!install_signal_handlers()) {
-    std::fprintf(stderr, "Could not install process stop handlers\n");
-    return 1;
-  }
-
   try {
+    Options options;
+    if (!parse_options(argc, argv, options)) return 2;
+    if (options.help) {
+      print_usage(argv[0]);
+      return 0;
+    }
+    if (options.version) {
+      std::printf("mol-keyboardd %s (API %u)\n", mol_get_version_string(), mol_get_api_version());
+      return 0;
+    }
+    if (!install_signal_handlers()) {
+      std::fprintf(stderr, "Could not install process stop handlers\n");
+      return 1;
+    }
+
     options.state_directory = std::filesystem::absolute(options.state_directory).lexically_normal();
     if (options.endpoint.empty())
       options.endpoint = molcontrol::default_local_ipc_endpoint(options.state_directory);

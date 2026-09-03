@@ -308,21 +308,24 @@ static int mol_convert_and_write(FILE* file, mol_sha256_t* hash, const float* sa
     if (format == MOL_WAV_PCM16) {
       int32_t value = (int32_t)lrintf(sample * (sample < 0.0f ? 32768.0f : 32767.0f));
       uint16_t bits = (uint16_t)(int16_t)value;
-      encoded[index * 2u] = (uint8_t)bits;
-      encoded[index * 2u + 1u] = (uint8_t)(bits >> 8u);
+      size_t offset = (size_t)index * 2u;
+      encoded[offset] = (uint8_t)bits;
+      encoded[offset + 1u] = (uint8_t)(bits >> 8u);
     } else if (format == MOL_WAV_PCM24) {
       int32_t value = (int32_t)lrintf(sample * (sample < 0.0f ? 8388608.0f : 8388607.0f));
       uint32_t bits = (uint32_t)value;
-      encoded[index * 3u] = (uint8_t)bits;
-      encoded[index * 3u + 1u] = (uint8_t)(bits >> 8u);
-      encoded[index * 3u + 2u] = (uint8_t)(bits >> 16u);
+      size_t offset = (size_t)index * 3u;
+      encoded[offset] = (uint8_t)bits;
+      encoded[offset + 1u] = (uint8_t)(bits >> 8u);
+      encoded[offset + 2u] = (uint8_t)(bits >> 16u);
     } else {
       uint32_t bits;
+      size_t offset = (size_t)index * 4u;
       memcpy(&bits, &sample, sizeof(bits));
-      encoded[index * 4u] = (uint8_t)bits;
-      encoded[index * 4u + 1u] = (uint8_t)(bits >> 8u);
-      encoded[index * 4u + 2u] = (uint8_t)(bits >> 16u);
-      encoded[index * 4u + 3u] = (uint8_t)(bits >> 24u);
+      encoded[offset] = (uint8_t)bits;
+      encoded[offset + 1u] = (uint8_t)(bits >> 8u);
+      encoded[offset + 2u] = (uint8_t)(bits >> 16u);
+      encoded[offset + 3u] = (uint8_t)(bits >> 24u);
     }
   }
   return mol_write_bytes(file, hash, encoded, (size_t)count * bytes_per_sample);
@@ -331,8 +334,9 @@ static int mol_convert_and_write(FILE* file, mol_sha256_t* hash, const float* sa
 static void mol_digest_hex(const uint8_t digest[32], char output[65]) {
   static const char digits[] = "0123456789abcdef";
   for (uint32_t index = 0u; index < 32u; ++index) {
-    output[index * 2u] = digits[digest[index] >> 4u];
-    output[index * 2u + 1u] = digits[digest[index] & 0x0Fu];
+    size_t offset = (size_t)index * 2u;
+    output[offset] = digits[digest[index] >> 4u];
+    output[offset + 1u] = digits[digest[index] & 0x0Fu];
   }
   output[64] = '\0';
 }
