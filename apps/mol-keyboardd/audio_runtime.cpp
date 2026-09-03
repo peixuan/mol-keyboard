@@ -133,7 +133,9 @@ class EventQueue {
   std::atomic<std::size_t> tail_{0u};
 };
 
-#if defined(_WIN32)
+#if defined(MOL_TEST_MACOS_AUDIO)
+constexpr ma_backend kDesktopBackends[] = {ma_backend_coreaudio};
+#elif defined(_WIN32)
 constexpr ma_backend kDesktopBackends[] = {ma_backend_wasapi};
 #elif defined(__APPLE__)
 constexpr ma_backend kDesktopBackends[] = {ma_backend_coreaudio};
