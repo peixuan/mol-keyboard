@@ -79,6 +79,18 @@
       }
     },
     {
+      "name": "ci-windows-arm64-cross",
+      "inherits": "base",
+      "displayName": "Windows ARM64 LLVM-MinGW Cross Build",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/windows-arm64-llvm-mingw.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "MOL_BUILD_TESTS": "OFF",
+        "MOL_VALIDATE_MOBILE_SOURCES": "OFF",
+        "MOL_ENABLE_ASSERTIONS": "OFF"
+      }
+    },
+    {
       "name": "fuzz-clang",
       "inherits": "base",
       "displayName": "Clang Sanitizer Fuzzing",
@@ -264,6 +276,7 @@
     { "name": "ci-linux-clang", "configurePreset": "ci-linux-clang" },
     { "name": "ci-linux-aarch64", "configurePreset": "ci-linux-aarch64" },
     { "name": "ci-windows-msvc", "configurePreset": "ci-windows-msvc" },
+    { "name": "ci-windows-arm64-cross", "configurePreset": "ci-windows-arm64-cross" },
     { "name": "fuzz-clang", "configurePreset": "fuzz-clang" },
     { "name": "coverage-clang", "configurePreset": "coverage-clang" },
     { "name": "static-analysis-clang", "configurePreset": "static-analysis-clang" },
