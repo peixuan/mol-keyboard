@@ -95,6 +95,12 @@ mol_enable_warnings(mol_esp32_web_protocol_tests)
 mol_enable_optional_instrumentation(mol_esp32_web_protocol_tests)
 add_test(NAME mol_esp32_web_protocol_tests COMMAND mol_esp32_web_protocol_tests)
 
+find_package(Python3 QUIET COMPONENTS Interpreter)
+if(Python3_Interpreter_FOUND)
+  add_test(NAME mol_esp32_hil_parser_tests
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/hardware/esp32_hil.py --self-test)
+endif()
+
 add_executable(
   mol_esp32_sequence_store_tests unit/test_esp32_sequence_store.c
                                  ${PROJECT_SOURCE_DIR}/platforms/esp32/main/sequence_store.c)
