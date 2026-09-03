@@ -56,6 +56,41 @@ jobs:
           cmake --build --preset wasm-release
           ctest --preset wasm-release
 
+  release-size:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install pinned Emscripten SDK
+        shell: bash
+        run: |
+          git init "$RUNNER_TEMP/emsdk"
+          git -C "$RUNNER_TEMP/emsdk" remote add origin https://github.com/emscripten-core/emsdk.git
+          git -C "$RUNNER_TEMP/emsdk" fetch --depth 1 origin dfb9d1a46c3bb8f52e1e6324be23123b9d73c190
+          git -C "$RUNNER_TEMP/emsdk" checkout --detach FETCH_HEAD
+          "$RUNNER_TEMP/emsdk/emsdk" install 6.0.5
+          "$RUNNER_TEMP/emsdk/emsdk" activate 6.0.5
+          echo "EMSDK=$RUNNER_TEMP/emsdk" >> "$GITHUB_ENV"
+      - name: Build optimized native and Web artifacts
+        shell: bash
+        run: |
+          source "$EMSDK/emsdk_env.sh"
+          cmake --preset dev-release
+          cmake --build --preset dev-release
+          cmake --preset wasm-release
+          cmake --build --preset wasm-release
+          npm --prefix apps/web ci
+          npm --prefix apps/web run build
+      - name: Enforce release size budgets
+        run: |
+          python3 tools/release_size_gate.py \
+            --native-core build/dev-release/libmol_core.a \
+            --daemon build/dev-release/apps/mol-keyboardd/mol-keyboardd \
+            --cli build/dev-release/apps/molctl/molctl \
+            --wasm build/wasm-release/platforms/web/emscripten/mol_core.wasm \
+            --web-dir apps/web/dist \
+            --report-dir build/size-report
+
   coverage:
     runs-on: ubuntu-24.04
     steps:
