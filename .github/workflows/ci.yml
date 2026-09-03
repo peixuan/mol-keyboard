@@ -83,6 +83,18 @@ jobs:
       - name: Analyze first-party production sources
         run: python3 tools/static_analysis.py --build-dir build/static-analysis-clang
 
+  thread-sanitizer:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Configure and build ThreadSanitizer target
+        run: |
+          cmake --preset tsan-clang
+          cmake --build --preset tsan-clang
+      - name: Test concurrent production paths
+        run: ctest --preset tsan-clang
+
   android:
     runs-on: ubuntu-24.04
     steps:

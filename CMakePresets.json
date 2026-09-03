@@ -109,6 +109,20 @@
       }
     },
     {
+      "name": "tsan-clang",
+      "inherits": "base",
+      "displayName": "Clang ThreadSanitizer",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "MOL_BUILD_TOOLS": "OFF",
+        "MOL_BUILD_DESKTOP_AUDIO": "OFF",
+        "MOL_VALIDATE_MOBILE_SOURCES": "OFF",
+        "MOL_ENABLE_THREAD_SANITIZER": "ON"
+      }
+    },
+    {
       "name": "ci-macos",
       "inherits": "base",
       "cacheVariables": {
@@ -214,6 +228,7 @@
     { "name": "fuzz-clang", "configurePreset": "fuzz-clang" },
     { "name": "coverage-clang", "configurePreset": "coverage-clang" },
     { "name": "static-analysis-clang", "configurePreset": "static-analysis-clang" },
+    { "name": "tsan-clang", "configurePreset": "tsan-clang" },
     { "name": "ci-macos", "configurePreset": "ci-macos" },
     { "name": "wasm-debug", "configurePreset": "wasm-debug" },
     { "name": "wasm-release", "configurePreset": "wasm-release" },
@@ -230,6 +245,7 @@
     { "name": "ci-windows-msvc", "configurePreset": "ci-windows-msvc", "output": { "outputOnFailure": true } },
     { "name": "fuzz-clang", "configurePreset": "fuzz-clang", "output": { "outputOnFailure": true } },
     { "name": "coverage-clang", "configurePreset": "coverage-clang", "output": { "outputOnFailure": true } },
+    { "name": "tsan-clang", "configurePreset": "tsan-clang", "output": { "outputOnFailure": true }, "environment": { "TSAN_OPTIONS": "halt_on_error=1" } },
     { "name": "ci-macos", "configurePreset": "ci-macos", "output": { "outputOnFailure": true } },
     { "name": "wasm-debug", "configurePreset": "wasm-debug", "output": { "outputOnFailure": true } },
     { "name": "wasm-release", "configurePreset": "wasm-release", "output": { "outputOnFailure": true } }
