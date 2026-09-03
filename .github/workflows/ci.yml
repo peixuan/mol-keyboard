@@ -125,6 +125,17 @@ jobs:
           cmake --preset ci-linux-aarch64-qemu
           cmake --build --preset ci-linux-aarch64-qemu
           ctest --preset ci-linux-aarch64-qemu
+      - name: Run virtual ESP32 hardware models and fault injection
+        run: |
+          python3 tests/hardware/esp32_hil.py --simulate --target esp32 \
+            --report build/esp32-simulated-hil.json
+          python3 tests/hardware/esp32_hil.py --simulate --target esp32s3 \
+            --report build/esp32s3-simulated-hil.json
+          if python3 tests/hardware/esp32_hil.py --simulate --target esp32 \
+              --inject-fault deadline-miss; then
+            echo "fault-injected HIL unexpectedly passed" >&2
+            exit 1
+          fi
 
   wasm:
     runs-on: ubuntu-24.04

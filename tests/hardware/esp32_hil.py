@@ -302,6 +302,98 @@ def state_summary(state: HilState) -> dict[str, object]:
     }
 
 
+def replace_field(line: str, name: str, value: int) -> str:
+    updated, count = re.subn(rf"\b{re.escape(name)}=\d+", f"{name}={value}", line)
+    if count != 1:
+        raise ValueError(f"diagnostic fixture does not contain exactly one {name} field")
+    return updated
+
+
+def simulated_state(target: str, duration_seconds: float, injected_fault: str | None) -> HilState:
+    if duration_seconds < 20.0:
+        raise ValueError("simulated HIL duration must be at least 20 seconds")
+    lines = passing_log(target)
+    audio_template = next(line for line in reversed(lines) if "audio frames=" in line)
+    control_template = next(line for line in reversed(lines) if "control_config=" in line)
+    a2dp_template = next((line for line in reversed(lines) if "a2dp_found=" in line), None)
+    usb_template = next((line for line in reversed(lines) if "usb_ifaces=" in line), None)
+    snapshot_count = math.floor(duration_seconds / 10.0)
+    for snapshot in range(3, snapshot_count + 1):
+        final_snapshot = snapshot == snapshot_count
+        audio = replace_field(audio_template, "frames", snapshot * 10 * 32000)
+        if final_snapshot:
+            audio = replace_field(audio, "gpio_events", 4)
+            audio = replace_field(audio, "bt_report", 4)
+        lines.append(audio)
+        control = control_template
+        if final_snapshot:
+            control = replace_field(control, "control_config", 1)
+            control = replace_field(control, "control_unpair", 1)
+        lines.append(control)
+    lines.append("I (20) mol-keyboard: Private configuration AP enabled by physical hold")
+    if a2dp_template is not None:
+        a2dp = replace_field(a2dp_template, "a2dp_connect", 1)
+        a2dp = replace_field(a2dp, "a2dp_callbacks", 400)
+        a2dp = replace_field(a2dp, "a2dp_pcm_bytes", 1638400)
+        lines.append(a2dp)
+    if usb_template is not None:
+        lines.append(replace_field(usb_template, "usb_report", 4))
+
+    state = HilState(target)
+    for line in lines:
+        state.observe(line)
+    if injected_fault == "reset":
+        state.observe("I (999) mol-keyboard: Reset reason=7")
+    elif injected_fault == "deadline-miss":
+        state.audio[-1]["deadline_miss"] = 1
+    elif injected_fault == "stalled-audio":
+        state.audio[-1]["frames"] = state.audio[0]["frames"]
+    elif injected_fault == "firmware-error":
+        state.observe("E (999) mol-keyboard: injected model failure")
+    return state
+
+
+def simulation_requirements(target: str, duration_seconds: float) -> Requirements:
+    return Requirements(
+        duration_seconds=duration_seconds,
+        require_gpio=True,
+        require_bluetooth=True,
+        require_usb=target == "esp32s3",
+        require_a2dp=target == "esp32",
+        require_web=True,
+        require_clear_pairing=True,
+    )
+
+
+def run_simulation(args: argparse.Namespace) -> int:
+    started = datetime.now(timezone.utc).isoformat()
+    state = simulated_state(args.target, args.duration_seconds, args.inject_fault)
+    errors = validate_state(state, simulation_requirements(args.target, args.duration_seconds))
+    report = {
+        "schema": 1,
+        "verification_level": "simulated-hil",
+        "target": args.target,
+        "started_utc": started,
+        "finished_utc": datetime.now(timezone.utc).isoformat(),
+        "duration_seconds": args.duration_seconds,
+        "virtual_clock": True,
+        "injected_fault": args.inject_fault,
+        "passed": not errors,
+        "errors": errors,
+        "firmware": state_summary(state),
+        "excluded_claims": [
+            "firmware execution on an ESP32 chip",
+            "physical UART, GPIO, HID, I2S, USB, or Bluetooth behavior",
+            "wall-clock endurance, watchdog, power, RF, or acoustic performance",
+        ],
+    }
+    if args.report:
+        Path(args.report).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.report).write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(report, indent=2))
+    return 0 if not errors else 1
+
+
 def reset_target(target: str, port: str) -> None:
     subprocess.run(
         [
@@ -446,10 +538,30 @@ class ParserTests(unittest.TestCase):
             state.observe(line)
         self.assertTrue(any("capability" in error for error in validate_state(state, Requirements(20.0))))
 
+    def test_complete_virtual_hil_sessions_pass(self) -> None:
+        for target in ("esp32", "esp32s3"):
+            state = simulated_state(target, 1800.0, None)
+            self.assertEqual([], validate_state(state, simulation_requirements(target, 1800.0)))
+            self.assertEqual(180, len(state.audio))
+
+    def test_virtual_hil_fault_injection_fails_closed(self) -> None:
+        expected = {
+            "reset": "boots",
+            "deadline-miss": "deadline_miss",
+            "stalled-audio": "audio advanced",
+            "firmware-error": "firmware error",
+        }
+        for fault, message in expected.items():
+            with self.subTest(fault=fault):
+                state = simulated_state("esp32", 1800.0, fault)
+                errors = validate_state(state, simulation_requirements("esp32", 1800.0))
+                self.assertTrue(any(message in error for error in errors), errors)
+
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--simulate", action="store_true")
     parser.add_argument("--target", choices=("esp32", "esp32s3"))
     parser.add_argument("--port")
     parser.add_argument("--baud", type=int, default=115200)
@@ -465,9 +577,19 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--require-a2dp", action="store_true")
     parser.add_argument("--require-web", action="store_true")
     parser.add_argument("--require-clear-pairing", action="store_true")
+    parser.add_argument(
+        "--inject-fault",
+        choices=("reset", "deadline-miss", "stalled-audio", "firmware-error"),
+    )
     args = parser.parse_args()
-    if not args.self_test and (not args.target or not args.port):
+    if args.self_test and args.simulate:
+        parser.error("--self-test and --simulate are mutually exclusive")
+    if args.simulate and not args.target:
+        parser.error("--target is required for a simulated HIL run")
+    if not args.self_test and not args.simulate and (not args.target or not args.port):
         parser.error("--target and --port are required for a live HIL run")
+    if args.inject_fault and not args.simulate:
+        parser.error("--inject-fault requires --simulate")
     if args.duration_seconds <= 0:
         parser.error("--duration-seconds must be positive")
     return args
@@ -477,4 +599,6 @@ if __name__ == "__main__":
     arguments = parse_arguments()
     if arguments.self_test:
         unittest.main(argv=[sys.argv[0]])
+    if arguments.simulate:
+        raise SystemExit(run_simulation(arguments))
     raise SystemExit(run(arguments))
