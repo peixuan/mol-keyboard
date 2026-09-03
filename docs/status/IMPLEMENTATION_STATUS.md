@@ -393,12 +393,13 @@ python3 tools/package_audit.py --archive <archive> \
   --report-dir <report-directory> --expected-version 0.1.0
 ```
 
-A clean archive of `3a1da43ad8d8171baa2c24afd132c30c129717bd` with no
-Git metadata or copied caches was built in a new directory. MSVC Debug passed
-71/71 tests; Emscripten MinSizeRel passed 31/31; a clean `npm ci` reported zero
-vulnerabilities, the Web unit suite passed 12/12, and the production bundle
-built. The Emscripten configure used the Ninja executable shipped with Visual
-Studio because Ninja is not on this host's default `PATH`.
+A clean local clone of `40cf588949b5ed0084b43d4eeaa0be44396a2002` with no
+copied build or dependency cache was built in a new directory. MSVC Debug
+passed 76/76 tests; Emscripten MinSizeRel passed 31/31; a clean `npm ci`
+reported zero vulnerabilities, the Web unit suite passed 12/12, TypeScript
+strict checking passed, and the production bundle built. The Emscripten
+configure used the Ninja executable shipped with Visual Studio because Ninja
+is not on this host's default `PATH`.
 
 ## Known environment constraints
 
