@@ -72,6 +72,16 @@ installed service directory. It creates a shortcut only in the current user's
 Startup folder and does not request administrator access. Run
 `uninstall-user-startup.ps1` to remove that shortcut.
 
+The Windows acceptance runner creates the same WScript shortcut in a temporary
+Startup-directory model, validates and launches it, exercises the real daemon
+and CLI, then uninstalls it without touching the real Startup folder:
+
+```powershell
+platforms/windows/run-startup-smoke.ps1 `
+  -Daemon build/dev-release/apps/mol-keyboardd/mol-keyboardd.exe `
+  -Controller build/dev-release/apps/molctl/molctl.exe
+```
+
 The service releases active notes, closes physical-input adapters, stops the
 audio device, and removes its Unix socket on RPC shutdown, SIGINT/SIGTERM, or a
 Windows console stop event.

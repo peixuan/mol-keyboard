@@ -7,6 +7,9 @@ validation runs under WSL with null audio. The production desktop Web UI now
 controls real Windows and Linux service processes in browser automation. The
 shipped Linux service policy also passes real systemd 259 user-manager startup,
 sandboxed execution, clean shutdown, socket cleanup, and runtime-unit removal.
+The Windows installer/uninstaller and an actual WScript shortcut pass an
+isolated Startup-directory product lifecycle; this does not alter the real user
+Startup folder or substitute for a sign-out/sign-in launch observation.
 macOS compilation and physical Bluetooth audio/keyboard verification remain
 unavailable here.
 

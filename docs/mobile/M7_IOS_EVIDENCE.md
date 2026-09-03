@@ -68,8 +68,8 @@ tests cover user-start gating, foreground resignation, idle background stop,
 playback continuation and completion, the metronome-plus-transport rule,
 engine reset, route restoration, foreground/background media-services reset,
 restart failure, route-revision saturation, and invalid/null calls. The same
-production C source passed as part of Windows MSVC Release 83/83, Linux GCC
-85/85, Emscripten MinSizeRel 36/36, and the prior ASan/UBSan 47/47 suites;
+production C source passed as part of Windows MSVC Release 85/85, Linux GCC
+86/86, Emscripten MinSizeRel 37/37, and the prior ASan/UBSan 47/47 suites;
 Clang static analysis also includes this production translation unit. A new
 cross-platform project audit fails if the app-side smoke, valid and rejected
 bridge requests, `simctl` install/launch runner, result markers, screenshot, or
@@ -86,8 +86,8 @@ resolution.
 The shared Web UI passed 12/12 Node tests, strict TypeScript checking, and a
 production Vite build after adding Promise-based WKWebView reply support.
 MSVC Release rebuilt the complete native project with warnings as errors and
-passed 83/83 CTest cases; Linux GCC passed 85/85 and Emscripten MinSizeRel
-passed 36/36. These include the production iOS lifecycle state machine, the
+passed 85/85 CTest cases; Linux GCC passed 86/86 and Emscripten MinSizeRel
+passed 37/37. These include the production iOS lifecycle state machine, the
 Simulator acceptance-project audit, macOS platform simulations, and dependency
 license audit. `build-app.sh` and `run-simulator-smoke.sh` both pass `bash -n`.
 

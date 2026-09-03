@@ -1,7 +1,7 @@
 # M5 Desktop Headless Evidence
 
 Verified on 2026-09-03 at commit `c87e1a1`; the desktop-first regression and
-device-free acceptance were refreshed through code candidate `938f955`.
+device-free acceptance were refreshed through code candidate `b255bef`.
 
 ## Implemented surface
 
@@ -34,6 +34,10 @@ device-free acceptance were refreshed through code candidate `938f955`.
   `systemd-analyze`, linked into the runtime user-unit directory, and started by
   the real systemd manager. The gate requires clean process status and removes
   the runtime unit link before succeeding.
+- Windows creates an actual WScript `.lnk` in an isolated Startup-directory
+  model, validates its target, arguments, working directory, and hidden-window
+  policy, launches the real daemon through that shortcut, and removes it with
+  the production uninstaller. The real user Startup folder is not modified.
 - The macOS CTest lane now bootstraps a temporary user LaunchAgent from the
   shipped property-list template. It runs the exact built daemon with a null
   sink, drives the exact built CLI through status, capability, preset, tempo,
@@ -50,12 +54,12 @@ device-free acceptance were refreshed through code candidate `938f955`.
 | Configuration | Result | Relevant evidence |
 |---|---:|---|
 | Windows MSVC Debug | 78/78 | local IPC recovery, all 41 RPC methods, runtime callback, independent daemon process, CLI, recording/playback, rendering, macOS interface simulations |
-| Windows MSVC LTO Release | 83/83 | current optimized suite, including the desktop platform simulations and portable service-asset audits |
-| Linux x86_64 GCC (WSL) | 85/85 | current Unix socket/null-audio product suite, real systemd user-service lifecycle, and executable macOS LaunchAgent orchestration simulation |
+| Windows MSVC LTO Release | 85/85 | current optimized suite plus real temporary Startup-shortcut product lifecycle and portable service-asset audits |
+| Linux x86_64 GCC (WSL) | 86/86 | current Unix socket/null-audio product suite, real systemd user-service lifecycle, executable macOS LaunchAgent orchestration simulation, and portable Windows service audit |
 | Linux x86_64 Clang (WSL) | 78/78 | Unix socket mode/cleanup, null-audio service process, CLI lifecycle, Linux adapter compilation, macOS interface simulations |
 | Linux AArch64 QEMU 10.2.1 | 59/59 | target core/DSP/music tests, 18-preset metrics, null playback, nested daemon process, CLI/render lifecycle |
 | Windows Clang ASan/UBSan | 30/30 | all sanitizer-enabled portable/control tests and four 20-second parser fuzz sessions |
-| Emscripten MinSizeRel | 36/36 | current core/worklet regression plus platform acceptance-project audits |
+| Emscripten MinSizeRel | 37/37 | current core/worklet regression plus platform acceptance-project audits |
 | ESP32 / ESP32-S3 | build passed | firmware regression; application binaries remain 153,440 and 179,328 bytes |
 
 The production Web/PWA application was also run against the current desktop
@@ -121,8 +125,8 @@ At candidate `a9b8e98`, Linux GCC executes that production runner through a
 fail-closed launchd model. The model accepted only the expected built daemon,
 then the real `mol-keyboardd` and `molctl` completed null-audio startup, all
 control/record/play/diagnostic assertions, a finite 4,096-frame benchmark,
-clean shutdown, socket removal, and both bootstrap and bootout. This raised the
-current Linux suite to 83/83. The runner also exposed and fixed a case-sensitive
+clean shutdown, socket removal, and both bootstrap and bootout. This raised that
+candidate's Linux suite to 83/83. The runner also exposed and fixed a case-sensitive
 null-backend assertion (`Null` is miniaudio's real backend name). This is
 device-free service-orchestration evidence, not native macOS evidence.
 
@@ -133,3 +137,12 @@ playback, diagnostic, benchmark, and shutdown checks. Systemd reported
 `ActiveState=inactive`, `Result=success`, and `ExecMainStatus=0`; the socket and
 runtime unit link were gone before the test passed. Environments without a
 systemd user manager report an explicit CTest skip instead of imitating one.
+
+At candidate `b255bef`, Windows created and inspected a real shell shortcut in
+a unique temporary directory, launched the exact Release daemon through it with
+a hidden window and private Named Pipe/state, and drove the real CLI through
+control, recording, playback, diagnostics, a finite 4,096-frame benchmark, and
+shutdown. The retained process handle reported exit code zero; the production
+uninstaller removed the shortcut and the runner removed all temporary state.
+The installer/uninstaller still target the real current-user Startup folder by
+default; their directory override exists for isolated acceptance only.

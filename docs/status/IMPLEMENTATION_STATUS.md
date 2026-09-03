@@ -5,6 +5,9 @@
 The desktop application and headless-service matrix remains the first priority,
 followed by mobile and ESP32. The production Web UI controls real Windows and
 Linux daemon processes, and both platforms pass their complete native suites.
+Windows now also creates, validates, launches, and uninstalls a real WScript
+Startup shortcut in an isolated directory while exercising the real daemon and
+CLI; the actual user Startup folder is untouched.
 The Linux suite now also validates the shipped hardened unit with
 `systemd-analyze` and runs the real daemon/CLI lifecycle under the actual
 systemd 259 user manager, removing its runtime-only unit afterward.
@@ -40,9 +43,14 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`938f955` (`test(linux): exercise daemon through systemd`) is the latest locally
-validated code candidate. A real systemd 259 user manager validates and links a
-temporary unit retaining the shipped sandbox/restart policy, launches the real
+`b255bef` (`test(windows): exercise startup service shortcut`) is the latest
+locally validated code candidate. It creates and inspects a real temporary
+Startup `.lnk`, launches the exact Windows daemon through it with hidden-window
+policy, drives the exact CLI through the complete null-audio lifecycle, retains
+the process handle through clean exit, and removes the shortcut with the
+production uninstaller without touching the user's Startup folder. The
+preceding `938f955` candidate uses a real systemd 259 user manager to validate
+and link a temporary unit retaining the shipped sandbox/restart policy, launches the real
 daemon and CLI, and requires complete control/record/play/diagnostic coverage,
 zero-exit shutdown, socket removal, and removal of the runtime unit link. The
 preceding `a9b8e98` candidate runs the exact production Apple smoke
@@ -68,11 +76,11 @@ ESP32-S3 images boot under Espressif QEMU, mount/format transactional storage,
 pass the shared sequence and C4 checks, drain 12 production input commands, and
 render more than 100,000 frames with non-silent finite output and zero project
 failure counters. All four physical-board configurations still compile with
-the emulator option disabled. Windows MSVC Release passes 83/83 tests, Linux
-x86_64 GCC passes 85/85, and Emscripten MinSizeRel passes 36/36. System Chrome
+the emulator option disabled. Windows MSVC Release passes 85/85 tests, Linux
+x86_64 GCC passes 86/86, and Emscripten MinSizeRel passes 37/37. System Chrome
 on Windows and bundled Chromium on Linux each pass the five applicable desktop
-application cases, including a real platform daemon process and authenticated service
-controller. Current core coverage remains 94.10%, Clang static analysis passes
+application cases, including a real platform daemon process and authenticated
+service controller. Current core coverage remains 94.10%, Clang static analysis passes
 40 production translation units, and ASan/UBSan passes 47/47 with all eleven
 fuzzers. The earlier `61b3342` candidate adds the
 exact-production-source CoreAudio lifecycle simulation, and `18e6e7d` adds the
@@ -173,6 +181,10 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
 - The shipped Linux systemd policy passes native user-manager acceptance under
   WSL: the runtime-only unit preserves restart and sandbox directives, starts
   the real daemon/CLI, exits successfully, removes its socket, and is unlinked.
+- The Windows Startup installer creates the expected hidden WScript shortcut.
+  An isolated-directory acceptance test launches the real daemon through that
+  `.lnk`, completes the CLI lifecycle with exit code zero, then runs the
+  production uninstaller and proves the shortcut and temporary state are gone.
 - Checked-in cross toolchains build that complete desktop product, including
   `mol-keyboardd`, `molctl`, `mol-play`, `mol-render`, `mol-seq`,
   `mol-patchc`, `mol-audio-analyze`, and `mol_core`, as Windows ARM64 COFF and
@@ -310,7 +322,7 @@ cmake --build --preset dev-release
 ctest --preset dev-release --output-on-failure
 ```
 
-MSVC 19.51.36248 passes 83/83 tests in the current LTO Release build; the prior
+MSVC 19.51.36248 passes 85/85 tests in the current LTO Release build; the prior
 Debug build passed 78/78. These runs include the iOS production lifecycle
 policy, strict Web form protocol and HIL evidence-parser tests in addition to
 the independent daemon process, realtime runtime, local IPC, all service
@@ -320,7 +332,7 @@ GNU 15 Release+LTO presets previously passed 75/75 for Tiny, 76/76 for
 Standard, and 75/75 for Full. The Full run exercises 64 voices, 4,096 sequence
 events, the complete desktop daemon, and the expanded fixed host arenas.
 
-Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 85/85
+Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 86/86
 tests; the prior Clang 21.1.8 candidate passed 78/78. The current suite runs a
 real systemd user unit lifecycle plus the production macOS service smoke
 unchanged through a controlled launchd model and
@@ -362,7 +374,7 @@ cmake --build --preset wasm-release
 ctest --preset wasm-release --output-on-failure
 ```
 
-Emscripten 6.0.5 and Node.js 22.16.0 pass 36/36 tests in the current LTO
+Emscripten 6.0.5 and Node.js 22.16.0 pass 37/37 tests in the current LTO
 MinSizeRel build; the prior Debug candidate passed 31/31. Both configurations
 match the Native event, sequence-fixture, and 18-preset audio-metric goldens.
 
@@ -576,8 +588,8 @@ tests.
 - Cross-platform source checks are not promoted to device verification.
 
 The HarmonyOS application descriptors, project audit, and native source-check
-boundary pass locally. Windows MSVC Release passes 83/83 tests and Linux GCC
-passes 85/85. The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
+boundary pass locally. Windows MSVC Release passes 85/85 tests and Linux GCC
+passes 86/86. The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
 5.8.9 build and audit
 both Debug and Release compatibility HAPs; the Release artifact is an unsigned
 2,951,842-byte package containing ArkTS bytecode and both required native ABIs.
