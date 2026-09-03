@@ -230,11 +230,13 @@ endforeach()
 foreach(_script "${_compat_script}" "${_compat_ps_script}")
   file(READ "${_script}" _script_text)
   foreach(_token
+          "clean --mode module"
           "product=openharmony"
           "entryOpenHarmony@default"
           "libs/arm64-v8a/libmol_harmony_audio.so"
           "libs/x86_64/libmol_harmony_audio.so"
-          "ets/modules.abc")
+          "ets/modules.abc"
+          "HAP bytecode SHA256")
     if(NOT _script_text MATCHES "${_token}")
       message(FATAL_ERROR "OpenHarmony compatibility build audit is missing ${_token}: ${_script}")
     endif()

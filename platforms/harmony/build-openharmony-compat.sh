@@ -49,6 +49,10 @@ done
 
 (
   cd "$project_dir"
+  "$HVIGORW" clean --mode module \
+    -p product=openharmony \
+    -p module=entryOpenHarmony@default \
+    --no-daemon
   "$HVIGORW" assembleHap --mode module \
     -p product=openharmony \
     -p module=entryOpenHarmony@default \
@@ -77,4 +81,6 @@ done
 echo "OpenHarmony compatibility HAP: $hap_path"
 if command -v sha256sum >/dev/null 2>&1; then
   sha256sum "$hap_path"
+  bytecode_hash="$(unzip -p "$hap_path" ets/modules.abc | sha256sum | cut -d ' ' -f 1)"
+  echo "HAP bytecode SHA256: $bytecode_hash"
 fi

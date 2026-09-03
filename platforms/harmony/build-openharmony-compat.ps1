@@ -50,6 +50,13 @@ foreach ($name in @("ets", "resources", "cpp")) {
 $buildMode = $Variant.ToLowerInvariant()
 Push-Location $projectRoot
 try {
+    & $env:HVIGORW clean --mode module `
+        -p product=openharmony `
+        -p module=entryOpenHarmony@default `
+        --no-daemon
+    if ($LASTEXITCODE -ne 0) {
+        throw "OpenHarmony compatibility clean failed."
+    }
     & $env:HVIGORW assembleHap --mode module `
         -p product=openharmony `
         -p module=entryOpenHarmony@default `
@@ -85,5 +92,26 @@ foreach ($required in @(
 }
 
 $hash = (Get-FileHash -LiteralPath $hap.FullName -Algorithm SHA256).Hash
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$archive = [IO.Compression.ZipFile]::OpenRead($hap.FullName)
+try {
+    $bytecodeEntry = $archive.GetEntry("ets/modules.abc")
+    if ($null -eq $bytecodeEntry) {
+        throw "HAP bytecode entry disappeared during hashing."
+    }
+    $stream = $bytecodeEntry.Open()
+    $algorithm = [Security.Cryptography.SHA256]::Create()
+    try {
+        $bytecodeHash = -join ($algorithm.ComputeHash($stream) | ForEach-Object {
+            $_.ToString("X2")
+        })
+    } finally {
+        $algorithm.Dispose()
+        $stream.Dispose()
+    }
+} finally {
+    $archive.Dispose()
+}
 Write-Output "OpenHarmony compatibility HAP: $($hap.FullName)"
 Write-Output "SHA256: $hash"
+Write-Output "HAP bytecode SHA256: $bytecodeHash"
