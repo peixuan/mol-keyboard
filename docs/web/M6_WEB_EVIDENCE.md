@@ -34,8 +34,13 @@ With the pinned Node.js runtime and Playwright browser cache selected:
 cd apps/web
 npm ci
 npm run test
+$env:MOL_DAEMON = "..\..\build\dev-release\apps\mol-keyboardd\mol-keyboardd.exe"
 npm run test:browser
 ```
+
+On POSIX hosts, export `MOL_DAEMON` with the corresponding built daemon path.
+The Chrome desktop service-controller case fails if that executable is missing;
+it is no longer reported as a capability skip.
 
 The production build type-checks and bundles successfully. Its complete output
 is 327,033 bytes including the source map. The application entry is 67,856
@@ -65,10 +70,11 @@ passed and 27 capability-specific paths were explicitly skipped. It verified:
   notifications, service-side recording, and rejection of a wrong token.
 
 The same build passed 12/12 Node unit tests, including malformed-Wasm
-fail-closed behavior. Emscripten 6.0.5 Debug and LTO MinSizeRel each passed
-31/31 CTest tests, including AudioWorklet, event,
-sequence, and all-preset metric conformance. The dependency license audit
-passed after a clean `npm ci` and reports no npm vulnerability.
+fail-closed behavior. Emscripten 6.0.5 now passes 42/42 LTO MinSizeRel tests;
+the earlier Debug candidate passed 31/31. These include AudioWorklet, event,
+sequence, all-preset metric, and fail-closed Web wiring conformance. The
+dependency license audit passed after a clean `npm ci` and reports no npm
+vulnerability.
 
 The current desktop-first refresh reinstalled the exact lockfile independently
 on Windows and in a clean Linux checkout, reporting zero vulnerabilities in
@@ -80,6 +86,16 @@ case. In both runs the service-controller case spawned the platform's real
 `mol-keyboardd`, authenticated over loopback WebSocket, observed engine events,
 recorded through the service, rejected a bad token, shut down through local
 IPC, and required a clean child-process exit.
+
+Candidate `5e84b49` makes that executable a mandatory browser-acceptance input.
+A negative Windows run with an intentionally absent path failed with the
+required diagnostic, while real Windows and Linux daemon runs each passed the
+service-controller case. A portable CMake audit passes under Windows, Linux,
+and Emscripten and rejects restoration of the missing-daemon skip. The Linux CI
+job now builds the native daemon, installs the three Playwright browsers, and
+runs the full production browser matrix with `MOL_DAEMON` set. That workflow is
+checked and YAML-validated locally but remains unexecuted for this unpushed
+commit.
 
 The Linux refresh ran the production bundle and the real Linux x86_64 daemon
 together under WSL. Playwright's pinned Chromium was selected explicitly so

@@ -66,12 +66,12 @@ two capability-specific skips and zero npm vulnerabilities.
 | Configuration | Result | Relevant evidence |
 |---|---:|---|
 | Windows MSVC Debug | 78/78 | local IPC recovery, all 41 RPC methods, runtime callback, independent daemon process, CLI, recording/playback, rendering, macOS interface simulations |
-| Windows MSVC LTO Release | 89/89 | current optimized suite plus real temporary Startup-shortcut product lifecycle, portable service-asset audits, and mobile policy/native-boundary simulations |
-| Linux x86_64 GCC (WSL) | 90/90 | current Unix socket/null-audio product suite, real systemd user-service lifecycle, executable macOS LaunchAgent orchestration simulation, portable Windows service audit, and mobile policy/native-boundary simulations |
+| Windows MSVC LTO Release | 90/90 | current optimized suite plus fail-closed Web acceptance audit, real temporary Startup-shortcut product lifecycle, portable service-asset audits, and mobile policy/native-boundary simulations |
+| Linux x86_64 GCC (WSL) | 91/91 | current Unix socket/null-audio product suite, fail-closed Web acceptance audit, real systemd user-service lifecycle, executable macOS LaunchAgent orchestration simulation, portable Windows service audit, and mobile policy/native-boundary simulations |
 | Linux x86_64 Clang (WSL) | 78/78 | Unix socket mode/cleanup, null-audio service process, CLI lifecycle, Linux adapter compilation, macOS interface simulations |
 | Linux AArch64 QEMU 10.2.1 | 71/71 | target core/DSP/music tests, 18-preset metrics, mobile policy/native-boundary simulations, null playback, nested daemon process, CLI/render lifecycle |
 | Windows Clang ASan/UBSan | 47/47 | all sanitizer-enabled portable/control tests and eleven 20-second parser fuzz sessions; current Harmony policy audit/source cases pass targeted validation |
-| Emscripten MinSizeRel | 41/41 | current core/worklet regression plus platform acceptance-project audits and mobile policy/native-boundary simulations |
+| Emscripten MinSizeRel | 42/42 | current core/worklet regression plus fail-closed Web/platform acceptance-project audits and mobile policy/native-boundary simulations |
 | ESP32 / ESP32-S3 | build passed | firmware regression; application binaries remain 153,440 and 179,328 bytes |
 
 The production Web/PWA application was also run against the current desktop

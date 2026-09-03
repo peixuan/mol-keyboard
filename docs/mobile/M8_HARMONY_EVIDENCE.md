@@ -124,7 +124,7 @@ handled, but only device execution can settle those runtime paths.
 MSVC 19.51 and Linux Clang 21.1.8 also compile the OHAudio host and Node-API
 bridge against the declaration-only API 12 source-check boundary with warnings
 as errors. The current Windows, Linux, Emscripten, and Linux AArch64 QEMU suites
-pass 89/89, 90/90, 41/41, and 71/71 respectively, including the executable
+pass 90/90, 91/91, 42/42, and 71/71 respectively, including the executable
 policy, bridge, and host simulations plus `mol_harmony_project_audit`; both
 build wrappers pass shell syntax checks. The targeted Clang ASan/UBSan audit
 and exact-source policy cases also pass. This is real OpenHarmony package

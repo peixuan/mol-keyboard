@@ -57,8 +57,13 @@ Build and test the complete PWA with the pinned package lock:
 cd apps/web
 npm ci
 npm run test
+$env:MOL_DAEMON = "..\..\build\dev-release\apps\mol-keyboardd\mol-keyboardd.exe"
 npm run test:browser
 ```
+
+On POSIX hosts, export the corresponding daemon path instead. Browser
+acceptance fails rather than skipping the authenticated desktop-controller case
+when `MOL_DAEMON` does not name an executable.
 
 `npm run preview` enables cross-origin isolation for the SharedArrayBuffer path.
 Any ordinary static HTTPS server remains supported through MessagePort. See

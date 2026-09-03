@@ -53,15 +53,20 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`00a0e50` (`test: require Node for native policy checks`) is the latest locally
-validated code candidate. Native test configuration now fails closed when
-Node.js is unavailable, instead of silently omitting the exact HarmonyOS
-production-policy test. With verified Node.js 22.16.0, Windows passes 89/89 and
-Linux passes 90/90, including their real headless service lifecycle tests. The
-production Web controller was then rebuilt from locked dependencies and passed
-all five applicable Chrome desktop cases against real Windows and Linux daemon
-processes at repository candidate `4cdb929`. The preceding `098ddf4` candidate
-makes the OpenHarmony compatibility wrappers run
+`5e84b49` (`test(web): require real daemon acceptance`) is the latest locally
+validated code candidate. Browser acceptance now fails when the real desktop
+daemon is absent, and the checked-in Linux CI path builds that daemon before
+running the locked production Web bundle across Chromium, Firefox, and WebKit.
+The missing-daemon rejection and real Windows/Linux daemon paths execute
+locally; Windows passes 90/90, Linux passes 91/91, and Wasm passes 42/42 with
+the new portable wiring audit. The CI workflow itself remains unexecuted for
+this unpushed commit. The preceding `00a0e50` candidate makes native test
+configuration fail closed when Node.js is unavailable instead of silently
+omitting the exact HarmonyOS production-policy test. The production Web
+controller was rebuilt from locked dependencies and passed all five applicable
+Chrome desktop cases against real Windows and Linux daemon processes at
+repository candidate `4cdb929`. The preceding `098ddf4` candidate makes the
+OpenHarmony compatibility wrappers run
 a module clean before assembly and report the packaged `ets/modules.abc`
 digest. A clean checkout of that commit rebuilt Windows and Wasm from empty
 build trees and produced a fresh Release HAP. The preceding `b48c680` candidate
@@ -117,8 +122,8 @@ ESP32-S3 images boot under Espressif QEMU, mount/format transactional storage,
 pass the shared sequence and C4 checks, drain 12 production input commands, and
 render more than 100,000 frames with non-silent finite output and zero project
 failure counters. All four physical-board configurations still compile with
-the emulator option disabled. Windows MSVC Release passes 89/89 tests, Linux
-x86_64 GCC passes 90/90, and Emscripten MinSizeRel passes 41/41. System Chrome
+the emulator option disabled. Windows MSVC Release passes 90/90 tests, Linux
+x86_64 GCC passes 91/91, and Emscripten MinSizeRel passes 42/42. System Chrome
 on Windows and bundled Chromium on Linux each pass the five applicable desktop
 application cases, including a real platform daemon process and authenticated
 service controller. Current core coverage remains 94.10%, Clang static analysis passes
@@ -375,7 +380,7 @@ cmake --build --preset dev-release
 ctest --preset dev-release --output-on-failure
 ```
 
-MSVC 19.51.36248 passes 89/89 tests in the current LTO Release build; the prior
+MSVC 19.51.36248 passes 90/90 tests in the current LTO Release build; the prior
 Debug build passed 78/78. These runs include the iOS production lifecycle
 policy, exact HarmonyOS production policy source, strict Web form protocol, and
 HIL evidence-parser tests in addition to
@@ -386,7 +391,7 @@ GNU 15 Release+LTO presets previously passed 75/75 for Tiny, 76/76 for
 Standard, and 75/75 for Full. The Full run exercises 64 voices, 4,096 sequence
 events, the complete desktop daemon, and the expanded fixed host arenas.
 
-Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 90/90
+Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 91/91
 tests; the prior Clang 21.1.8 candidate passed 78/78. The current suite runs a
 real systemd user unit lifecycle plus the production macOS service smoke
 unchanged through a controlled launchd model and
@@ -430,7 +435,7 @@ cmake --build --preset wasm-release
 ctest --preset wasm-release --output-on-failure
 ```
 
-Emscripten 6.0.5 and Node.js 22.16.0 pass 41/41 tests in the current LTO
+Emscripten 6.0.5 and Node.js 22.16.0 pass 42/42 tests in the current LTO
 MinSizeRel build; the prior Debug candidate passed 31/31. Both configurations
 match the Native event, sequence-fixture, and 18-preset audio-metric goldens.
 
@@ -684,8 +689,8 @@ tests.
 
 The HarmonyOS application descriptors, project audit, executable production
 policy/bridge/host simulations, and native source-check boundary pass locally.
-Windows MSVC Release passes 89/89 tests, Linux GCC passes 90/90, Emscripten
-passes 41/41, and Linux AArch64 QEMU passes 71/71.
+Windows MSVC Release passes 90/90 tests, Linux GCC passes 91/91, Emscripten
+passes 42/42, and Linux AArch64 QEMU passes 71/71.
 The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
 5.8.9 build and audit
 both Debug and Release compatibility HAPs; the Release artifact is an unsigned
