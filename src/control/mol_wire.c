@@ -2,6 +2,7 @@
 #include <math.h>
 #include <string.h>
 
+#include "mol/effects.h"
 #include "mol/wire.h"
 
 static uint16_t read_u16(const uint8_t* data) {
@@ -164,6 +165,12 @@ mol_result_t mol_wire_event_v1_to_command(const mol_wire_event_v1_t* event,
       command->payload.note.velocity = event->payload.note.velocity;
       break;
     case MOL_WIRE_CONTROL:
+      if (event->payload.control.control == MOL_WIRE_CONTROL_MODULATION) {
+        command->command_type = MOL_COMMAND_SET_PARAMETER;
+        command->payload.parameter.parameter = MOL_PARAMETER_MODULATION;
+        command->payload.parameter.value = event->payload.control.value;
+        break;
+      }
       if (event->payload.control.control == MOL_WIRE_CONTROL_SUSTAIN)
         command->command_type = MOL_COMMAND_SUSTAIN;
       else if (event->payload.control.control == MOL_WIRE_CONTROL_MASTER_GAIN)

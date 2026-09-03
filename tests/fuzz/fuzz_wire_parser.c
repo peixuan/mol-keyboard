@@ -19,9 +19,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         memcmp(data, encoded, sizeof(encoded)) != 0) {
       __builtin_trap();
     }
-    if (mol_wire_event_v1_to_command(&decoded, &command) != MOL_OK &&
-        !(decoded.type == MOL_WIRE_CONTROL &&
-          decoded.payload.control.control == MOL_WIRE_CONTROL_MODULATION)) {
+    if (mol_wire_event_v1_to_command(&decoded, &command) != MOL_OK) {
       __builtin_trap();
     }
   }

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "mol/effects.h"
 #include "mol/wire.h"
 
 static int failures;
@@ -63,7 +64,10 @@ static void test_types_and_controls(void) {
   EXPECT_TRUE(command.command_type == MOL_COMMAND_SUSTAIN && command.payload.scalar.value == 1.0f);
   event.payload.control.control = MOL_WIRE_CONTROL_MODULATION;
   EXPECT_TRUE(mol_wire_event_v1_encode(&event, encoded, sizeof(encoded)) == MOL_OK);
-  EXPECT_TRUE(mol_wire_event_v1_to_command(&event, &command) == MOL_ERROR_UNSUPPORTED);
+  EXPECT_TRUE(mol_wire_event_v1_to_command(&event, &command) == MOL_OK);
+  EXPECT_TRUE(command.command_type == MOL_COMMAND_SET_PARAMETER &&
+              command.payload.parameter.parameter == MOL_PARAMETER_MODULATION &&
+              command.payload.parameter.value == 1.0f);
   event = make_event(MOL_WIRE_PITCH_BEND);
   event.payload.pitch_bend.value = -0.5f;
   EXPECT_TRUE(mol_wire_event_v1_to_command(&event, &command) == MOL_OK);

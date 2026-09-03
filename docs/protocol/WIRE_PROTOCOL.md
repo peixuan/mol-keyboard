@@ -27,9 +27,8 @@ Control payload is a 16-bit control ID, two zero bytes, and value. Pitch bend is
 a float followed by four zero bytes. Empty event types require eight zero bytes.
 
 Velocity and supported controls use 0–1; pitch bend uses -1–1; all values must
-be finite. Sustain and master gain translate to core commands. Modulation is
-valid on the wire but currently reports unsupported when translated because the
-core has no matching public command.
+be finite. Sustain, master gain, and modulation translate to core commands;
+modulation targets the public vibrato-depth parameter.
 
 The packet sequence number lets a transport detect loss or duplication; the
 core does not reorder it. Timestamp becomes `mol_command_t.target_frame`, so a
