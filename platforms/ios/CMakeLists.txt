@@ -24,13 +24,15 @@ add_executable(
   MOLAppDelegate.mm
   MOLNativeAudioController.h
   MOLNativeAudioController.mm
+  mol_ios_audio_lifecycle.c
+  mol_ios_audio_lifecycle.h
   MOLViewController.h
   MOLViewController.mm
   Assets.xcassets)
 target_compile_features(mol_ios_app PRIVATE cxx_std_17)
 target_compile_options(mol_ios_app PRIVATE $<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>)
-target_link_libraries(mol_ios_app PRIVATE mol_apple_audio "-framework UIKit"
-                                                "-framework WebKit")
+target_link_libraries(mol_ios_app PRIVATE mol_apple_audio mol::core
+                                          "-framework UIKit" "-framework WebKit")
 set_target_properties(
   mol_ios_app
   PROPERTIES OUTPUT_NAME "MoLKeyboard"

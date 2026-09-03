@@ -4,6 +4,7 @@
 #import <UIKit/UIKit.h>
 
 #import "MOLAppleAudioHost.h"
+#import "mol_ios_audio_lifecycle.h"
 
 #include <algorithm>
 #include <cmath>
@@ -143,6 +144,10 @@ BOOL is_persistent_command(std::uint32_t command) {
   }
 }
 
+BOOL has_lifecycle_action(std::uint32_t actions, mol_ios_audio_action_t action) {
+  return (actions & static_cast<std::uint32_t>(action)) != 0U;
+}
+
 NSString* serialize_response(NSDictionary<NSString*, id>* response) {
   NSError* error = nil;
   NSData* data = [NSJSONSerialization dataWithJSONObject:response options:0 error:&error];
@@ -180,9 +185,9 @@ NSString* failure_response(NSString* message) {
                    integers:(const std::int64_t[4])integers
                     scalars:(const float[2])scalars;
 - (void)updateStateForCommand:(std::uint32_t)type integer0:(std::int64_t)integer0;
+- (void)applyLifecycleActions:(std::uint32_t)actions;
 - (void)restoreRuntimeState;
 - (void)pumpNativeEvents;
-- (BOOL)allowsBackgroundContinuation;
 - (nullable NSURL*)createSequenceURL;
 - (void)loadPersistedSequence;
 - (void)persistLoadedSequence;
@@ -197,12 +202,7 @@ NSString* failure_response(NSString* message) {
   NSMutableDictionary<NSString*, NSArray<NSNumber*>*>* _replayControls;
   NSData* _loadedSequence;
   NSURL* _sequenceURL;
-  BOOL _userStarted;
-  BOOL _uiForeground;
-  BOOL _transportRunning;
-  BOOL _playbackRunning;
-  BOOL _metronomeEnabled;
-  std::uint64_t _routeRevision;
+  mol_ios_audio_lifecycle_t _lifecycle;
   std::int32_t _lastStartStatus;
 }
 
@@ -213,7 +213,7 @@ NSString* failure_response(NSString* message) {
   if (_host == nil) return nil;
   _pendingEvents = [[NSMutableArray alloc] initWithCapacity:kMaximumPendingEventFields];
   _replayControls = [[NSMutableDictionary alloc] init];
-  _uiForeground = YES;
+  mol_ios_audio_lifecycle_init(&_lifecycle);
   _sequenceURL = [self createSequenceURL];
   [self loadPersistedSequence];
   NSNotificationCenter* center = NSNotificationCenter.defaultCenter;
@@ -288,10 +288,10 @@ NSString* failure_response(NSString* message) {
     if (!has_exact_keys(params, @[])) return failure_response(@"Unexpected parameters");
     MOLAppleAudioStatus status = _host.status;
     const std::uint64_t revision =
-        std::max(_routeRevision, static_cast<std::uint64_t>(status.routeChanges));
+        std::max(_lifecycle.route_revision, static_cast<std::uint64_t>(status.routeChanges));
     return success_response(@{
       @"active" : @(status.active),
-      @"userStarted" : @(_userStarted),
+      @"userStarted" : @(_lifecycle.user_started),
       @"sampleRate" : @(status.sampleRate),
       @"framesPerBurst" : @(status.maximumFramesPerSlice),
       @"audioApi" : @1,
@@ -351,7 +351,7 @@ NSString* failure_response(NSString* message) {
 }
 
 - (BOOL)submitHardwareNote:(uint8_t)note on:(BOOL)on gestureId:(uint64_t)gestureId {
-  if (!_uiForeground || !_userStarted || !_host.status.active) return NO;
+  if (!_lifecycle.ui_foreground || !_lifecycle.user_started || !_host.status.active) return NO;
   const int32_t result = [_host submitCommandType:on ? kCommandNoteOn : kCommandNoteOff
                                         gestureId:gestureId
                                          integer0:note
@@ -364,7 +364,7 @@ NSString* failure_response(NSString* message) {
 }
 
 - (BOOL)submitHardwareSustain:(BOOL)enabled gestureId:(uint64_t)gestureId {
-  if (!_uiForeground || !_userStarted || !_host.status.active) return NO;
+  if (!_lifecycle.ui_foreground || !_lifecycle.user_started || !_host.status.active) return NO;
   return [_host submitCommandType:kCommandSustain
                         gestureId:gestureId
                          integer0:0
@@ -376,36 +376,17 @@ NSString* failure_response(NSString* message) {
 }
 
 - (void)applicationDidBecomeActive {
-  _uiForeground = YES;
+  mol_ios_audio_lifecycle_did_become_active(&_lifecycle);
 }
 
 - (void)applicationWillResignActive {
-  _uiForeground = NO;
-  if (_host.status.active) {
-    (void)[_host submitCommandType:kCommandAllNotesOff
-                         gestureId:0U
-                          integer0:0
-                          integer1:0
-                          integer2:0
-                          integer3:0
-                           scalar0:0.0F
-                           scalar1:0.0F];
-  }
+  [self applyLifecycleActions:mol_ios_audio_lifecycle_will_resign_active(&_lifecycle,
+                                                                         _host.status.active)];
 }
 
 - (void)applicationDidEnterBackground {
-  _uiForeground = NO;
-  if (_host.status.active) {
-    (void)[_host submitCommandType:kCommandAllNotesOff
-                         gestureId:0U
-                          integer0:0
-                          integer1:0
-                          integer2:0
-                          integer3:0
-                           scalar0:0.0F
-                           scalar1:0.0F];
-  }
-  if (![self allowsBackgroundContinuation]) [self stopUserAudio];
+  [self applyLifecycleActions:mol_ios_audio_lifecycle_did_enter_background(&_lifecycle,
+                                                                           _host.status.active)];
 }
 
 - (void)stopUserAudio {
@@ -420,10 +401,7 @@ NSString* failure_response(NSString* message) {
                            scalar1:0.0F];
   }
   [_host stop];
-  _userStarted = NO;
-  _transportRunning = NO;
-  _playbackRunning = NO;
-  _metronomeEnabled = NO;
+  mol_ios_audio_lifecycle_stop(&_lifecycle);
   [_pendingEvents removeAllObjects];
 }
 
@@ -475,15 +453,14 @@ NSString* failure_response(NSString* message) {
 }
 
 - (BOOL)startUserAudio:(NSError**)error {
-  if (_userStarted && _host.status.active) return YES;
+  if (_lifecycle.user_started && _host.status.active) return YES;
   if (![_host startWithError:error]) {
     _lastStartStatus = error != nullptr && *error != nil ? (*error).code : -1;
-    _userStarted = NO;
+    mol_ios_audio_lifecycle_start_failed(&_lifecycle);
     return NO;
   }
   _lastStartStatus = 0;
-  _userStarted = YES;
-  [self restoreRuntimeState];
+  [self applyLifecycleActions:mol_ios_audio_lifecycle_start_succeeded(&_lifecycle)];
   return YES;
 }
 
@@ -502,40 +479,39 @@ NSString* failure_response(NSString* message) {
 }
 
 - (void)updateStateForCommand:(std::uint32_t)type integer0:(std::int64_t)integer0 {
-  switch (type) {
-    case kCommandTransportStart:
-      _transportRunning = YES;
-      break;
-    case kCommandTransportStop:
-      _transportRunning = NO;
-      break;
-    case kCommandPlaybackStart: {
-      NSData* sequence = [_host exportRecording];
-      if (sequence.length > 0U && sequence.length <= kMaximumRecordingBytes) {
-        _loadedSequence = [sequence copy];
-        [self persistLoadedSequence];
-      }
-      _playbackRunning = YES;
-      break;
+  if (type == kCommandPlaybackStart) {
+    NSData* sequence = [_host exportRecording];
+    if (sequence.length > 0U && sequence.length <= kMaximumRecordingBytes) {
+      _loadedSequence = [sequence copy];
+      [self persistLoadedSequence];
     }
-    case kCommandPlaybackStop:
-      _playbackRunning = NO;
-      break;
-    case kCommandSetMetronome:
-      _metronomeEnabled = integer0 != 0;
-      break;
-    case kCommandResetEngine:
-      _transportRunning = NO;
-      _playbackRunning = NO;
-      _metronomeEnabled = NO;
-      _loadedSequence = nil;
-      [_replayControls removeAllObjects];
-      [self removePersistedSequence];
-      break;
-    default:
-      break;
+  } else if (type == kCommandResetEngine) {
+    _loadedSequence = nil;
+    [_replayControls removeAllObjects];
+    [self removePersistedSequence];
   }
-  if (!_uiForeground && ![self allowsBackgroundContinuation]) [self stopUserAudio];
+  [self applyLifecycleActions:mol_ios_audio_lifecycle_command_submitted(
+                                  &_lifecycle, type, static_cast<std::int32_t>(integer0))];
+}
+
+- (void)applyLifecycleActions:(std::uint32_t)actions {
+  if (has_lifecycle_action(actions, MOL_IOS_AUDIO_ACTION_ALL_NOTES_OFF) && _host.status.active) {
+    (void)[_host submitCommandType:kCommandAllNotesOff
+                         gestureId:0U
+                          integer0:0
+                          integer1:0
+                          integer2:0
+                          integer3:0
+                           scalar0:0.0F
+                           scalar1:0.0F];
+  }
+  if (has_lifecycle_action(actions, MOL_IOS_AUDIO_ACTION_STOP)) {
+    [self stopUserAudio];
+    return;
+  }
+  if (has_lifecycle_action(actions, MOL_IOS_AUDIO_ACTION_RESTORE_STATE)) {
+    [self restoreRuntimeState];
+  }
 }
 
 - (void)restoreRuntimeState {
@@ -554,7 +530,7 @@ NSString* failure_response(NSString* message) {
                            scalar0:command[6].floatValue
                            scalar1:command[7].floatValue];
   }
-  if (_playbackRunning) {
+  if (_lifecycle.playback_running) {
     (void)[_host submitCommandType:kCommandPlaybackStart
                          gestureId:0U
                           integer0:0
@@ -564,7 +540,7 @@ NSString* failure_response(NSString* message) {
                            scalar0:0.0F
                            scalar1:0.0F];
   }
-  if (_transportRunning) {
+  if (_lifecycle.transport_running) {
     (void)[_host submitCommandType:kCommandTransportStart
                          gestureId:0U
                           integer0:0
@@ -584,6 +560,7 @@ NSString* failure_response(NSString* message) {
 - (void)pumpNativeEvents {
   if (!_host.status.active) return;
   NSArray<NSNumber*>* fields = [_host pollEvents];
+  std::uint32_t lifecycleActions = MOL_IOS_AUDIO_ACTION_NONE;
   for (NSUInteger offset = 0U; offset + kEventFieldCount <= fields.count;
        offset += kEventFieldCount) {
     const std::uint32_t type = fields[offset].unsignedIntValue;
@@ -595,7 +572,7 @@ NSString* failure_response(NSString* message) {
         [self persistLoadedSequence];
       }
     } else if (type == kEventPlaybackChanged) {
-      _playbackRunning = detail != 0U;
+      lifecycleActions |= mol_ios_audio_lifecycle_playback_changed(&_lifecycle, detail != 0U);
     }
     while (_pendingEvents.count + kEventFieldCount > kMaximumPendingEventFields) {
       [_pendingEvents removeObjectsInRange:NSMakeRange(0U, kEventFieldCount)];
@@ -603,31 +580,29 @@ NSString* failure_response(NSString* message) {
     [_pendingEvents
         addObjectsFromArray:[fields subarrayWithRange:NSMakeRange(offset, kEventFieldCount)]];
   }
-  if (!_uiForeground && ![self allowsBackgroundContinuation]) [self stopUserAudio];
-}
-
-- (BOOL)allowsBackgroundContinuation {
-  return _playbackRunning || (_metronomeEnabled && _transportRunning);
+  [self applyLifecycleActions:lifecycleActions];
 }
 
 - (void)hostDidRestart:(NSNotification*)notification {
-  if (notification.object != _host || !_userStarted) return;
-  _routeRevision += 1U;
-  [self restoreRuntimeState];
+  if (notification.object != _host) return;
+  [self applyLifecycleActions:mol_ios_audio_lifecycle_host_restarted(&_lifecycle)];
 }
 
 - (void)hostMediaServicesReset:(NSNotification*)notification {
-  if (notification.object != _host || !_userStarted) return;
-  _routeRevision += 1U;
-  if (_uiForeground || [self allowsBackgroundContinuation]) {
+  if (notification.object != _host) return;
+  const std::uint32_t actions = mol_ios_audio_lifecycle_media_services_reset(&_lifecycle);
+  if (has_lifecycle_action(actions, MOL_IOS_AUDIO_ACTION_RESTART)) {
     NSError* error = nil;
     if ([_host startWithError:&error]) {
-      [self restoreRuntimeState];
+      _lastStartStatus = 0;
+      [self applyLifecycleActions:mol_ios_audio_lifecycle_restart_completed(&_lifecycle, true)];
       return;
     }
-    _lastStartStatus = error.code;
+    _lastStartStatus = error != nil ? error.code : -1;
+    [self applyLifecycleActions:mol_ios_audio_lifecycle_restart_completed(&_lifecycle, false)];
+    return;
   }
-  [self stopUserAudio];
+  [self applyLifecycleActions:actions];
 }
 
 - (NSURL*)createSequenceURL {

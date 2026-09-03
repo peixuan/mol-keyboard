@@ -304,6 +304,19 @@ mol_enable_warnings(mol_platform_audio_runtime_tests)
 mol_enable_optional_instrumentation(mol_platform_audio_runtime_tests)
 add_test(NAME mol_platform_audio_runtime_tests COMMAND mol_platform_audio_runtime_tests)
 
+add_executable(
+  mol_ios_audio_lifecycle_tests
+  unit/test_ios_audio_lifecycle.c
+  ${PROJECT_SOURCE_DIR}/platforms/ios/mol_ios_audio_lifecycle.c)
+target_include_directories(mol_ios_audio_lifecycle_tests
+                           PRIVATE ${PROJECT_SOURCE_DIR}/platforms/ios)
+target_link_libraries(mol_ios_audio_lifecycle_tests PRIVATE mol::core)
+set_target_properties(mol_ios_audio_lifecycle_tests PROPERTIES C_EXTENSIONS OFF
+                                                                C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_ios_audio_lifecycle_tests)
+mol_enable_optional_instrumentation(mol_ios_audio_lifecycle_tests)
+add_test(NAME mol_ios_audio_lifecycle_tests COMMAND mol_ios_audio_lifecycle_tests)
+
 add_executable(mol_c_consumer consumers/c_consumer.c)
 target_link_libraries(mol_c_consumer PRIVATE mol::core)
 set_target_properties(mol_c_consumer PROPERTIES C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
