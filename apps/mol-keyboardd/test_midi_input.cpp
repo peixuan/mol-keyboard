@@ -112,6 +112,32 @@ void test_pressure_mode_messages_and_release() {
   EXPECT_TRUE(commands.back().command_type == MOL_COMMAND_SET_PARAMETER);
 }
 
+void test_repeat_bound_and_sink_failure() {
+  std::vector<mol_command_t> commands;
+  molkeyboardd::MidiStreamDecoder decoder(
+      11u, 0u, [&commands](const mol_command_t& command) {
+        commands.push_back(command);
+        return MOL_OK;
+      });
+  const std::uint8_t repeated[] = {0x90u, 60u, 1u, 60u, 2u, 60u, 3u,
+                                    60u,   4u,  60u, 5u};
+  EXPECT_TRUE(decoder.feed(repeated, sizeof(repeated)) == MOL_OK);
+  EXPECT_TRUE(commands.size() == 6u && decoder.active_note_count() == 4u);
+  EXPECT_TRUE(commands[4].command_type == MOL_COMMAND_NOTE_OFF &&
+              commands[4].gesture_id == commands[0].gesture_id &&
+              commands[5].command_type == MOL_COMMAND_NOTE_ON);
+  const std::uint8_t releases[] = {0x80u, 60u, 0u, 60u, 0u, 60u, 0u, 60u, 0u};
+  EXPECT_TRUE(decoder.feed(releases, sizeof(releases)) == MOL_OK);
+  EXPECT_TRUE(decoder.active_note_count() == 0u);
+
+  molkeyboardd::MidiStreamDecoder rejecting(
+      12u, 0u, [](const mol_command_t&) { return MOL_ERROR_QUEUE_FULL; });
+  const std::uint8_t note[] = {0x90u, 64u, 127u};
+  EXPECT_TRUE(rejecting.feed(note, sizeof(note)) == MOL_ERROR_QUEUE_FULL);
+  EXPECT_TRUE(rejecting.active_note_count() == 0u);
+  rejecting.release_all();
+}
+
 }  // namespace
 
 int main() {
@@ -119,6 +145,7 @@ int main() {
   test_controls_and_program();
   test_filtering_and_system_bytes();
   test_pressure_mode_messages_and_release();
+  test_repeat_bound_and_sink_failure();
   if (failures != 0) {
     std::fprintf(stderr, "%d test expectations failed\n", failures);
     return 1;
