@@ -64,6 +64,7 @@ install(
 if(MOL_BUILD_TESTS)
   add_executable(mol_midi_input_tests test_midi_input.cpp midi_input.cpp)
   target_link_libraries(mol_midi_input_tests PRIVATE mol::core)
+  target_compile_features(mol_midi_input_tests PRIVATE cxx_std_17)
   set_target_properties(mol_midi_input_tests PROPERTIES CXX_EXTENSIONS OFF
                                                         CXX_STANDARD_REQUIRED ON)
   mol_enable_warnings(mol_midi_input_tests)
