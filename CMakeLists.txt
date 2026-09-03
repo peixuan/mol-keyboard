@@ -110,7 +110,7 @@ set_target_properties(
 mol_enable_warnings(mol_platform_audio_runtime)
 mol_enable_optional_instrumentation(mol_platform_audio_runtime)
 
-if(NOT CMAKE_CROSSCOMPILING AND (MOL_BUILD_TOOLS OR MOL_BUILD_DAEMON OR MOL_BUILD_FUZZERS))
+if(MOL_BUILD_TOOLS OR MOL_BUILD_DAEMON OR MOL_BUILD_FUZZERS)
   add_library(mol_json STATIC apps/mol-seq/json.cpp)
   add_library(mol::json ALIAS mol_json)
   target_include_directories(mol_json PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/apps/mol-seq)
