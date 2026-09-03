@@ -8,6 +8,7 @@ set(MOL_APPLE_BUNDLE_IDENTIFIER "cn.zhangpeixuan.molkeyboard" CACHE STRING
 set(MOL_HARMONY_BUNDLE_NAME "cn.zhangpeixuan.molkeyboard" CACHE STRING
     "Default HarmonyOS bundle name")
 
+option(BUILD_SHARED_LIBS "Build mol_core as a shared library" OFF)
 option(MOL_BUILD_TESTS "Build automated tests" ON)
 option(MOL_BUILD_STRESS_TESTS "Build opt-in long-duration and recovery tests" OFF)
 option(MOL_BUILD_FUZZERS "Build sanitizer-backed parser fuzz targets" OFF)

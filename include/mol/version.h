@@ -4,6 +4,8 @@
 
 #include <stdint.h>
 
+#include "mol/export.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -13,10 +15,10 @@ extern "C" {
 #define MOL_API_VERSION ((MOL_API_VERSION_MAJOR << 16u) | MOL_API_VERSION_MINOR)
 
 /** Returns the packed public API version. */
-uint32_t mol_get_api_version(void);
+MOL_API uint32_t mol_get_api_version(void);
 
 /** Returns the semantic project version as a static UTF-8 string. */
-const char* mol_get_version_string(void);
+MOL_API const char* mol_get_version_string(void);
 
 #ifdef __cplusplus
 }

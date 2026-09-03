@@ -79,6 +79,16 @@
       }
     },
     {
+      "name": "ci-shared",
+      "inherits": "base",
+      "displayName": "Shared Core ABI",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_SHARED_LIBS": "ON",
+        "MOL_VALIDATE_MOBILE_SOURCES": "OFF"
+      }
+    },
+    {
       "name": "ci-windows-arm64-cross",
       "inherits": "base",
       "displayName": "Windows ARM64 LLVM-MinGW Cross Build",
@@ -276,6 +286,7 @@
     { "name": "ci-linux-clang", "configurePreset": "ci-linux-clang" },
     { "name": "ci-linux-aarch64", "configurePreset": "ci-linux-aarch64" },
     { "name": "ci-windows-msvc", "configurePreset": "ci-windows-msvc" },
+    { "name": "ci-shared", "configurePreset": "ci-shared" },
     { "name": "ci-windows-arm64-cross", "configurePreset": "ci-windows-arm64-cross" },
     { "name": "fuzz-clang", "configurePreset": "fuzz-clang" },
     { "name": "coverage-clang", "configurePreset": "coverage-clang" },
@@ -297,6 +308,7 @@
     { "name": "ci-linux-gcc", "configurePreset": "ci-linux-gcc", "output": { "outputOnFailure": true } },
     { "name": "ci-linux-clang", "configurePreset": "ci-linux-clang", "output": { "outputOnFailure": true } },
     { "name": "ci-windows-msvc", "configurePreset": "ci-windows-msvc", "output": { "outputOnFailure": true } },
+    { "name": "ci-shared", "configurePreset": "ci-shared", "output": { "outputOnFailure": true } },
     { "name": "fuzz-clang", "configurePreset": "fuzz-clang", "output": { "outputOnFailure": true } },
     { "name": "coverage-clang", "configurePreset": "coverage-clang", "output": { "outputOnFailure": true } },
     { "name": "tsan-clang", "configurePreset": "tsan-clang", "output": { "outputOnFailure": true }, "environment": { "TSAN_OPTIONS": "halt_on_error=1" } },

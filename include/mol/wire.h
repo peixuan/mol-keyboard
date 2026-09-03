@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "mol/command.h"
+#include "mol/export.h"
 #include "mol/result.h"
 #include "mol/version.h"
 
@@ -64,14 +65,16 @@ typedef struct mol_wire_event_v1 {
 } mol_wire_event_v1_t;
 
 /** Encodes one canonical fixed-size little-endian MolWireEventV1 packet. */
-mol_result_t mol_wire_event_v1_encode(const mol_wire_event_v1_t* event, uint8_t* output,
-                                      size_t capacity);
+MOL_API mol_result_t mol_wire_event_v1_encode(const mol_wire_event_v1_t* event, uint8_t* output,
+                                              size_t capacity);
 
 /** Decodes exactly one fixed-size MolWireEventV1 packet with strict validation. */
-mol_result_t mol_wire_event_v1_decode(const uint8_t* data, size_t size, mol_wire_event_v1_t* event);
+MOL_API mol_result_t mol_wire_event_v1_decode(const uint8_t* data, size_t size,
+                                              mol_wire_event_v1_t* event);
 
 /** Converts a validated packet to a core command when the control is supported. */
-mol_result_t mol_wire_event_v1_to_command(const mol_wire_event_v1_t* event, mol_command_t* command);
+MOL_API mol_result_t mol_wire_event_v1_to_command(const mol_wire_event_v1_t* event,
+                                                  mol_command_t* command);
 
 #ifdef __cplusplus
 }

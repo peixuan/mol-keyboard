@@ -8,6 +8,7 @@
 #include "mol/capabilities.h"
 #include "mol/command.h"
 #include "mol/event.h"
+#include "mol/export.h"
 #include "mol/result.h"
 #include "mol/sequence.h"
 #include "mol/version.h"
@@ -69,53 +70,60 @@ typedef struct mol_engine_state {
 } mol_engine_state_t;
 
 /** Returns a portable default Standard-profile configuration. */
-mol_engine_config_t mol_engine_config_default(void);
+MOL_API mol_engine_config_t mol_engine_config_default(void);
 
 /** Returns the minimum required alignment for caller-owned engine memory. */
-size_t mol_engine_memory_alignment(void);
+MOL_API size_t mol_engine_memory_alignment(void);
 
 /** Returns required bytes, or zero when the configuration is invalid. */
-size_t mol_engine_query_memory(const mol_engine_config_t* config);
+MOL_API size_t mol_engine_query_memory(const mol_engine_config_t* config);
 
 /** Initializes an engine entirely inside caller-owned memory. */
-mol_result_t mol_engine_init(void* memory, size_t memory_size, const mol_engine_config_t* config,
-                             mol_engine_t** out_engine);
+MOL_API mol_result_t mol_engine_init(void* memory, size_t memory_size,
+                                     const mol_engine_config_t* config,
+                                     mol_engine_t** out_engine);
 
 /** Invalidates the engine without releasing caller-owned memory. */
-void mol_engine_shutdown(mol_engine_t* engine);
+MOL_API void mol_engine_shutdown(mol_engine_t* engine);
 
 /** Restores deterministic initial state while retaining configuration. */
-void mol_engine_reset(mol_engine_t* engine);
+MOL_API void mol_engine_reset(mol_engine_t* engine);
 
 /** Submits a versioned music command. */
-mol_result_t mol_engine_submit(mol_engine_t* engine, const mol_command_t* command);
+MOL_API mol_result_t mol_engine_submit(mol_engine_t* engine, const mol_command_t* command);
 
 /** Copies a validated sequence into caller-owned engine storage for later playback. */
-mol_result_t mol_engine_load_sequence(mol_engine_t* engine, const mol_sequence_config_t* config,
-                                      const mol_sequence_event_t* events, uint32_t event_count);
+MOL_API mol_result_t mol_engine_load_sequence(mol_engine_t* engine,
+                                              const mol_sequence_config_t* config,
+                                              const mol_sequence_event_t* events,
+                                              uint32_t event_count);
 
 /** Copies the current recording and captured initial state into caller storage. */
-mol_result_t mol_engine_copy_recording(const mol_engine_t* engine,
-                                       mol_sequence_config_t* out_config,
-                                       mol_sequence_event_t* events, uint32_t capacity,
-                                       uint32_t* out_event_count);
+MOL_API mol_result_t mol_engine_copy_recording(const mol_engine_t* engine,
+                                               mol_sequence_config_t* out_config,
+                                               mol_sequence_event_t* events, uint32_t capacity,
+                                               uint32_t* out_event_count);
 
 /** Renders interleaved floating-point PCM without allocation. */
-mol_result_t mol_engine_render_interleaved_f32(mol_engine_t* engine, float* output,
-                                               uint32_t frame_count, uint32_t channel_count);
+MOL_API mol_result_t mol_engine_render_interleaved_f32(mol_engine_t* engine, float* output,
+                                                       uint32_t frame_count,
+                                                       uint32_t channel_count);
 
 /** Renders planar floating-point PCM without allocation. */
-mol_result_t mol_engine_render_planar_f32(mol_engine_t* engine, float* const* output_channels,
-                                          uint32_t frame_count, uint32_t channel_count);
+MOL_API mol_result_t mol_engine_render_planar_f32(mol_engine_t* engine,
+                                                  float* const* output_channels,
+                                                  uint32_t frame_count,
+                                                  uint32_t channel_count);
 
 /** Copies at most capacity queued events into caller storage. */
-uint32_t mol_engine_poll_events(mol_engine_t* engine, mol_event_t* events, uint32_t capacity);
+MOL_API uint32_t mol_engine_poll_events(mol_engine_t* engine, mol_event_t* events,
+                                        uint32_t capacity);
 
 /** Copies a read-only state snapshot into caller storage. */
-mol_result_t mol_engine_get_state(const mol_engine_t* engine, mol_engine_state_t* state);
+MOL_API mol_result_t mol_engine_get_state(const mol_engine_t* engine, mol_engine_state_t* state);
 
 /** Returns capabilities actually implemented by this engine build. */
-mol_capability_flags_t mol_engine_get_capabilities(const mol_engine_t* engine);
+MOL_API mol_capability_flags_t mol_engine_get_capabilities(const mol_engine_t* engine);
 
 #ifdef __cplusplus
 }

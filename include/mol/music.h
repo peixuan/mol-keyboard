@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 
+#include "mol/export.h"
 #include "mol/result.h"
 
 #ifdef __cplusplus
@@ -78,18 +79,18 @@ enum {
 };
 
 /** Returns the exact number of steps per quarter note for an arpeggiator rate. */
-uint32_t mol_arpeggiator_steps_per_quarter(mol_arpeggiator_rate_t rate);
+MOL_API uint32_t mol_arpeggiator_steps_per_quarter(mol_arpeggiator_rate_t rate);
 
 /** Maps one USB HID keyboard usage to the default C4-F6 MIDI-note range. */
-mol_result_t mol_keyboard_note_from_hid_usage(uint16_t usage, uint8_t* out_note);
+MOL_API mol_result_t mol_keyboard_note_from_hid_usage(uint16_t usage, uint8_t* out_note);
 
 /** Maps a MIDI note into a scale. Nearest ties resolve downward. */
-mol_result_t mol_scale_map_note(uint8_t note, uint8_t tonic, mol_scale_type_t scale,
-                                mol_scale_mapping_t mapping, uint8_t* out_note);
+MOL_API mol_result_t mol_scale_map_note(uint8_t note, uint8_t tonic, mol_scale_type_t scale,
+                                        mol_scale_mapping_t mapping, uint8_t* out_note);
 
 /** Expands a root into ascending MIDI notes and safely drops notes above 127. */
-mol_result_t mol_chord_expand(uint8_t root, mol_chord_mode_t chord, uint8_t* out_notes,
-                              uint32_t capacity, uint32_t* out_count);
+MOL_API mol_result_t mol_chord_expand(uint8_t root, mol_chord_mode_t chord, uint8_t* out_notes,
+                                      uint32_t capacity, uint32_t* out_count);
 
 #ifdef __cplusplus
 }

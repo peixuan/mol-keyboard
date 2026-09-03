@@ -4,6 +4,8 @@
 
 #include <stdint.h>
 
+#include "mol/export.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -27,7 +29,7 @@ enum {
 };
 
 /** Returns a stable ASCII description for a result code. */
-const char* mol_result_string(mol_result_t result);
+MOL_API const char* mol_result_string(mol_result_t result);
 
 #ifdef __cplusplus
 }

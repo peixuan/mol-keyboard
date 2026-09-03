@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "mol/export.h"
 #include "mol/result.h"
 #include "mol/version.h"
 
@@ -107,31 +108,32 @@ typedef struct mol_patch {
 } mol_patch_t;
 
 /** Returns the stable FNV-1a hash stored in a compiled patch header. */
-uint32_t mol_patch_id_hash(const char* stable_id);
+MOL_API uint32_t mol_patch_id_hash(const char* stable_id);
 
 /** Validates all fixed-layout parameters and feature flags. */
-mol_result_t mol_patch_validate(const mol_patch_t* patch);
+MOL_API mol_result_t mol_patch_validate(const mol_patch_t* patch);
 
 /** Compiles one strict, flat .molpatch.json document into quantized parameters. */
-mol_result_t mol_patch_compile_json(const char* json, size_t json_size, mol_patch_t* out_patch);
+MOL_API mol_result_t mol_patch_compile_json(const char* json, size_t json_size,
+                                            mol_patch_t* out_patch);
 
 /** Encodes the versioned little-endian binary patch representation. */
-mol_result_t mol_patch_encode(const mol_patch_t* patch, uint8_t* output, size_t capacity,
-                              size_t* out_size);
+MOL_API mol_result_t mol_patch_encode(const mol_patch_t* patch, uint8_t* output, size_t capacity,
+                                      size_t* out_size);
 
 /** Validates and decodes an exact-size binary patch representation. */
-mol_result_t mol_patch_decode(const uint8_t* data, size_t size, mol_patch_t* out_patch);
+MOL_API mol_result_t mol_patch_decode(const uint8_t* data, size_t size, mol_patch_t* out_patch);
 
 /** Returns metadata for one of the 18 stable built-in preset identifiers. */
-const char* mol_preset_stable_id(mol_preset_id_t preset);
-const char* mol_preset_english_name(mol_preset_id_t preset);
-const char* mol_preset_chinese_name(mol_preset_id_t preset);
+MOL_API const char* mol_preset_stable_id(mol_preset_id_t preset);
+MOL_API const char* mol_preset_english_name(mol_preset_id_t preset);
+MOL_API const char* mol_preset_chinese_name(mol_preset_id_t preset);
 
 /** Returns the immutable compiled bytes for a built-in preset, or NULL. */
-const uint8_t* mol_builtin_patch_binary(mol_preset_id_t preset, size_t* out_size);
+MOL_API const uint8_t* mol_builtin_patch_binary(mol_preset_id_t preset, size_t* out_size);
 
 /** Decodes one built-in preset from its flash-safe compiled representation. */
-mol_result_t mol_builtin_patch_load(mol_preset_id_t preset, mol_patch_t* out_patch);
+MOL_API mol_result_t mol_builtin_patch_load(mol_preset_id_t preset, mol_patch_t* out_patch);
 
 #ifdef __cplusplus
 }

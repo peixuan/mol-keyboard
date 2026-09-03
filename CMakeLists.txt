@@ -13,6 +13,13 @@ include(cmake/MolOptions.cmake)
 include(cmake/MolWarnings.cmake)
 include(cmake/MolSanitizers.cmake)
 
+# Keep Windows shared-library consumers beside mol_core.dll.  This is scoped to
+# the opt-in shared configuration; the established static product layout stays
+# unchanged.
+if(WIN32 AND BUILD_SHARED_LIBS)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+endif()
+
 add_library(mol_core src/c_api/mol_engine.c src/control/mol_wire.c src/dsp/mol_dsp.c src/effects/mol_effects.c
                      src/music/mol_music.c src/patch/mol_patch.c
                      src/patch/mol_builtin_patches.c src/sequence/mol_sequence.c
@@ -45,7 +52,9 @@ target_include_directories(
           ${CMAKE_CURRENT_SOURCE_DIR}/src/effects)
 target_compile_features(mol_core PUBLIC c_std_11)
 if(UNIX AND NOT APPLE)
-  target_link_libraries(mol_core PRIVATE m)
+  # Preserve the same complete imported-target link contract for static and
+  # shared configurations on ELF hosts.
+  target_link_libraries(mol_core PUBLIC m)
 endif()
 set_target_properties(
   mol_core
@@ -54,8 +63,12 @@ set_target_properties(
              POSITION_INDEPENDENT_CODE ON
              EXPORT_NAME core
              VERSION ${PROJECT_VERSION}
-             SOVERSION ${PROJECT_VERSION_MAJOR}
-             WINDOWS_EXPORT_ALL_SYMBOLS ON)
+             SOVERSION ${PROJECT_VERSION_MAJOR})
+if(BUILD_SHARED_LIBS)
+  target_compile_definitions(mol_core PRIVATE MOL_CORE_BUILDING_LIBRARY=1
+                                      PUBLIC MOL_CORE_SHARED=1)
+  set_target_properties(mol_core PROPERTIES C_VISIBILITY_PRESET hidden)
+endif()
 mol_enable_warnings(mol_core)
 mol_enable_optional_instrumentation(mol_core)
 
@@ -95,7 +108,9 @@ else()
                     MOL_PROFILE_REVERB_SCALE_MILLI=1350)
 endif()
 
-add_library(mol_platform_audio_runtime platforms/common/mol_audio_runtime.c)
+# This is an internal adapter with no public export surface.  Keep it static even
+# when BUILD_SHARED_LIBS is used to exercise the supported shared mol_core ABI.
+add_library(mol_platform_audio_runtime STATIC platforms/common/mol_audio_runtime.c)
 add_library(mol::platform_audio_runtime ALIAS mol_platform_audio_runtime)
 target_include_directories(
   mol_platform_audio_runtime

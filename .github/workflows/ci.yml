@@ -48,6 +48,41 @@ jobs:
           cmake --build --preset ci-windows-msvc
           ctest --preset ci-windows-msvc
 
+  shared-core:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, windows-2025-vs2026, macos-15]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Configure shared core
+        run: cmake --preset ci-shared
+      - name: Build shared core and consumers
+        run: cmake --build --preset ci-shared
+      - name: Test shared core behavior
+        run: ctest --preset ci-shared
+      - name: Install ABI compliance tools
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends abi-dumper abi-compliance-checker
+      - name: Check v1 public symbols and ABI compatibility
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          nm --dynamic --defined-only --format=posix \
+            build/ci-shared/libmol_core.so.0.1.0 \
+            | cut -d ' ' -f 1 | LC_ALL=C sort > build/mol_core-current.symbols
+          diff -u abi/mol_core-1.0.symbols build/mol_core-current.symbols
+          abi-dumper build/ci-shared/libmol_core.so.0.1.0 \
+            -lver current -o build/mol_core-current.dump
+          abi-compliance-checker -l mol_core \
+            -old abi/mol_core-1.0.dump \
+            -new build/mol_core-current.dump \
+            -report-path build/mol_core-abi-report.html
+
   linux-aarch64-cross:
     runs-on: ubuntu-24.04
     steps:

@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "mol/command.h"
+#include "mol/export.h"
 #include "mol/music.h"
 #include "mol/patch.h"
 #include "mol/result.h"
@@ -98,32 +99,33 @@ typedef struct mol_sequence_writer {
 } mol_sequence_writer_t;
 
 /** Returns a deterministic v1 initial state. */
-mol_sequence_initial_state_t mol_sequence_initial_state_default(void);
+MOL_API mol_sequence_initial_state_t mol_sequence_initial_state_default(void);
 
 /** Returns a deterministic v1 sequence configuration for a sample rate. */
-mol_sequence_config_t mol_sequence_config_default(uint32_t sample_rate);
+MOL_API mol_sequence_config_t mol_sequence_config_default(uint32_t sample_rate);
 
 /** Validates versioned configuration fields and fixed v1 bounds. */
-mol_result_t mol_sequence_validate_config(const mol_sequence_config_t* config);
+MOL_API mol_result_t mol_sequence_validate_config(const mol_sequence_config_t* config);
 
 /** Validates one canonical event without writing it. */
-mol_result_t mol_sequence_validate_event(const mol_sequence_event_t* event);
+MOL_API mol_result_t mol_sequence_validate_event(const mol_sequence_event_t* event);
 
 /** Starts a forward-only stream. A valid file exists only after finalize succeeds. */
-mol_result_t mol_sequence_writer_init(mol_sequence_writer_t* writer,
-                                      const mol_sequence_config_t* config,
-                                      mol_sequence_write_fn write, void* user_data);
+MOL_API mol_result_t mol_sequence_writer_init(mol_sequence_writer_t* writer,
+                                              const mol_sequence_config_t* config,
+                                              mol_sequence_write_fn write, void* user_data);
 
 /** Appends one canonical event. Frames must be monotonic and finite. */
-mol_result_t mol_sequence_writer_append(mol_sequence_writer_t* writer,
-                                        const mol_sequence_event_t* event);
+MOL_API mol_result_t mol_sequence_writer_append(mol_sequence_writer_t* writer,
+                                                const mol_sequence_event_t* event);
 
 /** Appends a bounded optional metadata chunk identified by a little-endian FourCC. */
-mol_result_t mol_sequence_writer_add_metadata(mol_sequence_writer_t* writer, uint32_t chunk_type,
-                                              const uint8_t* data, size_t size);
+MOL_API mol_result_t mol_sequence_writer_add_metadata(mol_sequence_writer_t* writer,
+                                                      uint32_t chunk_type, const uint8_t* data,
+                                                      size_t size);
 
 /** Writes the event count, final frame, and CRC32 completion record. */
-mol_result_t mol_sequence_writer_finalize(mol_sequence_writer_t* writer);
+MOL_API mol_result_t mol_sequence_writer_finalize(mol_sequence_writer_t* writer);
 
 /**
  * Parses a forward-only stream with bounded scratch memory.
@@ -131,9 +133,9 @@ mol_result_t mol_sequence_writer_finalize(mol_sequence_writer_t* writer);
  * Callbacks may observe records before the final CRC is known. Validate untrusted
  * input in a separate pass when transactional delivery is required.
  */
-mol_result_t mol_sequence_read_stream(mol_sequence_read_fn read, void* read_user_data,
-                                      mol_sequence_config_t* out_config,
-                                      const mol_sequence_callbacks_t* callbacks);
+MOL_API mol_result_t mol_sequence_read_stream(mol_sequence_read_fn read, void* read_user_data,
+                                              mol_sequence_config_t* out_config,
+                                              const mol_sequence_callbacks_t* callbacks);
 
 #ifdef __cplusplus
 }

@@ -76,6 +76,10 @@ function(mol_add_miniaudio)
       "https://github.com/mackron/miniaudio/archive/${MOL_MINIAUDIO_COMMIT}.tar.gz"
     URL_HASH "SHA256=${MOL_MINIAUDIO_ARCHIVE_SHA256}"
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+  # miniaudio follows the directory-wide BUILD_SHARED_LIBS setting and does not
+  # publish a Windows DLL export contract.  It is an implementation detail of
+  # the desktop host, so do not let a shared mol_core build turn it into a DLL.
+  set(BUILD_SHARED_LIBS OFF)
   FetchContent_MakeAvailable(miniaudio)
 
   add_library(mol_miniaudio INTERFACE)
