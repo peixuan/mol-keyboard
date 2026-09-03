@@ -9,6 +9,7 @@ set(MOL_HARMONY_BUNDLE_NAME "cn.zhangpeixuan.molkeyboard" CACHE STRING
     "Default HarmonyOS bundle name")
 
 option(MOL_BUILD_TESTS "Build automated tests" ON)
+option(MOL_BUILD_STRESS_TESTS "Build opt-in long-duration and recovery tests" OFF)
 option(MOL_BUILD_FUZZERS "Build sanitizer-backed parser fuzz targets" OFF)
 option(MOL_BUILD_TOOLS "Build command-line tools" ON)
 option(MOL_BUILD_DESKTOP_AUDIO "Build the miniaudio desktop playback host" ON)
