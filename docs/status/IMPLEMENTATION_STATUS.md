@@ -528,17 +528,22 @@ python3 tools/package_audit.py --archive <archive> \
   --report-dir <report-directory> --expected-version 0.1.0
 ```
 
-A clean local clone of `d0fa3d6f96fe0df9e5dd61ae944bc5a9e1e6e030` with no
-copied repository build output or managed-dependency directory was built in a
-new directory. MSVC LTO Release passed 79/79 tests; Emscripten MinSizeRel passed
-32/32; a clean `npm ci` reported zero vulnerabilities, the Web unit suite
-passed 12/12, TypeScript strict checking passed, and the production bundle
-built. Fresh ESP32 and ESP32-S3 QEMU builds used the external official ESP-IDF
-6.1 installation, booted both firmware images, and passed their three-snapshot
-runtime gates with 107,904 and 104,960 rendered frames respectively, 12 input
-commands each, finite non-silent output, and zero render or write failures. The
-Emscripten configure used the Ninja executable shipped with Visual Studio
-because Ninja is not on this host's default `PATH`.
+A clean local clone of `67a9e5138692991839121ae57c8df38abfa6d701` with no
+copied repository build output or managed-dependency directory rebuilt 154
+MSVC targets and passed 82/82 LTO Release tests. A separate clean Emscripten
+build compiled 95 targets and passed 35/35 MinSizeRel tests. Both new Apple
+acceptance scripts retained Git mode `100755` and were executable after the
+clone. The clone reused only the externally installed pinned Emscripten SDK;
+its configure explicitly selected the Ninja executable shipped with Visual
+Studio because Ninja is not on this host's default `PATH`.
+
+The earlier clean clone of `d0fa3d6f96fe0df9e5dd61ae944bc5a9e1e6e030`
+also ran a clean `npm ci` with zero vulnerabilities, the 12/12 Web unit suite,
+strict TypeScript checking, the production bundle, and fresh ESP32/ESP32-S3
+QEMU builds through the external official ESP-IDF 6.1 installation. Both
+firmware images passed their three-snapshot runtime gates with 107,904 and
+104,960 rendered frames respectively, 12 input commands each, finite
+non-silent output, and zero render or write failures.
 
 ## Known failures
 
