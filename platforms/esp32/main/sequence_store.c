@@ -1,4 +1,8 @@
 /* SPDX-License-Identifier: Apache-2.0 */
+#if !defined(_WIN32)
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #include "sequence_store.h"
 
 #include <errno.h>
