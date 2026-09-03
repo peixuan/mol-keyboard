@@ -267,6 +267,7 @@ if(EMSCRIPTEN AND DEFINED ENV{EMSDK_NODE})
 endif()
 
 if(MOL_BUILD_TESTS)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
   enable_testing()
   add_test(
     NAME mol_dependency_license_audit
