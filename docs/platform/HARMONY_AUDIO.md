@@ -92,6 +92,13 @@ recovery, and cleanup with injected failures. This runs under MSVC, Linux GCC,
 Emscripten, Clang sanitizers, and AArch64 QEMU; it validates host logic and
 target instructions without claiming HarmonyOS services or hardware.
 
+The unchanged production Node-API module also runs inside a controlled N-API
+runtime. Tests invoke all 11 registered exports, strict arity/type/handle/range
+rejection, diagnostic object creation, bounded five-field event arrays, native
+handle finalization, recording ArrayBuffer export/load/playback, and route
+recovery through the public bridge. It passes across the same x64, Wasm,
+sanitizer, and AArch64 QEMU configurations.
+
 ## Verification boundary
 
 The full application project, native bridge, OHAudio host, ArkUI surface,
@@ -99,11 +106,12 @@ official lifecycle integrations, persistence, and audited HAP pipeline are
 implemented. The public OpenHarmony 5.0.0.71/API 12 toolchain builds and audits
 Debug and Release compatibility HAPs with ArkTS bytecode and both AArch64 and
 x86-64 native libraries. Windows MSVC and Linux Clang also compile the C++
-boundary with warnings as errors. The production OHAudio host passes controlled
-API execution across x64, Wasm, sanitizers, and AArch64 QEMU, and the repository
-audit checks the Stage declarations, exact keyboard table, complete control
-surface, private persistence, continuous-task/AVSession/AudioSession calls,
-executable host-simulation wiring, and absence of ArkTS PCM rendering.
+boundary with warnings as errors. The production Node-API bridge and OHAudio
+host pass controlled API execution across x64, Wasm, sanitizers, and AArch64
+QEMU, and the repository audit checks the Stage declarations, exact keyboard
+table, complete control surface, private persistence,
+continuous-task/AVSession/AudioSession calls, executable native-boundary
+simulation wiring, and absence of ArkTS PCM rendering.
 
 No DevEco Studio/HarmonyOS SDK, signing identity, emulator, or physical device
 is available on the current host. Therefore only the OpenHarmony compatibility

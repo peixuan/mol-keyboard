@@ -28,7 +28,7 @@ Linux ThreadSanitizer, optimized endurance, release-size budgets, dependency/lic
 and SBOM audits, Windows/Linux package audits, Android packaging, and clean
 checkout reproduction pass. Complete Windows ARM64 and Linux AArch64 desktop
 products now cross-build through checked-in presets, closing their local build
-gap. Linux AArch64 also passes an end-to-end QEMU product gate and 69/69 target
+gap. Linux AArch64 also passes an end-to-end QEMU product gate and 70/70 target
 tests, while execution on native ARM64 hosts remains unclaimed. Android
 emulator coverage now also stops and reopens AAudio across injected transient
 focus loss/gain. The exact background-policy state machine consumed by the iOS
@@ -38,8 +38,9 @@ rollback, and deactivation release behavior. A checked-in
 iPhone Simulator gate now installs and launches the packaged application and
 requires both production-UI readiness and valid/rejected reply-bridge behavior;
 it still requires a real Apple CI execution. The unchanged production
-HarmonyOS OHAudio host now executes against a controlled API model across
-MSVC, Linux GCC, Emscripten, Clang sanitizers, and AArch64 QEMU. M0 through M9 are
+HarmonyOS Node-API bridge and OHAudio host now execute against controlled API
+models across MSVC, Linux GCC, Emscripten, Clang sanitizers, and AArch64 QEMU.
+M0 through M9 are
 implementation-complete, but the Definition of Done is not complete: native
 ARM64 runtime, Apple and Harmony toolchains, current Safari, physical mobile
 devices, ESP32 hardware, physical audio routes, and instrumented end-to-end
@@ -47,14 +48,17 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`da4b708` (`test(harmony): simulate production OHAudio host`) is the latest
-locally validated code candidate. It links the unchanged production HarmonyOS
-`AudioHost` to a controlled OHAudio API 12 implementation and exercises fast
-startup, normal-mode fallback, negotiated-format rejection, variable-size
-non-silent PCM, route/interruption/error recovery, command validation, and
-record/export/load/playback. It passes under MSVC, Linux GCC, Emscripten,
-Clang ASan/UBSan, and AArch64 QEMU without claiming HarmonyOS runtime evidence.
-The preceding `221abd9` candidate completes the `68a4336` iOS hardware-key
+`bcde79a` (`test(harmony): execute native bridge contract`) is the latest
+locally validated code candidate. It runs the unchanged production Node-API
+module inside a controlled N-API runtime, invokes all 11 exports, and verifies
+strict arity/type/handle/range rejection, status objects, bounded event arrays,
+native handle finalization, recording ArrayBuffer round trips, and public bridge
+recovery. The preceding `da4b708` candidate links the unchanged production
+`AudioHost` to controlled OHAudio API 12 startup, fallback, PCM,
+route/interruption/error, command, and persistence models. Both pass under
+MSVC, Linux GCC, Emscripten, Clang ASan/UBSan, and AArch64 QEMU without claiming
+HarmonyOS runtime evidence. The preceding `221abd9` candidate completes the
+`68a4336` iOS hardware-key
 simulation: `MOLViewController` directly consumes the tested C11 ownership
 state for all 30 notes and Space sustain, with compile-time UIKit usage checks
 in the Apple source. The preceding `b255bef` candidate creates and
@@ -90,8 +94,8 @@ ESP32-S3 images boot under Espressif QEMU, mount/format transactional storage,
 pass the shared sequence and C4 checks, drain 12 production input commands, and
 render more than 100,000 frames with non-silent finite output and zero project
 failure counters. All four physical-board configurations still compile with
-the emulator option disabled. Windows MSVC Release passes 87/87 tests, Linux
-x86_64 GCC passes 88/88, and Emscripten MinSizeRel passes 39/39. System Chrome
+the emulator option disabled. Windows MSVC Release passes 88/88 tests, Linux
+x86_64 GCC passes 89/89, and Emscripten MinSizeRel passes 40/40. System Chrome
 on Windows and bundled Chromium on Linux each pass the five applicable desktop
 application cases, including a real platform daemon process and authenticated
 service controller. Current core coverage remains 94.10%, Clang static analysis passes
@@ -204,7 +208,7 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   `mol-patchc`, `mol-audio-analyze`, and `mol_core`, as Windows ARM64 COFF and
   Linux AArch64 ELF. CI also includes native Windows and Ubuntu ARM64 runners.
 - QEMU 10.2.1 executes the Linux AArch64 Release daemon, CLI, and renderer as a
-  fail-closed product gate. A separate Debug target build passes 69/69 tests,
+  fail-closed product gate. A separate Debug target build passes 70/70 tests,
   including the 18-preset audio golden, local IPC, nested daemon/renderer
   processes, null playback, latency analyzer, and C/C++ consumers.
 - The production desktop Web UI passed its applicable system-Chrome run on
@@ -271,10 +275,11 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   atomic recording persistence, and route/interruption restoration. The official
   OpenHarmony 5.0.0.71/API 12 public SDK now builds and audits Debug and Release
   compatibility HAPs with ArkTS bytecode plus AArch64 and x86-64 native audio
-  libraries. The exact production host also passes controlled OHAudio startup,
-  fallback, PCM, route/interruption/error recovery, persistence/playback, and
-  cleanup tests across x64, Wasm, sanitizers, and AArch64 QEMU. This is build
-  evidence for the compatibility product plus host simulation; no formal
+  libraries. The exact production Node-API bridge and OHAudio host also pass
+  controlled registration/validation, status/event/recording transfer, startup,
+  fallback, PCM, route/interruption/error recovery, and cleanup tests across
+  x64, Wasm, sanitizers, and AArch64 QEMU. This is build evidence for the
+  compatibility product plus native-boundary simulation; no formal
   DevEco/HarmonyOS build or runtime result is claimed here.
 - The M9 firmware now provides a configurable 5x6 GPIO matrix; shared BLE HID
   on both targets; Classic HID and A2DP Source/AVRCP on ESP32; USB boot HID on
@@ -305,9 +310,9 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   executable simulations and a CI-bound LaunchAgent product smoke. Native
   macOS application/service acceptance is the highest-priority external gate.
   The iOS production background-policy and hardware-key ownership state
-  machines, the HarmonyOS production OHAudio host simulation, and strongest
-  reachable device-free ESP32 firmware execution gate also pass; mobile and
-  ESP32 external acceptance follows the desktop gate.
+  machines, the HarmonyOS production native bridge/host simulations, and
+  strongest reachable device-free ESP32 firmware execution gate also pass;
+  mobile and ESP32 external acceptance follows the desktop gate.
   Documentation remains a draft and `v1.0.0` remains forbidden until all
   results pass.
 
@@ -344,7 +349,7 @@ cmake --build --preset dev-release
 ctest --preset dev-release --output-on-failure
 ```
 
-MSVC 19.51.36248 passes 87/87 tests in the current LTO Release build; the prior
+MSVC 19.51.36248 passes 88/88 tests in the current LTO Release build; the prior
 Debug build passed 78/78. These runs include the iOS production lifecycle
 policy, strict Web form protocol and HIL evidence-parser tests in addition to
 the independent daemon process, realtime runtime, local IPC, all service
@@ -354,7 +359,7 @@ GNU 15 Release+LTO presets previously passed 75/75 for Tiny, 76/76 for
 Standard, and 75/75 for Full. The Full run exercises 64 voices, 4,096 sequence
 events, the complete desktop daemon, and the expanded fixed host arenas.
 
-Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 88/88
+Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 89/89
 tests; the prior Clang 21.1.8 candidate passed 78/78. The current suite runs a
 real systemd user unit lifecycle plus the production macOS service smoke
 unchanged through a controlled launchd model and
@@ -396,7 +401,7 @@ cmake --build --preset wasm-release
 ctest --preset wasm-release --output-on-failure
 ```
 
-Emscripten 6.0.5 and Node.js 22.16.0 pass 39/39 tests in the current LTO
+Emscripten 6.0.5 and Node.js 22.16.0 pass 40/40 tests in the current LTO
 MinSizeRel build; the prior Debug candidate passed 31/31. Both configurations
 match the Native event, sequence-fixture, and 18-preset audio-metric goldens.
 
@@ -529,7 +534,7 @@ python3 tools/aarch64_emulation_gate.py \
   --report build/aarch64-emulation-report.json
 ```
 
-The local QEMU 10.2.1 run passed 69/69 AArch64 tests in 90.59 seconds. The
+The local QEMU 10.2.1 run passed 70/70 AArch64 tests in 92.88 seconds. The
 Release product report for `b3b7e14` passed daemon/CLI IPC, record/playback,
 doctor, self-test, finite benchmark, clean shutdown, and deterministic WAV
 validation. It is explicitly `simulated-runtime`, not native/device evidence.
@@ -610,8 +615,9 @@ tests.
 - Cross-platform source checks are not promoted to device verification.
 
 The HarmonyOS application descriptors, project audit, executable production
-host simulation, and native source-check boundary pass locally. Windows MSVC
-Release passes 87/87 tests, Linux GCC passes 88/88, and Emscripten passes 39/39.
+bridge/host simulations, and native source-check boundary pass locally. Windows
+MSVC Release passes 88/88 tests, Linux GCC passes 89/89, and Emscripten passes
+40/40.
 The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
 5.8.9 build and audit
 both Debug and Release compatibility HAPs; the Release artifact is an unsigned

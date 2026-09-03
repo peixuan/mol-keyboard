@@ -3,13 +3,13 @@
 ## Status
 
 The HarmonyOS application implementation is complete and source-checked. Its
-exact production OHAudio host now passes executable controlled-API simulations,
-including an AArch64 QEMU run. A separate OpenHarmony API 12 compatibility
-product is `build-verified` with the official public OpenHarmony SDK, but this
-does not qualify the formal HarmonyOS/DevEco product. Neither product is
-`runtime-verified` or `device-verified`: this Windows host has no DevEco Studio,
-HarmonyOS SDK, signing identity, emulator, or physical HarmonyOS/OpenHarmony
-device.
+exact production Node-API bridge and OHAudio host now pass executable
+controlled-API simulations, including AArch64 QEMU runs. A separate OpenHarmony
+API 12 compatibility product is `build-verified` with the official public
+OpenHarmony SDK, but this does not qualify the formal HarmonyOS/DevEco product.
+Neither product is `runtime-verified` or `device-verified`: this Windows host
+has no DevEco Studio, HarmonyOS SDK, signing identity, emulator, or physical
+HarmonyOS/OpenHarmony device.
 
 ## Implemented product path
 
@@ -77,8 +77,18 @@ record/export/load/playback. Failure injection rejects bad negotiated formats,
 renderer creation, and renderer startup. MSVC Release, Linux x86_64 GCC,
 Emscripten, and Clang ASan/UBSan execute this exact host. The same test also
 cross-compiles with GNU 15.2.0 and passes under AArch64 QEMU as part of the
-current 69/69 target suite. These are host API and target-instruction
+current 70/70 target suite. These are host API and target-instruction
 simulations, not HarmonyOS runtime or device evidence.
+
+The unchanged production `napi_module.cpp` also executes inside a controlled
+Node-API runtime while calling that same host. It registers and invokes all 11
+exports, creates and finalizes the 2 MiB native handle, enforces exact arity,
+type, handle, note, velocity, and recording-buffer rejection, returns the full
+diagnostic object, flattens real engine events into bounded five-field arrays,
+and round-trips recording ArrayBuffers through stop/start and playback. Route
+loss and recovery are observed through the public bridge rather than by calling
+the host directly. MSVC, Linux GCC, Emscripten, Clang ASan/UBSan, and AArch64
+QEMU all execute the exact production bridge.
 
 ArkTS strict checking found and drove fixes for explicitly typed selector data,
 the component `scale` name collision, API 12 AudioSession/WantAgent signatures,
@@ -91,11 +101,11 @@ handled, but only device execution can settle those runtime paths.
 
 MSVC 19.51 and Linux Clang 21.1.8 also compile the OHAudio host and Node-API
 bridge against the declaration-only API 12 source-check boundary with warnings
-as errors. The current Windows, Linux, and Emscripten suites pass 87/87, 88/88,
-and 39/39 respectively, including the executable host simulation and
+as errors. The current Windows, Linux, and Emscripten suites pass 88/88, 89/89,
+and 40/40 respectively, including the executable bridge/host simulations and
 `mol_harmony_project_audit`; both build wrappers pass shell syntax checks. This
-is real OpenHarmony package evidence plus controlled host simulation, not a
-formal HarmonyOS build or runtime/device result.
+is real OpenHarmony package evidence plus controlled native-boundary
+simulation, not a formal HarmonyOS build or runtime/device result.
 
 ## Reproducible HarmonyOS commands
 

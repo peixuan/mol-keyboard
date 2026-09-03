@@ -1,7 +1,7 @@
 # M5 Desktop Headless Evidence
 
 Verified on 2026-09-03 at commit `c87e1a1`; the desktop-first regression and
-device-free acceptance were refreshed through code candidate `da4b708`.
+device-free acceptance were refreshed through code candidate `bcde79a`.
 
 ## Implemented surface
 
@@ -54,12 +54,12 @@ device-free acceptance were refreshed through code candidate `da4b708`.
 | Configuration | Result | Relevant evidence |
 |---|---:|---|
 | Windows MSVC Debug | 78/78 | local IPC recovery, all 41 RPC methods, runtime callback, independent daemon process, CLI, recording/playback, rendering, macOS interface simulations |
-| Windows MSVC LTO Release | 87/87 | current optimized suite plus real temporary Startup-shortcut product lifecycle, portable service-asset audits, and iOS/HarmonyOS host simulations |
-| Linux x86_64 GCC (WSL) | 88/88 | current Unix socket/null-audio product suite, real systemd user-service lifecycle, executable macOS LaunchAgent orchestration simulation, portable Windows service audit, and iOS/HarmonyOS host simulations |
+| Windows MSVC LTO Release | 88/88 | current optimized suite plus real temporary Startup-shortcut product lifecycle, portable service-asset audits, and iOS/HarmonyOS native-boundary simulations |
+| Linux x86_64 GCC (WSL) | 89/89 | current Unix socket/null-audio product suite, real systemd user-service lifecycle, executable macOS LaunchAgent orchestration simulation, portable Windows service audit, and iOS/HarmonyOS native-boundary simulations |
 | Linux x86_64 Clang (WSL) | 78/78 | Unix socket mode/cleanup, null-audio service process, CLI lifecycle, Linux adapter compilation, macOS interface simulations |
-| Linux AArch64 QEMU 10.2.1 | 69/69 | target core/DSP/music tests, 18-preset metrics, mobile host simulations, null playback, nested daemon process, CLI/render lifecycle |
+| Linux AArch64 QEMU 10.2.1 | 70/70 | target core/DSP/music tests, 18-preset metrics, mobile native-boundary simulations, null playback, nested daemon process, CLI/render lifecycle |
 | Windows Clang ASan/UBSan | 30/30 | all sanitizer-enabled portable/control tests and four 20-second parser fuzz sessions |
-| Emscripten MinSizeRel | 39/39 | current core/worklet regression plus platform acceptance-project audits and iOS/HarmonyOS host simulations |
+| Emscripten MinSizeRel | 40/40 | current core/worklet regression plus platform acceptance-project audits and iOS/HarmonyOS native-boundary simulations |
 | ESP32 / ESP32-S3 | build passed | firmware regression; application binaries remain 153,440 and 179,328 bytes |
 
 The production Web/PWA application was also run against the current desktop
@@ -109,7 +109,7 @@ Release AArch64 daemon and CLI over a private Unix socket. Record/playback,
 doctor, self-test, a 96,000-frame finite benchmark, all-sound-off, persistent
 configuration, and clean shutdown passed; the AArch64 renderer produced a
 finite, non-silent 4.25-second WAV with no clipping or underruns. A separate
-Debug cross-test build passed 69/69 tests. The JSON report labels this
+Debug cross-test build passed 70/70 tests. The JSON report labels this
 `simulated-runtime` and excludes native scheduling, physical audio/input,
 latency, route change, suspend, and device-loss claims.
 
