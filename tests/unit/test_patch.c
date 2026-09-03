@@ -99,6 +99,68 @@ static void test_rejected_inputs(void) {
   binary[MOL_PATCH_BINARY_HEADER_SIZE + 3u] ^= 0x55u;
   patch.struct_size = (uint32_t)sizeof(patch);
   EXPECT_TRUE(mol_patch_decode(binary, size, &patch) == MOL_ERROR_INVALID_ARGUMENT);
+
+  EXPECT_TRUE(mol_patch_id_hash(NULL) == 0u);
+  EXPECT_TRUE(mol_patch_validate(NULL) == MOL_ERROR_INVALID_ARGUMENT);
+  memset(&patch, 0, sizeof(patch));
+  patch.struct_size = (uint32_t)sizeof(patch) - 1u;
+  EXPECT_TRUE(mol_patch_validate(&patch) == MOL_ERROR_INVALID_ARGUMENT);
+  patch.struct_size = (uint32_t)sizeof(patch);
+  patch.api_version = MOL_API_VERSION + 1u;
+  EXPECT_TRUE(mol_patch_validate(&patch) == MOL_ERROR_UNSUPPORTED_VERSION);
+
+  EXPECT_TRUE(mol_patch_compile_json(NULL, 1u, &patch) == MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_patch_compile_json(valid_patch, 0u, &patch) == MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_patch_compile_json(valid_patch, MOL_PATCH_MAX_JSON_SIZE + 1u, &patch) ==
+              MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_patch_compile_json(valid_patch, sizeof(valid_patch) - 1u, NULL) ==
+              MOL_ERROR_INVALID_ARGUMENT);
+  patch.struct_size = 0u;
+  EXPECT_TRUE(mol_patch_compile_json(valid_patch, sizeof(valid_patch) - 1u, &patch) ==
+              MOL_ERROR_INVALID_ARGUMENT);
+  patch.struct_size = (uint32_t)sizeof(patch);
+  EXPECT_TRUE(mol_patch_compile_json("[]", 2u, &patch) == MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_patch_compile_json("{1}", strlen("{1}"), &patch) == MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_patch_compile_json("{\"id\" \"grand-piano\"}", strlen("{\"id\" \"grand-piano\"}"),
+                                     &patch) == MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_patch_compile_json("{\"\\u12xz\":1}", strlen("{\"\\u12xz\":1}"), &patch) ==
+              MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_patch_compile_json("{\"bad\\q\":1}", strlen("{\"bad\\q\":1}"), &patch) ==
+              MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_patch_compile_json("{\"bad\\", strlen("{\"bad\\"), &patch) ==
+              MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_patch_compile_json("{\"id\":\"unterminated", strlen("{\"id\":\"unterminated"),
+                                     &patch) == MOL_ERROR_INVALID_ARGUMENT);
+
+  EXPECT_TRUE(mol_patch_encode(&patch, binary, sizeof(binary), NULL) == MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_patch_compile_json(valid_patch, sizeof(valid_patch) - 1u, &patch) == MOL_OK);
+  patch.api_version = MOL_API_VERSION + 1u;
+  EXPECT_TRUE(mol_patch_encode(&patch, binary, sizeof(binary), &size) ==
+              MOL_ERROR_UNSUPPORTED_VERSION);
+  patch.api_version = MOL_API_VERSION;
+  EXPECT_TRUE(mol_patch_encode(&patch, NULL, 0u, &size) == MOL_ERROR_BUFFER_TOO_SMALL);
+  EXPECT_TRUE(mol_patch_decode(NULL, size, &patch) == MOL_ERROR_INVALID_ARGUMENT);
+  patch.struct_size = 0u;
+  EXPECT_TRUE(mol_patch_decode(binary, size, &patch) == MOL_ERROR_INVALID_ARGUMENT);
+}
+
+static void test_synthesis_feature_derivation(void) {
+  static const char* const models[MOL_SYNTHESIS_MODEL_COUNT] = {"subtractive", "fm2",   "additive",
+                                                                "pluck",       "modal", "formant"};
+  const char* marker = strstr(valid_patch, "\"modal\"");
+  char variant[sizeof(valid_patch) + 32u];
+  EXPECT_TRUE(marker != NULL);
+  if (marker == NULL) return;
+  for (uint32_t model = 0u; model < MOL_SYNTHESIS_MODEL_COUNT; ++model) {
+    mol_patch_t patch = {0};
+    const int written =
+        snprintf(variant, sizeof(variant), "%.*s\"%s\"%s", (int)(marker - valid_patch), valid_patch,
+                 models[model], marker + strlen("\"modal\""));
+    patch.struct_size = (uint32_t)sizeof(patch);
+    EXPECT_TRUE(written > 0 && (size_t)written < sizeof(variant));
+    EXPECT_TRUE(mol_patch_compile_json(variant, (size_t)written, &patch) == MOL_OK);
+    EXPECT_TRUE(patch.synthesis_model == model);
+  }
 }
 
 static void test_metadata(void) {
@@ -127,6 +189,7 @@ static void test_metadata(void) {
 int main(void) {
   test_compile_encode_decode();
   test_rejected_inputs();
+  test_synthesis_feature_derivation();
   test_metadata();
   if (failures != 0) {
     (void)fprintf(stderr, "%d test expectations failed\n", failures);

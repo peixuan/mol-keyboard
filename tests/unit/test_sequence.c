@@ -6,7 +6,7 @@
 #include "mol/mol.h"
 
 #define TEST_BUFFER_SIZE 8192u
-#define TEST_EVENT_CAPACITY 16u
+#define TEST_EVENT_CAPACITY 32u
 
 typedef struct memory_stream {
   uint8_t data[TEST_BUFFER_SIZE];
@@ -282,9 +282,138 @@ static void test_truncation_corruption_and_writer_bounds(void) {
   }
 }
 
+static void populate_payload(mol_sequence_event_t* event) {
+  switch (event->command_type) {
+    case MOL_COMMAND_NOTE_ON:
+    case MOL_COMMAND_NOTE_OFF:
+    case MOL_COMMAND_POLY_PRESSURE:
+      event->payload.note.note = 64u;
+      event->payload.note.velocity = 0.5f;
+      break;
+    case MOL_COMMAND_PITCH_BEND:
+      event->payload.scalar.value = -0.25f;
+      break;
+    case MOL_COMMAND_SUSTAIN:
+      event->payload.scalar.value = 0.75f;
+      break;
+    case MOL_COMMAND_SET_MASTER_GAIN:
+      event->payload.scalar.value = 0.2f;
+      break;
+    case MOL_COMMAND_SET_TEMPO:
+      event->payload.scalar.value = 123.0f;
+      break;
+    case MOL_COMMAND_SET_PRESET:
+      event->payload.preset.preset = MOL_PRESET_FLUTE;
+      event->payload.preset.hard_switch = 1u;
+      break;
+    case MOL_COMMAND_SET_PARAMETER:
+      event->payload.parameter.parameter = MOL_PARAMETER_CHORUS_MIX;
+      event->payload.parameter.value = 0.4f;
+      break;
+    case MOL_COMMAND_SET_OCTAVE_SHIFT:
+      event->payload.integer.value = -2;
+      break;
+    case MOL_COMMAND_SET_TRANSPOSE:
+      event->payload.integer.value = 7;
+      break;
+    case MOL_COMMAND_SET_CHORD_MODE:
+      event->payload.integer.value = MOL_CHORD_MINOR_7;
+      break;
+    case MOL_COMMAND_SET_SCALE:
+      event->payload.scale.type = MOL_SCALE_MIXOLYDIAN;
+      event->payload.scale.tonic = 5u;
+      event->payload.scale.mapping = MOL_SCALE_MAP_NEAREST;
+      break;
+    case MOL_COMMAND_SET_ARPEGGIATOR:
+      event->payload.arpeggiator.mode = MOL_ARPEGGIATOR_DOWN;
+      event->payload.arpeggiator.rate = MOL_ARPEGGIATOR_RATE_SIXTEENTH;
+      event->payload.arpeggiator.gate = 0.6f;
+      event->payload.arpeggiator.random_seed = UINT32_C(0x12345678);
+      event->payload.arpeggiator.octaves = 3u;
+      break;
+    case MOL_COMMAND_SET_TIME_SIGNATURE:
+      event->payload.time_signature.numerator = 6u;
+      event->payload.time_signature.denominator = 8u;
+      break;
+    case MOL_COMMAND_TRANSPORT_SEEK:
+      event->payload.transport.frame = UINT64_C(0x1020304050607080);
+      break;
+    case MOL_COMMAND_SET_METRONOME:
+      event->payload.metronome.level = 0.3f;
+      event->payload.metronome.enabled = 1u;
+      break;
+    case MOL_COMMAND_SET_PORTAMENTO:
+      event->payload.portamento.mode = MOL_PORTAMENTO_ALWAYS;
+      event->payload.portamento.time_ms = 75.0f;
+      break;
+    default:
+      break;
+  }
+}
+
+static void test_every_sequence_command_payload(void) {
+  static const mol_command_type_t types[] = {
+      MOL_COMMAND_NOTE_ON,
+      MOL_COMMAND_NOTE_OFF,
+      MOL_COMMAND_POLY_PRESSURE,
+      MOL_COMMAND_PITCH_BEND,
+      MOL_COMMAND_SUSTAIN,
+      MOL_COMMAND_ALL_NOTES_OFF,
+      MOL_COMMAND_ALL_SOUND_OFF,
+      MOL_COMMAND_SET_MASTER_GAIN,
+      MOL_COMMAND_SET_PRESET,
+      MOL_COMMAND_SET_PARAMETER,
+      MOL_COMMAND_SET_OCTAVE_SHIFT,
+      MOL_COMMAND_SET_TRANSPOSE,
+      MOL_COMMAND_SET_SCALE,
+      MOL_COMMAND_SET_CHORD_MODE,
+      MOL_COMMAND_SET_ARPEGGIATOR,
+      MOL_COMMAND_SET_TEMPO,
+      MOL_COMMAND_SET_TIME_SIGNATURE,
+      MOL_COMMAND_TRANSPORT_START,
+      MOL_COMMAND_TRANSPORT_STOP,
+      MOL_COMMAND_TRANSPORT_SEEK,
+      MOL_COMMAND_SET_METRONOME,
+      MOL_COMMAND_SET_PORTAMENTO,
+  };
+  memory_stream_t stream = {0};
+  capture_t capture = {0};
+  mol_sequence_config_t config = mol_sequence_config_default(48000u);
+  mol_sequence_config_t decoded = {0};
+  mol_sequence_callbacks_t callbacks = {0};
+  mol_sequence_writer_t writer = {0};
+  stream.capacity = sizeof(stream.data);
+  writer.struct_size = (uint32_t)sizeof(writer);
+  writer.api_version = MOL_API_VERSION;
+  EXPECT_TRUE(mol_sequence_writer_init(&writer, &config, write_memory, &stream) == MOL_OK);
+  for (uint32_t index = 0u; index < sizeof(types) / sizeof(types[0]); ++index) {
+    mol_sequence_event_t event = make_event(types[index], index + 1u);
+    populate_payload(&event);
+    EXPECT_TRUE(mol_sequence_validate_event(&event) == MOL_OK);
+    EXPECT_TRUE(mol_sequence_writer_append(&writer, &event) == MOL_OK);
+  }
+  EXPECT_TRUE(mol_sequence_writer_finalize(&writer) == MOL_OK);
+
+  callbacks.struct_size = (uint32_t)sizeof(callbacks);
+  callbacks.api_version = MOL_API_VERSION;
+  callbacks.on_event = capture_event;
+  callbacks.user_data = &capture;
+  decoded.struct_size = (uint32_t)sizeof(decoded);
+  decoded.api_version = MOL_API_VERSION;
+  EXPECT_TRUE(mol_sequence_read_stream(read_memory, &stream, &decoded, &callbacks) == MOL_OK);
+  EXPECT_TRUE(capture.event_count == sizeof(types) / sizeof(types[0]));
+
+  {
+    mol_sequence_event_t invalid = make_event((mol_command_type_t)UINT32_MAX, 1u);
+    EXPECT_TRUE(mol_sequence_validate_event(NULL) == MOL_ERROR_INVALID_ARGUMENT);
+    EXPECT_TRUE(mol_sequence_validate_event(&invalid) == MOL_ERROR_UNSUPPORTED);
+  }
+}
+
 int main(void) {
   test_round_trip_and_determinism();
   test_truncation_corruption_and_writer_bounds();
+  test_every_sequence_command_payload();
   EXPECT_TRUE(strcmp(mol_result_string(MOL_ERROR_CORRUPT_DATA), "corrupt data") == 0);
   EXPECT_TRUE(strcmp(mol_result_string(MOL_ERROR_IO), "I/O error") == 0);
   if (failures != 0) {

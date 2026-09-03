@@ -84,8 +84,31 @@ static void test_exact_transport_math(void) {
   EXPECT_TRUE(mol_time_signature_is_valid(5u, 4u));
   EXPECT_TRUE(mol_time_signature_is_valid(6u, 8u));
   EXPECT_TRUE(!mol_time_signature_is_valid(7u, 8u));
+  EXPECT_TRUE(mol_tempo_to_milli_bpm(120.0f, NULL) == MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_tempo_to_milli_bpm(NAN, &milli_bpm) == MOL_ERROR_INVALID_ARGUMENT);
   EXPECT_TRUE(mol_tempo_to_milli_bpm(29.99f, &milli_bpm) == MOL_ERROR_INVALID_ARGUMENT);
   EXPECT_TRUE(mol_tempo_to_milli_bpm(300.01f, &milli_bpm) == MOL_ERROR_INVALID_ARGUMENT);
+
+  EXPECT_TRUE(mol_transport_step_frame(48000u, 120000u, 1u, 0u, NULL) ==
+              MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_transport_step_frame(0u, 120000u, 1u, 0u, &frame) == MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_transport_step_frame(1u, 1u, 1u, UINT64_MAX, &frame) == MOL_ERROR_OVERFLOW);
+  EXPECT_TRUE(mol_transport_step_frame(UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT64_MAX, &frame) ==
+              MOL_ERROR_OVERFLOW);
+  {
+    const uint64_t whole = UINT64_MAX / UINT64_C(60000);
+    EXPECT_TRUE(mol_transport_step_frame(1u, 1u, 8u, whole * 8u + 7u, &frame) ==
+                MOL_ERROR_OVERFLOW);
+  }
+
+  EXPECT_TRUE(mol_transport_step_at_or_after(48000u, 120000u, 1u, 0u, NULL) ==
+              MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_transport_step_at_or_after(48000u, 0u, 1u, 0u, &step) ==
+              MOL_ERROR_INVALID_ARGUMENT);
+  EXPECT_TRUE(mol_transport_step_at_or_after(1u, UINT32_MAX, UINT32_MAX, 120000u, &step) ==
+              MOL_ERROR_OVERFLOW);
+  EXPECT_TRUE(mol_transport_step_at_or_after(1u, UINT32_MAX, UINT32_MAX, 2u, &step) ==
+              MOL_ERROR_OVERFLOW);
 }
 
 static void test_metronome_and_transport_state(void) {
