@@ -47,5 +47,12 @@ if(MOL_BUILD_TESTS)
       set_tests_properties(mol_macos_launchd_service_simulation
                            PROPERTIES RUN_SERIAL TRUE TIMEOUT 50)
     endif()
+    add_test(
+      NAME mol_linux_systemd_user_service_smoke
+      COMMAND ${PROJECT_SOURCE_DIR}/platforms/linux/run-systemd-user-smoke.sh
+              $<TARGET_FILE:mol-keyboardd> $<TARGET_FILE:molctl>)
+    set_tests_properties(
+      mol_linux_systemd_user_service_smoke
+      PROPERTIES RUN_SERIAL TRUE TIMEOUT 50 SKIP_RETURN_CODE 77)
   endif()
 endif()
