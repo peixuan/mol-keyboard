@@ -43,6 +43,7 @@ mol_add_fuzzer(fuzz_wire_parser fuzz_wire_parser.c)
 mol_add_fuzzer(fuzz_jsonrpc_dispatch fuzz_jsonrpc_dispatch.cpp)
 mol_add_fuzzer(fuzz_config_parser fuzz_config_parser.cpp)
 mol_add_fuzzer(fuzz_midi_parser fuzz_midi_parser.cpp)
+mol_add_fuzzer(fuzz_midi_stream_decoder fuzz_midi_stream_decoder.cpp)
 mol_add_fuzzer(fuzz_latency_capture fuzz_latency_capture.c)
 mol_add_fuzzer(fuzz_audio_capture fuzz_audio_capture.c)
 mol_add_fuzzer(fuzz_esp32_settings fuzz_esp32_settings.c)
@@ -70,17 +71,22 @@ endif()
 target_link_libraries(fuzz_jsonrpc_dispatch PRIVATE mol::jsonrpc)
 target_link_libraries(fuzz_config_parser PRIVATE mol::service_control)
 target_link_libraries(fuzz_midi_parser PRIVATE mol::midi)
+target_sources(fuzz_midi_stream_decoder
+               PRIVATE ${PROJECT_SOURCE_DIR}/apps/mol-keyboardd/midi_input.cpp)
+target_include_directories(fuzz_midi_stream_decoder
+                           PRIVATE ${PROJECT_SOURCE_DIR}/apps/mol-keyboardd)
 target_compile_features(fuzz_jsonrpc_dispatch PRIVATE cxx_std_17)
 target_compile_features(fuzz_config_parser PRIVATE cxx_std_17)
 target_compile_features(fuzz_midi_parser PRIVATE cxx_std_17)
+target_compile_features(fuzz_midi_stream_decoder PRIVATE cxx_std_17)
 set_target_properties(
-  fuzz_jsonrpc_dispatch fuzz_config_parser fuzz_midi_parser
+  fuzz_jsonrpc_dispatch fuzz_config_parser fuzz_midi_parser fuzz_midi_stream_decoder
   PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
 if(WIN32)
   target_compile_definitions(
     fuzz_jsonrpc_dispatch
     PRIVATE _DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION _ITERATOR_DEBUG_LEVEL=0)
-  foreach(_mol_cpp_fuzzer fuzz_config_parser fuzz_midi_parser)
+  foreach(_mol_cpp_fuzzer fuzz_config_parser fuzz_midi_parser fuzz_midi_stream_decoder)
     target_compile_definitions(
       ${_mol_cpp_fuzzer}
       PRIVATE _DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION _ITERATOR_DEBUG_LEVEL=0)
@@ -155,6 +161,14 @@ add_test(
     fuzz_midi_parser -max_total_time=20 -max_len=1048576 -timeout=5
     -artifact_prefix=${_mol_midi_artifacts}/ ${_mol_midi_corpus})
 set_tests_properties(fuzz_midi_parser_smoke PROPERTIES TIMEOUT 45)
+
+set(_mol_midi_stream_artifacts "${CMAKE_CURRENT_BINARY_DIR}/artifacts/midi_stream_decoder")
+file(MAKE_DIRECTORY "${_mol_midi_stream_artifacts}")
+add_test(
+  NAME fuzz_midi_stream_decoder_smoke
+  COMMAND fuzz_midi_stream_decoder -max_total_time=20 -max_len=65536 -timeout=5
+          -artifact_prefix=${_mol_midi_stream_artifacts}/)
+set_tests_properties(fuzz_midi_stream_decoder_smoke PROPERTIES TIMEOUT 45)
 
 set(_mol_latency_artifacts "${CMAKE_CURRENT_BINARY_DIR}/artifacts/latency_capture")
 file(MAKE_DIRECTORY "${_mol_latency_artifacts}")
