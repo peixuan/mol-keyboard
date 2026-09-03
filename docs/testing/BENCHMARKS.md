@@ -75,12 +75,12 @@ ESP-IDF 6.1/GNU 15.2.0 produced these build/map results:
 
 | Target | Default image | Web image | Default internal use | Web internal use |
 | --- | ---: | ---: | ---: | ---: |
-| ESP32 | 1,018,096 B | 1,550,992 B | 101,892 / 124,580 B DRAM | 117,984 / 124,580 B DRAM |
-| ESP32-S3 | 796,656 B | 1,302,048 B | 148,923 / 341,760 B DIRAM | 187,975 / 341,760 B DIRAM |
+| ESP32 | 1,018,256 B | 1,551,168 B | 101,892 / 124,580 B DRAM | 118,000 / 124,580 B DRAM |
+| ESP32-S3 | 796,832 B | 1,302,192 B | 148,923 / 341,760 B DIRAM | 187,975 / 341,760 B DIRAM |
 
 The Tiny core archive remains below 28 KiB. Its eight-voice engine query is
 37,664 bytes in a 37,888-byte arena. The ESP32 Web configuration leaves only
-6,596 bytes of reported static DRAM margin, so physical long-run HIL remains a
+6,580 bytes of reported static DRAM margin, so physical long-run HIL remains a
 mandatory release gate.
 
 ## End-to-end latency

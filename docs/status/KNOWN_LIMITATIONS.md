@@ -46,16 +46,21 @@ available, so the synthetic 19.5/28.05/29 ms fixture statistics are tool tests
 only and every platform latency row remains unmeasured.
 
 The M9 ESP-IDF implementation is complete and all four ESP32/ESP32-S3 default
-and optional-Web variants build. It has not run on a physical board. I2S
-signal, sound, timing, GPIO/BLE/Classic/USB input, NVS/FAT power-cycle recovery,
-physical AP authorization, sustained operation, and ESP32 Classic A2DP Source
-remain unverified. The ESP32 Web map leaves 6,596 bytes in the primary DRAM
-layout before runtime allocations, so its Wi-Fi/Bluetooth heap watermark is a
-mandatory HIL result, not an inferred capability. The fail-closed procedure is
-documented in `docs/hardware/M9_ESP32_EVIDENCE.md`. A virtual-clock model now
-validates 180 ten-second telemetry snapshots for each chip family and proves
-reset, deadline, stalled-audio, and firmware-error injection are rejected; it
-is parser/control evidence, not firmware or hardware execution.
+and optional-Web variants build. Isolated real ESP-IDF images for both chips
+also boot in Espressif QEMU and pass storage, shared-sequence/C4 conformance,
+production input/control, FreeRTOS audio, finite/non-silent output, and bounded
+runtime diagnostics through a virtual sink. It has not run on a physical board.
+I2S signal, sound, real-time timing, GPIO/BLE/Classic/USB input, NVS/FAT
+power-cycle recovery, physical AP authorization, sustained operation, and
+ESP32 Classic A2DP Source remain unverified. The ESP32 Web map leaves 6,580
+bytes in the primary DRAM layout before runtime allocations, so its
+Wi-Fi/Bluetooth heap watermark is a mandatory HIL result, not an inferred
+capability. The fail-closed procedure and exact QEMU boundary are documented in
+`docs/hardware/M9_ESP32_EVIDENCE.md`. A separate virtual-clock model validates
+180 ten-second telemetry snapshots for each chip family and proves reset,
+deadline, stalled-audio, and firmware-error injection are rejected; it is
+parser/control evidence, while QEMU is firmware evidence, and neither is
+hardware evidence.
 
 Android now provides a complete dual-ABI application and is runtime-verified on
 an Android 15 x86_64 emulator, including AAudio rendering, legal foreground

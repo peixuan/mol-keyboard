@@ -141,6 +141,15 @@ telemetry for both chip families and injects reset, deadline, stalled-audio,
 and firmware-error failures. It verifies the HIL state machine and reporting,
 is always labeled `simulated-hil`, and never satisfies the release HIL row.
 
+The separate `run-qemu.ps1` gate builds and boots each real ESP-IDF image on
+the corresponding Espressif QEMU machine. It requires NVS/FAT initialization,
+the shared sequence and C4 checks, a synthetic note through the production
+input queue, three FreeRTOS audio/control snapshots, non-silent finite PCM, and
+zero project failure counters. Its configuration replaces I2S pacing with a
+virtual sink and prevents GPIO, Bluetooth, A2DP, and USB startup. Reports are
+always labeled `emulated-firmware`; QEMU performance and all physical, radio,
+USB, I2S, acoustic, power, thermal, watchdog, and endurance claims are excluded.
+
 ## Performance, latency, size, and packages
 
 The release size gate strips a copy of the native archive, gzip-compresses Wasm,

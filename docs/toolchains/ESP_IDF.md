@@ -20,7 +20,8 @@ The verified Windows environment reported:
 - ESP-IDF 6.1;
 - Python 3.14.6 in the ESP-IDF-managed virtual environment;
 - CMake 4.0.3 and Ninja 1.12.1 from ESP-IDF;
-- `xtensa-esp-elf` GNU 15.2.0 (`esp-15.2.0_20251204`).
+- `xtensa-esp-elf` GNU 15.2.0 (`esp-15.2.0_20251204`);
+- optional Espressif QEMU 9.2.2 (`esp_develop_9.2.2_20260417`).
 
 ## Reproducible target builds
 
@@ -34,8 +35,21 @@ idf.py -B build-esp32s3 build
 
 The project stores `sdkconfig` in its selected build directory. This avoids
 cross-target configuration conflicts and permits subsequent independent builds.
-Successful compilation is build evidence only; flashing, startup logs, I2S
-output, and timing measurements require the corresponding physical device.
+Successful compilation is build evidence only. The optional isolated QEMU
+profile supplies real firmware boot/runtime evidence without physical-device
+claims:
+
+```powershell
+python .cache/esp-idf/tools/idf_tools.py install qemu-xtensa
+& .\.cache\esp-idf\export.ps1
+platforms/esp32/run-qemu.ps1 -Target esp32
+platforms/esp32/run-qemu.ps1 -Target esp32s3
+```
+
+The QEMU profile executes ESP-IDF, storage, the production input/control path,
+the shared core, and the FreeRTOS audio task with a virtual PCM sink. Flashing,
+physical GPIO/radio/USB/I2S/audio, real-time timing, power, and endurance still
+require the corresponding physical device and instruments.
 
 ## I2S host and size evidence
 

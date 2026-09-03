@@ -2,13 +2,16 @@
 
 ## Current milestone
 
-The current priority is the desktop application and headless-service matrix
-before further mobile or ESP32 work. The production Web UI now controls real
-Windows and Linux daemon processes, and both platforms pass their complete
-native suites. The exact macOS IOHID and CoreAudio-selected production sources
-also pass controlled lifecycle simulations under two non-Apple compilers; this
-does not replace an Apple SDK or macOS runtime result. Other locally actionable
-M10 release gates are complete. Native and Wasm
+The desktop application and headless-service matrix remains the first priority,
+followed by mobile and ESP32. The production Web UI controls real Windows and
+Linux daemon processes, and both platforms pass their complete native suites.
+The exact macOS IOHID and CoreAudio-selected production sources also pass
+controlled lifecycle simulations under two non-Apple compilers; this does not
+replace an Apple SDK or macOS runtime result. With those locally reachable
+desktop/service gates exhausted, both real ESP-IDF firmware images now also
+execute through their production storage, input/control, shared-core, and
+FreeRTOS audio paths in Espressif QEMU. Other locally actionable M10 release
+gates are complete. Native and Wasm
 regression, Release+LTO Tiny/Standard/Full profiles, static/shared ABI
 verification, coverage, static analysis, ASan/UBSan with all eleven fuzzers,
 Linux ThreadSanitizer, optimized endurance, release-size budgets, dependency/license
@@ -26,14 +29,20 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`61b3342` (`test(macos): simulate CoreAudio runtime recovery`) is the latest
-locally validated code candidate. Windows MSVC Release and Linux x86_64 Clang
-pass 78/78 tests; system Chrome on Windows and bundled Chromium on Linux each
-pass the five applicable desktop application cases, including a real platform
-daemon process and authenticated service controller. The preceding `18e6e7d`
-candidate adds the exact-production-source IOHID lifecycle simulation. The
-earlier `240b207` candidate's dual-ABI Debug and
-instrumentation APKs, unsigned Release/R8/lintVital package, and full lint gate
+`dbc4374` (`test(esp32): execute firmware in Espressif QEMU`) is the latest
+locally validated code candidate. Its ESP32 and ESP32-S3 images boot under
+Espressif QEMU, mount/format transactional storage, pass the shared sequence
+and C4 checks, drain 12 production input commands, and render more than 100,000
+frames with non-silent finite output and zero project failure counters. All
+four physical-board configurations still compile with the emulator option
+disabled. Windows MSVC Release and Linux x86_64 GCC pass 79/79 tests; system
+Chrome on Windows and bundled Chromium on Linux each pass the five applicable
+desktop application cases, including a real platform daemon process and
+authenticated service controller. The preceding `61b3342` candidate adds the
+exact-production-source CoreAudio lifecycle simulation, and `18e6e7d` adds the
+corresponding IOHID lifecycle simulation. The earlier `240b207` candidate's
+dual-ABI Debug and instrumentation APKs, unsigned Release/R8/lintVital package,
+and full lint gate
 all pass. Android 15/API 35 emulator instrumentation also passes with injected focus loss/gain
 and resumed AAudio callbacks. The prior `b3b7e14` candidate's
 Linux AArch64 Release products pass the QEMU lifecycle/render gate, its AArch64
@@ -41,7 +50,7 @@ Debug suite passes 59/59, affected MSVC tests pass 5/5, and ESP32 HIL
 parser/model self-tests pass 5/5. The prior
 `4f77f56` candidate retains the complete MSVC Debug/LTO Release, Linux Clang,
 ABI, sanitizer, analysis, endurance, size, package, and clean-checkout evidence
-documented below. MSVC Debug/LTO Release and Linux Clang now pass
+documented below. MSVC Debug/LTO Release and Linux Clang previously passed
 78/78 tests; Emscripten MinSizeRel passes 31/31. Windows and Linux shared-core
 builds pass 74/74 public-boundary tests, expose exactly the 47 version 1.0 API
 symbols, and Linux ABI Compliance Checker reports 100% binary and source
@@ -193,23 +202,31 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   peers; physical configuration, clear-pairing, and factory-reset gestures; an
   isolated bounded control task; and an optional physically authorized WPA2
   SoftAP Web configuration service with strict Origin/token/form validation.
-- ESP-IDF 6.1 built the default ESP32/ESP32-S3 images at 1,018,096 and 796,656
-  bytes and the 4 MiB Web variants at 1,550,992 and 1,302,048 bytes. The core
+- ESP-IDF 6.1 built the default ESP32/ESP32-S3 images at 1,018,256 and 796,832
+  bytes and the 4 MiB Web variants at 1,551,168 and 1,302,192 bytes. The core
   archive remains below 28 KiB and the queried eight-voice engine uses 37,664
   bytes of its 37,888-byte arena. A host-tested HIL verifier now fails on reset,
   underrun, watchdog, queue, persistence, capability, input, or real I2S-capture
   violations. Its virtual-clock mode passes 180 healthy snapshots for each
   chip family and rejects reset, deadline, stalled-audio, and firmware-error
   injection without claiming board execution.
+- Isolated QEMU configurations for both chips execute the real ESP-IDF 6.1
+  bootloader/application, NVS/FAT startup, the shared sequence and C4 checks,
+  the production input/control path, and the statically allocated FreeRTOS
+  audio task through a paced virtual PCM sink. The runner rejects missing
+  phases, project errors, non-finite or silent audio, physical-peripheral
+  startup, and failure counters, then writes `emulated-firmware` evidence with
+  explicit physical and real-time exclusions.
 
 ## In-progress work
 
 - The desktop-first local audit is complete: Windows/Linux application and
   service process paths pass, while macOS platform-specific source paths have
   executable simulations. Native macOS application/service acceptance is the
-  highest-priority external gate. Mobile and ESP32 external acceptance follows
-  it. Documentation remains a draft and `v1.0.0` remains forbidden until all
-  results pass.
+  highest-priority external gate. The strongest reachable device-free ESP32
+  firmware execution gate also passes; mobile and ESP32 external acceptance
+  follows the desktop gate. Documentation remains a draft and `v1.0.0` remains
+  forbidden until all results pass.
 
 ## Blocked platform checks
 
@@ -228,7 +245,8 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   are configured but an unpushed local commit is not reported as a CI result.
 - Physical Android/Apple/Harmony/ESP32 devices, I2S capture equipment, signing
   credentials, and long-run device time are not available. The Android emulator
-  result and ESP-IDF builds are not promoted to device verification.
+  result, ESP-IDF builds, and Espressif QEMU firmware runs are not promoted to
+  device verification.
 
 ## Exact validation commands and results
 
@@ -362,11 +380,26 @@ With the pinned ESP-IDF environment active, from `platforms/esp32`:
 ```
 
 All four ESP-IDF 6.1/GNU 15.2.0 variants rebuilt successfully. Default/Web
-image sizes are 1,018,096/1,550,992 bytes for ESP32 and
-796,656/1,302,048 bytes for ESP32-S3. Default ESP32 reports 101,892 of 124,580
-bytes DRAM; its Web variant reports 117,984 bytes. Default ESP32-S3 reports
+image sizes are 1,018,256/1,551,168 bytes for ESP32 and
+796,832/1,302,192 bytes for ESP32-S3. Default ESP32 reports 101,892 of 124,580
+bytes DRAM; its Web variant reports 118,000 bytes. Default ESP32-S3 reports
 148,923 of 341,760 bytes DIRAM; its Web variant reports 187,975 bytes. These
 are build/map results, not physical playback results.
+
+The optional Espressif QEMU 9.2.2 gate executed the clean `dbc4374` images:
+
+```powershell
+platforms/esp32/run-qemu.ps1 -Target esp32
+platforms/esp32/run-qemu.ps1 -Target esp32s3
+```
+
+ESP32 passed after 105,728 frames, 12 drained commands, and 211,256 nonzero
+samples; ESP32-S3 passed after 101,888 frames, 12 commands, and 203,852 nonzero
+samples. Both had three snapshots, 262.5 Hz C4, zero non-finite samples, and
+zero project failure counters. Each emulator run counted two deadline misses;
+the 22,459/26,857 microsecond maximum render times are reported but excluded from
+real-time acceptance. Full hashes and physical exclusions are in
+`docs/hardware/M9_ESP32_EVIDENCE.md`.
 
 Additional locally actionable M10 gates passed with these reproducible command
 families:

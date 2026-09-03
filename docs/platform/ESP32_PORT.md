@@ -116,13 +116,38 @@ task reports rendered frames, render/write failures, partial writes, DMA event
 queue overflows, render deadline misses, maximum render time, watchdog errors,
 submitted/rejected/dropped input commands, queue high-water, GPIO scans,
 transitions, ambiguous scans, delivery recovery, minimum task-stack headroom,
-and minimum internal-heap watermark every ten seconds. The startup log also
-records the reset reason.
+minimum internal-heap watermark, non-finite render samples, and nonzero PCM
+samples every ten seconds. The startup log also records the reset reason.
 
 These counters make underruns and resets diagnosable, but a successful compile
 does not prove hardware output. Device verification requires flashing the
 matching target, observing the C4 conformance message, hearing stable I2S audio,
 and recording a sustained-play run with zero failure and deadline counters.
+
+## Espressif QEMU smoke test
+
+After installing ESP-IDF's optional `qemu-xtensa` tool, run the actual firmware
+without a board from the repository root:
+
+```powershell
+& .\.cache\esp-idf\export.ps1
+platforms/esp32/run-qemu.ps1 -Target esp32
+platforms/esp32/run-qemu.ps1 -Target esp32s3
+```
+
+The isolated `build-<target>-qemu` configuration replaces physical I2S pacing
+with a virtual PCM sink and prevents GPIO, Bluetooth, A2DP, and USB startup.
+Everything before the sink remains production code: ESP-IDF boot, NVS and FAT,
+the shared core, startup conformance, the bounded input queue, device control,
+and the statically allocated FreeRTOS audio task. The runner stores an ignored
+serial log and `emulated-firmware` JSON report under `build/qemu-<target>/` and
+fails on missing startup phases, silence, non-finite output, project errors,
+unexpected physical-peripheral startup, or failure counters.
+
+This is stronger than the separate virtual-clock HIL-parser model, but it is
+not board evidence. QEMU timing, GPIO, radio, USB, I2S, audio, power, and
+endurance results are explicitly excluded. Never flash or release an image
+with `CONFIG_MOL_QEMU_RUNTIME=y`.
 
 ## Verified build procedure
 
@@ -142,10 +167,10 @@ coexist without sharing an `sdkconfig`. On 2026-09-03, ESP-IDF 6.1 and GNU
 
 | Target | Application image | `libmol_core.a` | Data-memory map |
 |---|---:|---:|---:|
-| ESP32 | 1,018,096 bytes | 26,790 bytes | DRAM 101,892 / 124,580 bytes |
-| ESP32-S3 | 796,656 bytes | 26,519 bytes | DIRAM 148,923 / 341,760 bytes |
-| ESP32 + Web | 1,550,992 bytes | 27,015 bytes | DRAM 117,984 / 124,580 bytes |
-| ESP32-S3 + Web | 1,302,048 bytes | 27,087 bytes | DIRAM 187,975 / 341,760 bytes |
+| ESP32 | 1,018,256 bytes | 26,790 bytes | DRAM 101,892 / 124,580 bytes |
+| ESP32-S3 | 796,832 bytes | 26,519 bytes | DIRAM 148,923 / 341,760 bytes |
+| ESP32 + Web | 1,551,168 bytes | 27,015 bytes | DRAM 118,000 / 124,580 bytes |
+| ESP32-S3 + Web | 1,302,192 bytes | 27,087 bytes | DIRAM 187,975 / 341,760 bytes |
 
 The component builds the complete M3 Tiny graph and stores all 18 fixed
 120-byte compiled Patches in flash. Its complete code and read-only archive is
