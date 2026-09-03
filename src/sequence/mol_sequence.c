@@ -10,6 +10,8 @@
 #define MOL_SEQUENCE_RECORD_METADATA 2u
 #define MOL_SEQUENCE_RECORD_END 255u
 #define MOL_SEQUENCE_EVENT_BODY_MAX 64u
+#define MOL_SEQUENCE_PAYLOAD_MAX 32u
+#define MOL_SEQUENCE_VARINT_MAX 10u
 
 static void mol_seq_write_u16(uint8_t* output, uint16_t value) {
   output[0] = (uint8_t)(value & UINT16_C(0xFF));
@@ -89,7 +91,7 @@ static int mol_seq_decode_varint(const uint8_t* input, size_t size, size_t* offs
     if (shift == 63u && (byte & 0x7Eu) != 0u) return 0;
     value |= (uint64_t)(byte & 0x7Fu) << shift;
     if ((byte & 0x80u) == 0u) {
-      uint8_t canonical[10];
+      uint8_t canonical[MOL_SEQUENCE_VARINT_MAX];
       size_t canonical_size = mol_seq_encode_varint(value, canonical);
       if (canonical_size != *offset - start) return 0;
       *out_value = value;
@@ -416,9 +418,9 @@ mol_result_t mol_sequence_validate_event(const mol_sequence_event_t* event) {
 
 mol_result_t mol_sequence_writer_append(mol_sequence_writer_t* writer,
                                         const mol_sequence_event_t* event) {
-  uint8_t body[MOL_SEQUENCE_EVENT_BODY_MAX];
-  uint8_t record[2u + 10u + MOL_SEQUENCE_EVENT_BODY_MAX];
-  uint8_t payload[32];
+  uint8_t body[5u * MOL_SEQUENCE_VARINT_MAX + MOL_SEQUENCE_PAYLOAD_MAX];
+  uint8_t record[2u + MOL_SEQUENCE_VARINT_MAX + MOL_SEQUENCE_EVENT_BODY_MAX];
+  uint8_t payload[MOL_SEQUENCE_PAYLOAD_MAX];
   size_t body_size = 0u;
   size_t payload_size = 0u;
   size_t record_size = 0u;
@@ -431,6 +433,7 @@ mol_result_t mol_sequence_writer_append(mol_sequence_writer_t* writer,
     return MOL_ERROR_INVALID_ARGUMENT;
   result = mol_seq_encode_payload(event, payload, &payload_size);
   if (result != MOL_OK) return result;
+  if (payload_size > sizeof(payload)) return MOL_ERROR_INVALID_ARGUMENT;
   body_size += mol_seq_encode_varint(event->frame - writer->previous_frame, body + body_size);
   body_size += mol_seq_encode_varint(event->command_type, body + body_size);
   body_size += mol_seq_encode_varint(event->source_id, body + body_size);
@@ -438,8 +441,11 @@ mol_result_t mol_sequence_writer_append(mol_sequence_writer_t* writer,
   body_size += mol_seq_encode_varint(payload_size, body + body_size);
   memcpy(body + body_size, payload, payload_size);
   body_size += payload_size;
+  if (body_size > MOL_SEQUENCE_EVENT_BODY_MAX) return MOL_ERROR_INVALID_ARGUMENT;
   record[record_size++] = MOL_SEQUENCE_RECORD_EVENT;
   record_size += mol_seq_encode_varint(body_size, record + record_size);
+  if (record_size > sizeof(record) || body_size > sizeof(record) - record_size)
+    return MOL_ERROR_INVALID_ARGUMENT;
   memcpy(record + record_size, body, body_size);
   record_size += body_size;
   result = mol_seq_writer_emit(writer, record, record_size, 1);

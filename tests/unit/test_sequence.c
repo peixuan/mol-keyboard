@@ -280,6 +280,22 @@ static void test_truncation_corruption_and_writer_bounds(void) {
     EXPECT_TRUE(mol_sequence_writer_add_metadata(&writer, 1u, oversized, sizeof(oversized)) ==
                 MOL_ERROR_INVALID_ARGUMENT);
   }
+  {
+    memory_stream_t stream = {0};
+    mol_sequence_config_t config = mol_sequence_config_default(48000u);
+    mol_sequence_writer_t writer = {0};
+    mol_sequence_event_t event = make_event(MOL_COMMAND_NOTE_ON, UINT64_MAX - 1u);
+    stream.capacity = sizeof(stream.data);
+    writer.struct_size = (uint32_t)sizeof(writer);
+    writer.api_version = MOL_API_VERSION;
+    event.source_id = UINT32_MAX;
+    event.gesture_id = UINT32_MAX;
+    event.payload.note.note = 127u;
+    event.payload.note.velocity = 1.0f;
+    EXPECT_TRUE(mol_sequence_writer_init(&writer, &config, write_memory, &stream) == MOL_OK);
+    EXPECT_TRUE(mol_sequence_writer_append(&writer, &event) == MOL_OK);
+    EXPECT_TRUE(mol_sequence_writer_finalize(&writer) == MOL_OK);
+  }
 }
 
 static void populate_payload(mol_sequence_event_t* event) {
