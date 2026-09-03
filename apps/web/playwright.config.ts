@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const useBundledChromium = process.env.MOL_USE_BUNDLED_CHROMIUM === "1";
+
 export default defineConfig({
   testDir: "./e2e",
   outputDir: "../../.cache/playwright-results",
@@ -30,7 +32,10 @@ export default defineConfig({
   projects: [
     {
       name: "chrome-desktop",
-      use: { ...devices["Desktop Chrome"], channel: "chrome" },
+      use: {
+        ...devices["Desktop Chrome"],
+        ...(useBundledChromium ? {} : { channel: "chrome" as const }),
+      },
     },
     {
       name: "edge-desktop",
