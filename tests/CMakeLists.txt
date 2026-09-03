@@ -140,6 +140,12 @@ add_test(
     ${CMAKE_COMMAND} -DMOL_SOURCE_DIR=${PROJECT_SOURCE_DIR} -P
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_harmony_project.cmake)
 
+add_test(
+  NAME mol_ios_project_audit
+  COMMAND
+    ${CMAKE_COMMAND} -DMOL_SOURCE_DIR=${PROJECT_SOURCE_DIR} -P
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_ios_project.cmake)
+
 if(TARGET mol_jsonrpc)
   add_executable(mol_jsonrpc_tests unit/test_jsonrpc.cpp)
   target_link_libraries(mol_jsonrpc_tests PRIVATE mol::jsonrpc)

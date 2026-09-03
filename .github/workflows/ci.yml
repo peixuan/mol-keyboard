@@ -313,3 +313,6 @@ jobs:
           source "$EMSDK/emsdk_env.sh"
           platforms/ios/build-app.sh Simulator
           MOL_SKIP_WEB_BUILD=1 platforms/ios/build-app.sh Device
+      - name: Launch simulator and verify packaged UI bridge
+        shell: bash
+        run: MOL_SKIP_IOS_BUILD=1 platforms/ios/run-simulator-smoke.sh

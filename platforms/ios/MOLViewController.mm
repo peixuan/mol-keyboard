@@ -6,6 +6,7 @@
 #import "MOLNativeAudioController.h"
 
 #include <cstdint>
+#include <cstdio>
 
 namespace {
 
@@ -307,12 +308,14 @@ NSString* mime_type(NSString* path) {
 - (void)applicationWillResignActive:(NSNotification*)notification;
 - (void)applicationDidEnterBackground:(NSNotification*)notification;
 - (void)applicationWillTerminate:(NSNotification*)notification;
+- (void)completeSimulatorSmokeWithResult:(nullable id)result error:(nullable NSError*)error;
 
 @end
 
 @implementation MOLViewController {
   MOLNativeAudioController* _audioController;
   MOLKeyboardWebView* _webView;
+  BOOL _simulatorSmokeStarted;
 }
 
 - (void)viewDidLoad {
@@ -456,6 +459,66 @@ NSString* mime_type(NSString* path) {
 - (void)webViewWebContentProcessDidTerminate:(WKWebView*)webView {
   [webView loadRequest:[NSURLRequest
                            requestWithURL:[NSURL URLWithString:@"mol-keyboard://app/index.html"]]];
+}
+
+- (void)webView:(WKWebView*)webView didFinishNavigation:(WKNavigation*)navigation {
+  (void)navigation;
+  if (_simulatorSmokeStarted ||
+      ![NSProcessInfo.processInfo.arguments containsObject:@"--mol-simulator-smoke"]) {
+    return;
+  }
+  _simulatorSmokeStarted = YES;
+  NSString* script =
+      @"const bridge = window.MolKeyboardNative;"
+       "const app = document.querySelector('mol-keyboard-app');"
+       "const uiReady = app !== null && app.querySelector('[data-action=\"start\"]') !== null;"
+       "const statusText = await bridge.dispatch("
+       "'{\"version\":1,\"method\":\"runtime.status\",\"params\":{}}');"
+       "const rejectedText = await bridge.dispatch("
+       "'{\"version\":2,\"method\":\"runtime.status\",\"params\":{}}');"
+       "return {platform: window.MolKeyboardPlatform, uiReady, "
+       "status: JSON.parse(statusText), rejected: JSON.parse(rejectedText)};";
+  __weak MOLViewController* weakSelf = self;
+  [webView callAsyncJavaScript:script
+                     arguments:@{}
+                       inFrame:nil
+                  contentWorld:WKContentWorld.pageWorld
+             completionHandler:^(id result, NSError* error) {
+               [weakSelf completeSimulatorSmokeWithResult:result error:error];
+             }];
+}
+
+- (void)completeSimulatorSmokeWithResult:(id)result error:(NSError*)error {
+  NSString* failure = nil;
+  if (error != nil) {
+    failure = error.localizedDescription;
+  } else if (![result isKindOfClass:NSDictionary.class]) {
+    failure = @"JavaScript result is not an object";
+  } else {
+    NSDictionary<NSString*, id>* payload = result;
+    NSDictionary<NSString*, id>* status =
+        [payload[@"status"] isKindOfClass:NSDictionary.class] ? payload[@"status"] : nil;
+    NSDictionary<NSString*, id>* rejected =
+        [payload[@"rejected"] isKindOfClass:NSDictionary.class] ? payload[@"rejected"] : nil;
+    if (![payload[@"platform"] isEqual:@"ios"]) {
+      failure = @"native platform injection is missing";
+    } else if (![payload[@"uiReady"] boolValue]) {
+      failure = @"packaged production UI did not initialize";
+    } else if (![status[@"ok"] boolValue] || [status[@"audioApi"] integerValue] != 1 ||
+               ![status[@"callbackCount"] isKindOfClass:NSNumber.class]) {
+      failure = @"valid runtime.status bridge response is invalid";
+    } else if ([rejected[@"ok"] boolValue] || ![rejected[@"error"] isKindOfClass:NSString.class] ||
+               [rejected[@"error"] length] == 0U) {
+      failure = @"invalid bridge version was not rejected";
+    }
+  }
+  if (failure == nil) {
+    std::fputs("MOL_IOS_SIMULATOR_SMOKE_PASS\n", stderr);
+  } else {
+    NSString* singleLine = [failure stringByReplacingOccurrencesOfString:@"\n" withString:@" "];
+    std::fprintf(stderr, "MOL_IOS_SIMULATOR_SMOKE_FAIL %s\n", singleLine.UTF8String);
+  }
+  std::fflush(stderr);
 }
 
 - (BOOL)handleHardwareUsage:(UIKeyboardHIDUsage)usage pressed:(BOOL)pressed {
