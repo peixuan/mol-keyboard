@@ -63,4 +63,16 @@ if(MOL_BUILD_TESTS)
     COMMAND mol_daemon_process_tests $<TARGET_FILE:mol-keyboardd>
             ${CMAKE_CURRENT_BINARY_DIR}/daemon-process-state "${_mol_daemon_test_endpoint}")
   set_tests_properties(mol_daemon_process_tests PROPERTIES RUN_SERIAL TRUE TIMEOUT 20)
+
+  if(MOL_BUILD_STRESS_TESTS)
+    add_executable(mol_runtime_recovery_stress
+                   ${PROJECT_SOURCE_DIR}/tests/stress/test_runtime_recovery.cpp)
+    target_link_libraries(mol_runtime_recovery_stress PRIVATE mol_daemon_runtime)
+    set_target_properties(mol_runtime_recovery_stress PROPERTIES CXX_EXTENSIONS OFF
+                                                                 CXX_STANDARD_REQUIRED ON)
+    mol_enable_warnings(mol_runtime_recovery_stress)
+    mol_enable_optional_instrumentation(mol_runtime_recovery_stress)
+    add_test(NAME mol_runtime_recovery_stress COMMAND mol_runtime_recovery_stress)
+    set_tests_properties(mol_runtime_recovery_stress PROPERTIES LABELS endurance TIMEOUT 120)
+  endif()
 endif()
