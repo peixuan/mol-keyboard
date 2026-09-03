@@ -21,24 +21,30 @@ products now cross-build through checked-in presets, closing their local build
 gap. Linux AArch64 also passes an end-to-end QEMU product gate and 59/59 target
 tests, while execution on native ARM64 hosts remains unclaimed. Android
 emulator coverage now also stops and reopens AAudio across injected transient
-focus loss/gain. M0 through M9 are implementation-complete, but the Definition
-of Done is not complete: native
+focus loss/gain. The exact background-policy state machine consumed by the iOS
+controller now also executes under MSVC, Linux GCC, and Emscripten. M0 through
+M9 are implementation-complete, but the Definition of Done is not complete: native
 ARM64 runtime, Apple and Harmony toolchains, current Safari, physical mobile
 devices, ESP32 hardware, physical audio routes, and instrumented end-to-end
 latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`dbc4374` (`test(esp32): execute firmware in Espressif QEMU`) is the latest
-locally validated code candidate. Its ESP32 and ESP32-S3 images boot under
-Espressif QEMU, mount/format transactional storage, pass the shared sequence
-and C4 checks, drain 12 production input commands, and render more than 100,000
-frames with non-silent finite output and zero project failure counters. All
-four physical-board configurations still compile with the emulator option
-disabled. Windows MSVC Release and Linux x86_64 GCC pass 79/79 tests; system
-Chrome on Windows and bundled Chromium on Linux each pass the five applicable
-desktop application cases, including a real platform daemon process and
-authenticated service controller. The preceding `61b3342` candidate adds the
+`a184c02` (`test(ios): execute background lifecycle state machine`) is the
+latest locally validated code candidate. The Objective-C++ iOS controller now
+directly consumes a portable production state machine for user-start gating,
+foreground/background transitions, playback and metronome continuation, idle
+stop, route recovery, and media-services reset. That same C source passes under
+MSVC, Linux GCC, and Emscripten. The preceding `dbc4374` candidate's ESP32 and
+ESP32-S3 images boot under Espressif QEMU, mount/format transactional storage,
+pass the shared sequence and C4 checks, drain 12 production input commands, and
+render more than 100,000 frames with non-silent finite output and zero project
+failure counters. All four physical-board configurations still compile with
+the emulator option disabled. Windows MSVC Release and Linux x86_64 GCC pass
+80/80 tests; Emscripten MinSizeRel passes 33/33. System Chrome on Windows and
+bundled Chromium on Linux each pass the five applicable desktop application
+cases, including a real platform daemon process and authenticated service
+controller. The earlier `61b3342` candidate adds the
 exact-production-source CoreAudio lifecycle simulation, and `18e6e7d` adds the
 corresponding IOHID lifecycle simulation. The earlier `240b207` candidate's
 dual-ABI Debug and instrumentation APKs, unsigned Release/R8/lintVital package,
@@ -186,7 +192,9 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   and app icon. Its Objective-C++ controller restores persistent engine state
   after route/interruption/media-service rebuilds and keeps background audio
   only for playback or a running metronome transport. Xcode simulator/device
-  pipelines are checked in, but no Apple build is claimed on this host.
+  pipelines are checked in. The controller-consumed policy state machine passes
+  executable MSVC, Linux GCC, and Emscripten tests, but no Apple build, API
+  execution, or device result is claimed on this host.
 - The HarmonyOS Stage application provides the complete ArkUI surface and exact
   30-key foreground mapping, strict Node-API controls, OHAudio fast request with
   normal fallback and effective latency reporting, AudioSession focus,
@@ -223,10 +231,11 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
 - The desktop-first local audit is complete: Windows/Linux application and
   service process paths pass, while macOS platform-specific source paths have
   executable simulations. Native macOS application/service acceptance is the
-  highest-priority external gate. The strongest reachable device-free ESP32
-  firmware execution gate also passes; mobile and ESP32 external acceptance
-  follows the desktop gate. Documentation remains a draft and `v1.0.0` remains
-  forbidden until all results pass.
+  highest-priority external gate. The iOS production background-policy state
+  machine and strongest reachable device-free ESP32 firmware execution gate
+  also pass; mobile and ESP32 external acceptance follows the desktop gate.
+  Documentation remains a draft and `v1.0.0` remains forbidden until all
+  results pass.
 
 ## Blocked platform checks
 
@@ -261,19 +270,20 @@ cmake --build --preset dev-release
 ctest --preset dev-release --output-on-failure
 ```
 
-MSVC 19.51.36248 passed 78/78 tests in Debug and LTO Release. These runs include
-the strict Web form protocol and HIL evidence-parser tests in addition to the
-independent daemon process, realtime runtime, local IPC, all service methods,
-CLI validation, configuration restart, recording/playback, the macOS
+MSVC 19.51.36248 passes 80/80 tests in the current LTO Release build; the prior
+Debug build passed 78/78. These runs include the iOS production lifecycle
+policy, strict Web form protocol and HIL evidence-parser tests in addition to
+the independent daemon process, realtime runtime, local IPC, all service
+methods, CLI validation, configuration restart, recording/playback, the macOS
 IOHID/CoreAudio lifecycle simulations, and prior core/tool coverage. Dedicated
 GNU 15 Release+LTO presets previously passed 75/75 for Tiny, 76/76 for
 Standard, and 75/75 for Full. The Full run exercises 64 voices, 4,096 sequence
 events, the complete desktop daemon, and the expanded fixed host arenas.
 
-Under WSL, Linux x86_64 Clang 21.1.8 built the desktop service and passed 78/78
-tests. The daemon process used its null sink and a private Unix socket; the
-production Web UI additionally controlled it under bundled Chromium. Physical
-Linux devices remain unclaimed.
+Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 80/80
+tests; the prior Clang 21.1.8 candidate passed 78/78. The daemon process used
+its null sink and a private Unix socket; the production Web UI additionally
+controlled it under bundled Chromium. Physical Linux devices remain unclaimed.
 
 Static/shared API parity is checked separately:
 
@@ -309,9 +319,9 @@ cmake --build --preset wasm-release
 ctest --preset wasm-release --output-on-failure
 ```
 
-Emscripten 6.0.5 and Node.js 22.16.0 passed 31/31 tests in Debug and LTO
-MinSizeRel. Both configurations match the Native event, sequence-fixture, and
-18-preset audio-metric goldens.
+Emscripten 6.0.5 and Node.js 22.16.0 pass 33/33 tests in the current LTO
+MinSizeRel build; the prior Debug candidate passed 31/31. Both configurations
+match the Native event, sequence-fixture, and 18-preset audio-metric goldens.
 
 The production Web bundle passed 12/12 Node tests. Playwright 1.62.1 ran 42
 browser project/test combinations: 15 applicable cases passed and 27 were
@@ -518,7 +528,7 @@ tests.
 - Cross-platform source checks are not promoted to device verification.
 
 The HarmonyOS application descriptors, project audit, and native source-check
-boundary pass locally. Windows MSVC Release and Linux GCC pass 79/79 tests. The
+boundary pass locally. Windows MSVC Release and Linux GCC pass 80/80 tests. The
 official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor 5.8.9 build and audit
 both Debug and Release compatibility HAPs; the Release artifact is an unsigned
 2,951,842-byte package containing ArkTS bytecode and both required native ABIs.

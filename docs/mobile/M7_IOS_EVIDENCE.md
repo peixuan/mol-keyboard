@@ -2,10 +2,11 @@
 
 ## Status
 
-The iOS application implementation is complete and source-reviewed. It is not
-marked `build-verified`, `runtime-verified`, or `device-verified`: this Windows
-host has no Xcode, iOS SDK, Simulator, Apple signing identity, or physical Apple
-device.
+The iOS application implementation is complete and source-reviewed. Its exact
+production background-policy state machine is executable under non-Apple
+toolchains, but the application is not marked `build-verified`,
+`runtime-verified`, or `device-verified`: this Windows host has no Xcode, iOS
+SDK, Simulator, Apple signing identity, or physical Apple device.
 
 ## Implemented product path
 
@@ -50,6 +51,17 @@ through atomics.
 
 ## Local validation on 2026-09-03
 
+The Objective-C++ controller directly consumes
+`mol_ios_audio_lifecycle.c`; this is not a separate test model. Its executable
+tests cover user-start gating, foreground resignation, idle background stop,
+playback continuation and completion, the metronome-plus-transport rule,
+engine reset, route restoration, foreground/background media-services reset,
+restart failure, route-revision saturation, and invalid/null calls. The same
+production C source passed as part of Windows MSVC Release 80/80, Linux GCC
+80/80, and Emscripten MinSizeRel 33/33 suites. This validates deterministic
+application policy only; it does not simulate or claim UIKit, AVAudioSession,
+RemoteIO, OS notifications, actual background scheduling, or an audio route.
+
 The source was formatted with Visual Studio ClangFormat 22 and passed
 `git diff --check`. The property lists parsed as XML, the asset catalogs parsed
 as JSON, and `build-app.sh` passed `bash -n` under WSL. The 1024×1024 app icon
@@ -58,9 +70,9 @@ resolution.
 
 The shared Web UI passed 12/12 Node tests, strict TypeScript checking, and a
 production Vite build after adding Promise-based WKWebView reply support.
-MSVC Debug rebuilt the complete native project with warnings as errors and
-passed 64/64 CTest cases, including the mobile native source checks and
-dependency license audit.
+MSVC Release rebuilt the complete native project with warnings as errors and
+passed 80/80 CTest cases, including the production iOS lifecycle state machine,
+macOS platform simulations, and dependency license audit.
 
 ## Reproducible Apple commands
 

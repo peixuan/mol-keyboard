@@ -75,8 +75,11 @@ playback remain unverified.
 The iOS application implementation is complete, including the packaged shared
 UI, Promise-based WKWebView bridge, AudioUnit lifecycle restoration, hardware
 key interception, private sequence persistence, offline content policy, privacy
-manifest, and Xcode simulator/device pipeline. This Windows host has no Xcode,
-iOS Simulator, signing identity, or physical Apple device, so compilation,
+manifest, and Xcode simulator/device pipeline. The exact background-policy
+state machine consumed by the Objective-C++ controller passes executable tests
+under MSVC, Linux GCC, and Emscripten. This validates application state
+transitions, not Apple APIs or scheduling. This Windows host has no Xcode, iOS
+Simulator, signing identity, or physical Apple device, so compilation,
 installation, audible output, background/lock-screen continuation,
 route/interruption behavior, hardware keyboard input, latency, and sustained
 playback are not claimed.
