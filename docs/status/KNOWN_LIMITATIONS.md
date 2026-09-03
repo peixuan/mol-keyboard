@@ -3,8 +3,18 @@
 The M0-M4 gates, M5 desktop implementation, and M6 Web/PWA implementation are
 complete. The current Windows host has Visual Studio 2026, MSVC 19.51.36248,
 CMake 4.4.0, Ninja 1.13.2, Emscripten 6.0.5, and ESP-IDF 6.1. Linux/Clang service
-validation runs under WSL with null audio. macOS compilation and physical
-Bluetooth audio/keyboard verification remain unavailable here.
+validation runs under WSL with null audio. The production desktop Web UI now
+controls real Windows and Linux service processes in browser automation.
+macOS compilation and physical Bluetooth audio/keyboard verification remain
+unavailable here.
+
+The exact macOS IOHID adapter and CoreAudio-selected desktop runtime compile and
+execute against controlled API models under MSVC and Linux Clang. These tests
+cover input gesture ownership and cleanup plus audio callback, device selection,
+notification, recovery, and cleanup state. They do not provide Apple framework
+headers or ABI, launchd behavior, system permissions, hardware routes, or native
+macOS scheduling, so macOS remains below `build-verified` and
+`runtime-verified`.
 
 The complete Windows ARM64 and Linux AArch64 products cross-build and their
 object formats were inspected as COFF-ARM64 and AArch64 ELF respectively. They

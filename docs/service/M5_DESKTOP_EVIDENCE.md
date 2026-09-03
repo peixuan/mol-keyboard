@@ -1,7 +1,7 @@
 # M5 Desktop Headless Evidence
 
-Verified on 2026-09-03 at commit `c87e1a1`; the complete regression suite was
-refreshed at code candidate `3a1da43`.
+Verified on 2026-09-03 at commit `c87e1a1`; the desktop-first regression was
+refreshed through code candidate `61b3342`.
 
 ## Implemented surface
 
@@ -34,13 +34,21 @@ refreshed at code candidate `3a1da43`.
 
 | Configuration | Result | Relevant evidence |
 |---|---:|---|
-| Windows MSVC Debug | 63/63 | local IPC recovery, all 41 RPC methods, runtime callback, independent daemon process, CLI, recording/playback, rendering |
-| Windows MSVC LTO Release | 63/63 | same optimized suite; daemon plus CLI total 586,240 bytes |
-| Linux x86_64 Clang (WSL) | 63/63 | Unix socket mode/cleanup, null-audio service process, CLI lifecycle, Linux adapter compilation |
+| Windows MSVC Debug | 78/78 | local IPC recovery, all 41 RPC methods, runtime callback, independent daemon process, CLI, recording/playback, rendering, macOS interface simulations |
+| Windows MSVC LTO Release | 78/78 | same optimized suite, including the desktop platform simulations |
+| Linux x86_64 Clang (WSL) | 78/78 | Unix socket mode/cleanup, null-audio service process, CLI lifecycle, Linux adapter compilation, macOS interface simulations |
 | Linux AArch64 QEMU 10.2.1 | 59/59 | target core/DSP/music tests, 18-preset metrics, null playback, nested daemon process, CLI/render lifecycle |
 | Windows Clang ASan/UBSan | 30/30 | all sanitizer-enabled portable/control tests and four 20-second parser fuzz sessions |
 | Emscripten Debug/MinSizeRel | 31/31 each | current core/worklet regression after the control-plane changes |
 | ESP32 / ESP32-S3 | build passed | firmware regression; application binaries remain 153,440 and 179,328 bytes |
+
+The production Web/PWA application was also run against the current desktop
+service rather than only as a standalone synthesizer. System Chrome on Windows
+and bundled Chromium 151.0.7922.34 on Linux each passed five applicable desktop
+application tests, with two capability-specific cases skipped. The service
+controller test spawned the platform's real `mol-keyboardd`, authenticated over
+the loopback WebSocket, delivered keyboard events, recorded a sequence, rejected
+an invalid token, shut down over local IPC, and observed a clean process exit.
 
 An independently started Windows Release daemon enumerated four WASAPI
 outputs and the `raw-input:all-keyboards` physical adapter. `molctl doctor`
@@ -54,8 +62,15 @@ The host exposed no Bluetooth output during this run, so `doctor` correctly
 reported that fact and directed the user to system pairing. No Bluetooth
 speaker playback claim is made. The Linux run used WSL and a null sink, so it
 does not claim physical evdev or Linux audio hardware. An Apple SDK and macOS
-host were unavailable; the IOHIDManager adapter and launchd asset are present
-but macOS compilation/runtime acceptance remains unverified.
+host were unavailable. The exact production `physical_input_macos.cpp` now
+compiles and executes against a controlled IOHID model under both MSVC and Linux
+Clang, covering enumeration, press/repeat/release, gesture ownership, and detach
+cleanup. The exact production `audio_runtime.cpp` also executes with a
+controlled CoreAudio/miniaudio model, covering backend selection, effective
+stream configuration, callbacks, device selection, reroute/stopped
+notifications, recovery, and cleanup. These are explicitly simulation results:
+the launchd asset, Apple framework ABI, CoreAudio device, IOHID permissions, and
+macOS daemon process still require a real macOS run.
 
 The later `d45383b` release audit also cross-built the complete desktop product
 with checked-in presets. GNU 15.2.0 produced AArch64 ELF daemon, CLI, playback,

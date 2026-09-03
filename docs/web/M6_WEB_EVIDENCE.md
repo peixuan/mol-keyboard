@@ -70,6 +70,22 @@ fail-closed behavior. Emscripten 6.0.5 Debug and LTO MinSizeRel each passed
 sequence, and all-preset metric conformance. The dependency license audit
 passed after a clean `npm ci` and reports no npm vulnerability.
 
+The desktop-first refresh also ran the production bundle and the real Linux
+x86_64 daemon together under WSL. Playwright's pinned Chromium was selected
+explicitly so this result did not depend on a separately installed branded
+browser:
+
+```sh
+export MOL_USE_BUNDLED_CHROMIUM=1
+export MOL_DAEMON="$PWD/build/ci-linux-clang/apps/mol-keyboardd/mol-keyboardd"
+npm --prefix apps/web run build
+node apps/web/scripts/run-browser-tests.mjs test --project=chrome-desktop
+```
+
+Five applicable cases passed and two browser-specific cases were skipped. This
+is Linux application/service process evidence with a null audio sink; it is not
+physical Linux audio, evdev, or macOS Safari evidence.
+
 ## Explicit acceptance boundary
 
 Playwright's Windows WebKit port renders the shared UI but does not expose

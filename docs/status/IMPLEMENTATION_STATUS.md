@@ -2,7 +2,13 @@
 
 ## Current milestone
 
-All locally actionable M10 release gates are complete. Native and Wasm
+The current priority is the desktop application and headless-service matrix
+before further mobile or ESP32 work. The production Web UI now controls real
+Windows and Linux daemon processes, and both platforms pass their complete
+native suites. The exact macOS IOHID and CoreAudio-selected production sources
+also pass controlled lifecycle simulations under two non-Apple compilers; this
+does not replace an Apple SDK or macOS runtime result. Other locally actionable
+M10 release gates are complete. Native and Wasm
 regression, Release+LTO Tiny/Standard/Full profiles, static/shared ABI
 verification, coverage, static analysis, ASan/UBSan with all eleven fuzzers,
 Linux ThreadSanitizer, optimized endurance, release-size budgets, dependency/license
@@ -20,8 +26,13 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`240b207` (`fix(android): resume foreground audio after focus gain`) is the
-latest locally validated candidate commit. Its dual-ABI Debug and
+`61b3342` (`test(macos): simulate CoreAudio runtime recovery`) is the latest
+locally validated code candidate. Windows MSVC Release and Linux x86_64 Clang
+pass 78/78 tests; system Chrome on Windows and bundled Chromium on Linux each
+pass the five applicable desktop application cases, including a real platform
+daemon process and authenticated service controller. The preceding `18e6e7d`
+candidate adds the exact-production-source IOHID lifecycle simulation. The
+earlier `240b207` candidate's dual-ABI Debug and
 instrumentation APKs, unsigned Release/R8/lintVital package, and full lint gate
 all pass. Android 15/API 35 emulator instrumentation also passes with injected focus loss/gain
 and resumed AAudio callbacks. The prior `b3b7e14` candidate's
@@ -30,8 +41,8 @@ Debug suite passes 59/59, affected MSVC tests pass 5/5, and ESP32 HIL
 parser/model self-tests pass 5/5. The prior
 `4f77f56` candidate retains the complete MSVC Debug/LTO Release, Linux Clang,
 ABI, sanitizer, analysis, endurance, size, package, and clean-checkout evidence
-documented below. MSVC Debug/LTO Release and Linux Clang pass
-76/76 tests; Emscripten MinSizeRel passes 31/31. Windows and Linux shared-core
+documented below. MSVC Debug/LTO Release and Linux Clang now pass
+78/78 tests; Emscripten MinSizeRel passes 31/31. Windows and Linux shared-core
 builds pass 74/74 public-boundary tests, expose exactly the 47 version 1.0 API
 symbols, and Linux ABI Compliance Checker reports 100% binary and source
 compatibility with zero problems. GNU 15 Release+LTO Tiny, Standard, and Full
@@ -122,6 +133,14 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   fail-closed product gate. A separate Debug target build passes 59/59 tests,
   including the 18-preset audio golden, local IPC, nested daemon/renderer
   processes, null playback, latency analyzer, and C/C++ consumers.
+- The production desktop Web UI passed its applicable system-Chrome run on
+  Windows and bundled-Chromium run on Linux. In both cases its service controller
+  authenticated to the real platform daemon, delivered keyboard events,
+  recorded a sequence, rejected a wrong token, and shut the daemon down cleanly.
+- The exact macOS IOHID and CoreAudio-selected production sources compile and
+  execute against controlled API models under MSVC and Linux Clang. Input
+  enumeration/gesture cleanup and audio callbacks/device recovery pass, without
+  claiming Apple SDK or native macOS evidence.
 - An independent Windows Release process used the active 48 kHz stereo WASAPI
   device, exposed the physical Raw Input adapter, passed doctor and a 96,000
   frame benchmark at 80.68 times realtime with no non-finite samples, and shut
@@ -182,15 +201,17 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
 
 ## In-progress work
 
-- No locally actionable implementation or automated release gate is known to
-  remain after adding AArch64 QEMU execution and ESP32 virtual HIL fault
-  injection. Release acceptance now requires the external hosts, devices, routes,
-  and measurement equipment listed below. Documentation remains a draft and
-  `v1.0.0` remains forbidden until those results pass.
+- The desktop-first local audit is complete: Windows/Linux application and
+  service process paths pass, while macOS platform-specific source paths have
+  executable simulations. Native macOS application/service acceptance is the
+  highest-priority external gate. Mobile and ESP32 external acceptance follows
+  it. Documentation remains a draft and `v1.0.0` remains forbidden until all
+  results pass.
 
 ## Blocked platform checks
 
 - Apple SDKs and DevEco/HarmonyOS SDKs are not available on this Windows host.
+  The macOS simulations do not change this constraint or platform status.
 - Playwright's Windows WebKit port does not expose AudioWorklet and is not actual
   Safari. Current-stable Safari remains unverified until run on an Apple host.
 - No Bluetooth output was exposed for the Windows run. WSL exposes neither a
@@ -218,16 +239,18 @@ cmake --build --preset dev-release
 ctest --preset dev-release --output-on-failure
 ```
 
-MSVC 19.51.36248 passed 76/76 tests in Debug and LTO Release. These runs include
+MSVC 19.51.36248 passed 78/78 tests in Debug and LTO Release. These runs include
 the strict Web form protocol and HIL evidence-parser tests in addition to the
 independent daemon process, realtime runtime, local IPC, all service methods,
-CLI validation, configuration restart, recording/playback, and prior core/tool
-coverage. Dedicated GNU 15 Release+LTO presets passed 75/75 for Tiny, 76/76 for
+CLI validation, configuration restart, recording/playback, the macOS
+IOHID/CoreAudio lifecycle simulations, and prior core/tool coverage. Dedicated
+GNU 15 Release+LTO presets previously passed 75/75 for Tiny, 76/76 for
 Standard, and 75/75 for Full. The Full run exercises 64 voices, 4,096 sequence
 events, the complete desktop daemon, and the expanded fixed host arenas.
 
-Under WSL, Linux x86_64 Clang 21.1.8 built the desktop service and passed 76/76
-tests. The daemon process used its null sink and a private Unix socket; physical
+Under WSL, Linux x86_64 Clang 21.1.8 built the desktop service and passed 78/78
+tests. The daemon process used its null sink and a private Unix socket; the
+production Web UI additionally controlled it under bundled Chromium. Physical
 Linux devices remain unclaimed.
 
 Static/shared API parity is checked separately:
@@ -462,9 +485,11 @@ evidence and pending physical acceptance are in
 
 ## Next highest-priority task
 
-Run the external acceptance matrix: native Windows/Linux ARM64 execution,
-macOS plus current Safari, official iOS and Harmony builds, physical
-Android/iOS/Harmony lifecycle and route checks, ESP32/ESP32-S3 30-minute HIL
-with I2S/A2DP/USB/GPIO evidence, and instrumented P50/P95/maximum latency on
-every required route. Keep `v1.0.0` blocked until all results pass and the exact
-final candidate is reviewed.
+Run `cmake --preset ci-macos`, its build, and all CTest cases on a real macOS
+host first; then exercise the production Web UI against that daemon and current
+Safari, including CoreAudio, IOHID permission, launchd, route loss, and clean
+shutdown. After the desktop gate, run native Windows/Linux ARM64 execution,
+official iOS and Harmony builds, physical Android/iOS/Harmony lifecycle and
+route checks, ESP32/ESP32-S3 30-minute HIL with I2S/A2DP/USB/GPIO evidence, and
+instrumented P50/P95/maximum latency on every required route. Keep `v1.0.0`
+blocked until all results pass and the exact final candidate is reviewed.
