@@ -160,6 +160,7 @@ Json device_json(const DeviceInfo& device) {
   result["bluetooth"] = Json::boolean_value(device.is_bluetooth);
   result["default"] = Json::boolean_value(device.is_default);
   result["id"] = Json::string(device.id);
+  result["midi_input"] = Json::boolean_value(device.is_midi_input);
   result["name"] = Json::string(device.name);
   result["physical_input"] = Json::boolean_value(device.is_physical_input);
   return Json::object_value(std::move(result));
@@ -495,10 +496,12 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
     const std::vector<DeviceInfo> inputs = runtime_.input_devices();
     const bool physical_input =
         std::any_of(inputs.begin(), inputs.end(),
-                    [](const DeviceInfo& item) { return item.is_physical_input; });
+                    [](const DeviceInfo& item) {
+                      return item.is_physical_input && !item.is_midi_input;
+                    });
     result["hid"] = Json::boolean_value(physical_input);
     result["max_voices"] = Json::number(state.max_voices);
-    result["midi"] = Json::boolean_value(false);
+    result["midi"] = Json::boolean_value(runtime_.midi_supported());
     result["persistent_storage"] = Json::boolean_value(true);
     result["sample_rates"] = Json::array_value(std::move(rates));
     result["sampler"] = Json::boolean_value(false);
@@ -582,7 +585,7 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
     allow_members(params, {"parameter", "value"});
     mol_command_t value = command(MOL_COMMAND_SET_PARAMETER);
     value.payload.parameter.parameter = static_cast<std::uint32_t>(
-        u64_value(required(params, "parameter"), "parameter", MOL_PARAMETER_LIMITER_CEILING_DB));
+        u64_value(required(params, "parameter"), "parameter", MOL_PARAMETER_MODULATION));
     value.payload.parameter.value =
         static_cast<float>(real_value(required(params, "value"), "value", -100000.0, 100000.0));
     require_ok(runtime_.submit(value), "set preset parameter");
@@ -985,14 +988,23 @@ Json ServiceBackend::invoke_checked(std::string_view method, const Json& params)
     const std::vector<DeviceInfo> inputs = runtime_.input_devices();
     const bool physical_input =
         std::any_of(inputs.begin(), inputs.end(),
-                    [](const DeviceInfo& item) { return item.is_physical_input; });
+                    [](const DeviceInfo& item) {
+                      return item.is_physical_input && !item.is_midi_input;
+                    });
+    const bool midi_input = std::any_of(inputs.begin(), inputs.end(),
+                                        [](const DeviceInfo& item) { return item.is_midi_input; });
     add_check("hid-input", physical_input,
               physical_input ? "A physical keyboard adapter is available."
                              : "No accessible physical keyboard input found.",
               "Grant input-monitoring permission or select an accessible keyboard.");
-    add_check("midi-input", false, "Desktop MIDI input is not enabled in this service build.",
-              "Use the physical keyboard or local IPC input; install a MIDI-enabled build when "
-              "available.");
+    const bool midi_supported = runtime_.midi_supported();
+    add_check("midi-input", midi_supported && midi_input,
+              midi_input ? "A native MIDI input endpoint is accessible."
+                         : midi_supported ? "MIDI support is enabled, but no accessible input "
+                                            "endpoint was found."
+                                          : "Desktop MIDI input is disabled in this service build.",
+              midi_supported ? "Connect a MIDI input and grant device access if required."
+                             : "Install a build configured with MOL_ENABLE_MIDI=ON.");
     add_check("service-ipc", true, "This request reached the local service IPC.",
               "Restart the user service if future requests fail.");
     add_check("configuration", true, "Configuration schema version 1 was parsed and validated.",

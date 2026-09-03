@@ -18,6 +18,7 @@ struct DeviceInfo {
   bool is_active = false;
   bool is_bluetooth = false;
   bool is_physical_input = false;
+  bool is_midi_input = false;
 };
 
 struct AudioStatus {
@@ -63,6 +64,7 @@ class ServiceRuntime {
   virtual mol_result_t snapshot(mol_engine_state_t& state) = 0;
   virtual mol_capability_flags_t capabilities() const = 0;
   virtual RuntimeMetrics metrics() const = 0;
+  virtual bool midi_supported() const = 0;
 
   virtual std::vector<DeviceInfo> input_devices() = 0;
   virtual mol_result_t attach_input(const std::string& id) = 0;

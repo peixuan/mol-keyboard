@@ -126,6 +126,7 @@ const char* ma_result_description(ma_result result) {
 namespace molkeyboardd {
 
 std::unique_ptr<PhysicalInputAdapter> make_physical_input_adapter() { return nullptr; }
+std::unique_ptr<PhysicalInputAdapter> make_midi_input_adapter() { return nullptr; }
 
 }  // namespace molkeyboardd
 

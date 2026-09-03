@@ -56,13 +56,17 @@ class TestRuntime final : public molcontrol::ServiceRuntime {
     return result;
   }
 
+  bool midi_supported() const override { return true; }
+
   std::vector<molcontrol::DeviceInfo> input_devices() override {
-    return {{"keyboard:default", "Default keyboard", "test", true, input_id_ == "keyboard:default",
-             false, true}};
+    return {{"keyboard:default", "Default keyboard", "test", true,
+             input_id_ == "keyboard:default", false, true, false},
+            {"midi:test:omni", "Test MIDI input", "test-midi", false,
+             input_id_ == "midi:test:omni", false, true, true}};
   }
 
   mol_result_t attach_input(const std::string& id) override {
-    if (id != "keyboard:default") return MOL_ERROR_INVALID_ARGUMENT;
+    if (id != "keyboard:default" && id != "midi:test:omni") return MOL_ERROR_INVALID_ARGUMENT;
     input_id_ = id;
     return MOL_OK;
   }
@@ -184,7 +188,10 @@ int main() {
     if (!molcontrol::register_service_methods(dispatcher, backend)) return 1;
 
     dispatch(dispatcher, "system.getInfo");
-    dispatch(dispatcher, "system.getCapabilities");
+    const molseq::Json capabilities = dispatch(dispatcher, "system.getCapabilities");
+    if (!molseq::json_bool(molseq::require_member(capabilities, "hid")) ||
+        !molseq::json_bool(molseq::require_member(capabilities, "midi")))
+      return 1;
     dispatch(dispatcher, "system.getMetrics");
     dispatch(dispatcher, "engine.getState");
     dispatch(dispatcher, "engine.reset");

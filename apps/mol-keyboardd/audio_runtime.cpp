@@ -220,6 +220,7 @@ class AudioRuntime::Impl {
   bool null_backend = false;
   std::unique_ptr<EngineMemory> memory = std::make_unique<EngineMemory>();
   std::unique_ptr<PhysicalInputAdapter> physical_input = make_physical_input_adapter();
+  std::unique_ptr<PhysicalInputAdapter> midi_input = make_midi_input_adapter();
   mol_engine_t* engine = nullptr;
   CommandQueue commands;
   EventQueue events;
@@ -432,6 +433,7 @@ void AudioRuntime::Impl::stop() {
   maintenance_stop.store(true, std::memory_order_release);
   if (maintenance_thread.joinable()) maintenance_thread.join();
   if (physical_input != nullptr) physical_input->detach();
+  if (midi_input != nullptr) midi_input->detach();
   input_id.clear();
   std::lock_guard<std::mutex> lock(control_mutex);
   shutdown_device();
@@ -600,6 +602,8 @@ molcontrol::RuntimeMetrics AudioRuntime::metrics() const {
   return result;
 }
 
+bool AudioRuntime::midi_supported() const { return impl_->midi_input != nullptr; }
+
 std::vector<molcontrol::DeviceInfo> AudioRuntime::input_devices() {
   std::vector<molcontrol::DeviceInfo> result = {{"programmatic", "Programmatic and local IPC input",
                                                  "service", true, impl_->input_id == "programmatic",
@@ -608,6 +612,11 @@ std::vector<molcontrol::DeviceInfo> AudioRuntime::input_devices() {
     std::vector<molcontrol::DeviceInfo> physical = impl_->physical_input->devices();
     result.insert(result.end(), std::make_move_iterator(physical.begin()),
                   std::make_move_iterator(physical.end()));
+  }
+  if (impl_->midi_input != nullptr) {
+    std::vector<molcontrol::DeviceInfo> midi = impl_->midi_input->devices();
+    result.insert(result.end(), std::make_move_iterator(midi.begin()),
+                  std::make_move_iterator(midi.end()));
   }
   return result;
 }
@@ -618,22 +627,30 @@ mol_result_t AudioRuntime::attach_input(const std::string& id) {
     impl_->input_id = id;
     return MOL_OK;
   }
-  if (impl_->physical_input == nullptr) return MOL_ERROR_UNSUPPORTED;
-  const mol_result_t result =
-      impl_->physical_input->attach(id, [impl = impl_.get()](const mol_command_t& command) {
+  const auto sink = [impl = impl_.get()](const mol_command_t& command) {
         if (!impl->commands.push(command)) {
           impl->dropped_commands.fetch_add(1u, std::memory_order_relaxed);
           return static_cast<mol_result_t>(MOL_ERROR_QUEUE_FULL);
         }
         impl->input_events.fetch_add(1u, std::memory_order_relaxed);
         return static_cast<mol_result_t>(MOL_OK);
-      });
-  if (result == MOL_OK) impl_->input_id = id;
-  return result;
+      };
+  for (PhysicalInputAdapter* adapter : {impl_->physical_input.get(), impl_->midi_input.get()}) {
+    if (adapter == nullptr) continue;
+    const std::vector<molcontrol::DeviceInfo> devices = adapter->devices();
+    if (std::none_of(devices.begin(), devices.end(),
+                     [&id](const molcontrol::DeviceInfo& device) { return device.id == id; }))
+      continue;
+    const mol_result_t result = adapter->attach(id, sink);
+    if (result == MOL_OK) impl_->input_id = id;
+    return result;
+  }
+  return MOL_ERROR_INVALID_ARGUMENT;
 }
 
 mol_result_t AudioRuntime::detach_input() {
   if (impl_->physical_input != nullptr) impl_->physical_input->detach();
+  if (impl_->midi_input != nullptr) impl_->midi_input->detach();
   impl_->input_id.clear();
   return MOL_OK;
 }

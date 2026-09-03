@@ -25,6 +25,7 @@ class AudioRuntime final : public molcontrol::ServiceRuntime {
   mol_result_t snapshot(mol_engine_state_t& state) override;
   mol_capability_flags_t capabilities() const override;
   molcontrol::RuntimeMetrics metrics() const override;
+  bool midi_supported() const override;
   std::vector<molcontrol::DeviceInfo> input_devices() override;
   mol_result_t attach_input(const std::string& id) override;
   mol_result_t detach_input() override;

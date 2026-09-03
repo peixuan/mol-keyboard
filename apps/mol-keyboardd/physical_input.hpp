@@ -23,6 +23,7 @@ class PhysicalInputAdapter {
 };
 
 std::unique_ptr<PhysicalInputAdapter> make_physical_input_adapter();
+std::unique_ptr<PhysicalInputAdapter> make_midi_input_adapter();
 
 }  // namespace molkeyboardd
 

@@ -111,6 +111,15 @@ int main() {
     return 1;
   }
   const std::vector<molcontrol::DeviceInfo> inputs = runtime.input_devices();
+#if MOL_ENABLE_MIDI
+  if (!runtime.midi_supported()) return 1;
+#else
+  if (runtime.midi_supported()) return 1;
+#endif
+  for (const molcontrol::DeviceInfo& input : inputs)
+    if (input.is_midi_input &&
+        (!input.is_physical_input || input.backend.find("midi") == std::string::npos))
+      return 1;
   for (const molcontrol::DeviceInfo& input : inputs) {
     if (!input.is_physical_input) continue;
     if (runtime.attach_input(input.id) != MOL_OK || runtime.active_input_id() != input.id ||
