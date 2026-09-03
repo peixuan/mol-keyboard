@@ -18,6 +18,8 @@ jobs:
             preset: ci-linux-gcc
           - runner: ubuntu-24.04
             preset: ci-linux-clang
+          - runner: ubuntu-24.04-arm
+            preset: ci-linux-gcc
           - runner: windows-2025-vs2026
             preset: ci-windows-msvc
           - runner: macos-15
@@ -32,6 +34,35 @@ jobs:
         run: cmake --build --preset ${{ matrix.preset }}
       - name: Test
         run: ctest --preset ${{ matrix.preset }}
+
+  windows-arm64:
+    runs-on: windows-11-vs2026-arm
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Build and test native ARM64 product
+        shell: cmd
+        run: |
+          call "%ProgramFiles%\Microsoft Visual Studio\18\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=arm64 -host_arch=arm64
+          cmake --preset ci-windows-msvc
+          cmake --build --preset ci-windows-msvc
+          ctest --preset ci-windows-msvc
+
+  linux-aarch64-cross:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install AArch64 cross compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+      - name: Configure and build complete AArch64 product
+        run: |
+          cmake --preset ci-linux-aarch64
+          cmake --build --preset ci-linux-aarch64
+          file build/ci-linux-aarch64/apps/mol-keyboardd/mol-keyboardd
+          file build/ci-linux-aarch64/apps/molctl/molctl
 
   wasm:
     runs-on: ubuntu-24.04

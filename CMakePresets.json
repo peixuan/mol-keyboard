@@ -58,6 +58,18 @@
       }
     },
     {
+      "name": "ci-linux-aarch64",
+      "inherits": "base",
+      "displayName": "Linux AArch64 Cross Build",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/linux-aarch64-gnu.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "MOL_BUILD_TESTS": "OFF",
+        "MOL_VALIDATE_MOBILE_SOURCES": "OFF",
+        "MOL_ENABLE_ASSERTIONS": "OFF"
+      }
+    },
+    {
       "name": "ci-windows-msvc",
       "inherits": "base",
       "cacheVariables": {
@@ -250,6 +262,7 @@
     { "name": "dev-release", "configurePreset": "dev-release" },
     { "name": "ci-linux-gcc", "configurePreset": "ci-linux-gcc" },
     { "name": "ci-linux-clang", "configurePreset": "ci-linux-clang" },
+    { "name": "ci-linux-aarch64", "configurePreset": "ci-linux-aarch64" },
     { "name": "ci-windows-msvc", "configurePreset": "ci-windows-msvc" },
     { "name": "fuzz-clang", "configurePreset": "fuzz-clang" },
     { "name": "coverage-clang", "configurePreset": "coverage-clang" },
