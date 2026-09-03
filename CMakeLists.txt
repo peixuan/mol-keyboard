@@ -130,6 +130,15 @@ if(NOT CMAKE_CROSSCOMPILING AND (MOL_BUILD_TOOLS OR MOL_BUILD_DAEMON OR MOL_BUIL
     target_compile_definitions(mol_sequence_document PRIVATE _CRT_SECURE_NO_WARNINGS)
   endif()
 
+  add_library(mol_midi STATIC apps/mol-seq/midi.cpp)
+  add_library(mol::midi ALIAS mol_midi)
+  target_include_directories(mol_midi PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/apps/mol-seq)
+  target_link_libraries(mol_midi PUBLIC mol::sequence_document)
+  target_compile_features(mol_midi PUBLIC cxx_std_17)
+  set_target_properties(mol_midi PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
+  mol_enable_warnings(mol_midi)
+  mol_enable_optional_instrumentation(mol_midi)
+
   add_library(mol_jsonrpc STATIC src/control/jsonrpc.cpp src/control/service_rpc.cpp)
   add_library(mol::jsonrpc ALIAS mol_jsonrpc)
   target_include_directories(mol_jsonrpc PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/control)
@@ -173,6 +182,15 @@ if(NOT CMAKE_CROSSCOMPILING AND (MOL_BUILD_TOOLS OR MOL_BUILD_DAEMON OR MOL_BUIL
     target_compile_definitions(
       mol_jsonrpc PUBLIC _DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION
                          _ITERATOR_DEBUG_LEVEL=0)
+    target_compile_definitions(
+      mol_sequence_document PUBLIC _DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION
+                                   _ITERATOR_DEBUG_LEVEL=0)
+    target_compile_definitions(
+      mol_midi PUBLIC _DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION
+                      _ITERATOR_DEBUG_LEVEL=0)
+    target_compile_definitions(
+      mol_service_control PUBLIC _DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION
+                                 _ITERATOR_DEBUG_LEVEL=0)
   endif()
 endif()
 

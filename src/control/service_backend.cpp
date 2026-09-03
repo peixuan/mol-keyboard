@@ -355,9 +355,7 @@ Json load_config_file(const std::filesystem::path& path) {
   if (!stream ||
       (!source.empty() && !stream.read(source.data(), static_cast<std::streamsize>(size))))
     throw std::runtime_error("cannot read configuration file");
-  Json config = molseq::parse_json(source);
-  validate_config(config);
-  return config;
+  return parse_service_config(source);
 }
 
 void save_config_file(const std::filesystem::path& path, const Json& config) {
@@ -400,6 +398,14 @@ Json single_config_value(const Json& config, const Json& params) {
 }
 
 }  // namespace
+
+molseq::Json parse_service_config(std::string_view source) {
+  if (source.size() > kMaximumConfigBytes)
+    throw std::runtime_error("configuration exceeds the 64 KiB limit");
+  Json config = molseq::parse_json(std::string(source));
+  validate_config(config);
+  return config;
+}
 
 ServiceBackend::ServiceBackend(ServiceRuntime& runtime, std::filesystem::path state_directory)
     : config_(make_default_config()),

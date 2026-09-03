@@ -1,0 +1,1 @@
+{"bpm":100,"chord_mode":0,"default_preset":"grand-piano","esp32_board_config":"none","input_device_id":"programmatic","input_mapping":{},"ipc":{"transport":"platform-local"},"log_level":"info","master_gain":0.25,"max_voices":32,"output_device_id":"default","sample_rate_policy":"device","scale_mapping":0,"scale_tonic":0,"scale_type":0,"schema_version":1,"web_ui":false}

@@ -4,12 +4,15 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <string>
 #include <string_view>
 
 #include "service_rpc.hpp"
 #include "service_runtime.hpp"
 
 namespace molcontrol {
+
+molseq::Json parse_service_config(std::string_view source);
 
 class ServiceBackend final : public RpcBackend {
  public:

@@ -111,7 +111,7 @@ set_target_properties(mol_esp32_sequence_store_tests PROPERTIES C_EXTENSIONS OFF
                                                          C_STANDARD_REQUIRED ON)
 mol_enable_warnings(mol_esp32_sequence_store_tests)
 mol_enable_optional_instrumentation(mol_esp32_sequence_store_tests)
-if(MSVC)
+if(WIN32)
   target_compile_definitions(mol_esp32_sequence_store_tests PRIVATE _CRT_SECURE_NO_WARNINGS)
 endif()
 add_test(NAME mol_esp32_sequence_store_tests COMMAND mol_esp32_sequence_store_tests)

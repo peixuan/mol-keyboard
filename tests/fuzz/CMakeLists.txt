@@ -41,13 +41,26 @@ mol_add_fuzzer(fuzz_patch_parser fuzz_patch_parser.c)
 mol_add_fuzzer(fuzz_sequence_parser fuzz_sequence_parser.c)
 mol_add_fuzzer(fuzz_wire_parser fuzz_wire_parser.c)
 mol_add_fuzzer(fuzz_jsonrpc_dispatch fuzz_jsonrpc_dispatch.cpp)
+mol_add_fuzzer(fuzz_config_parser fuzz_config_parser.cpp)
+mol_add_fuzzer(fuzz_midi_parser fuzz_midi_parser.cpp)
 target_link_libraries(fuzz_jsonrpc_dispatch PRIVATE mol::jsonrpc)
+target_link_libraries(fuzz_config_parser PRIVATE mol::service_control)
+target_link_libraries(fuzz_midi_parser PRIVATE mol::midi)
 target_compile_features(fuzz_jsonrpc_dispatch PRIVATE cxx_std_17)
-set_target_properties(fuzz_jsonrpc_dispatch PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
+target_compile_features(fuzz_config_parser PRIVATE cxx_std_17)
+target_compile_features(fuzz_midi_parser PRIVATE cxx_std_17)
+set_target_properties(
+  fuzz_jsonrpc_dispatch fuzz_config_parser fuzz_midi_parser
+  PROPERTIES CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
 if(WIN32)
   target_compile_definitions(
     fuzz_jsonrpc_dispatch
     PRIVATE _DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION _ITERATOR_DEBUG_LEVEL=0)
+  foreach(_mol_cpp_fuzzer fuzz_config_parser fuzz_midi_parser)
+    target_compile_definitions(
+      ${_mol_cpp_fuzzer}
+      PRIVATE _DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION _ITERATOR_DEBUG_LEVEL=0)
+  endforeach()
 endif()
 
 set(_mol_patch_corpus "${CMAKE_CURRENT_BINARY_DIR}/corpus/patch_parser_ci")
@@ -96,3 +109,25 @@ add_test(
     fuzz_jsonrpc_dispatch -max_total_time=20 -max_len=65536 -timeout=5
     -artifact_prefix=${_mol_jsonrpc_artifacts}/ ${_mol_jsonrpc_corpus})
 set_tests_properties(fuzz_jsonrpc_dispatch_smoke PROPERTIES TIMEOUT 45)
+
+set(_mol_config_corpus "${CMAKE_CURRENT_BINARY_DIR}/corpus/config_parser_ci")
+set(_mol_config_artifacts "${CMAKE_CURRENT_BINARY_DIR}/artifacts/config_parser")
+file(MAKE_DIRECTORY "${_mol_config_corpus}" "${_mol_config_artifacts}")
+configure_file(seeds/config.json ${_mol_config_corpus}/config.json COPYONLY)
+add_test(
+  NAME fuzz_config_parser_smoke
+  COMMAND
+    fuzz_config_parser -max_total_time=20 -max_len=65536 -timeout=5
+    -artifact_prefix=${_mol_config_artifacts}/ ${_mol_config_corpus})
+set_tests_properties(fuzz_config_parser_smoke PROPERTIES TIMEOUT 45)
+
+set(_mol_midi_corpus "${CMAKE_CURRENT_BINARY_DIR}/corpus/midi_parser_ci")
+set(_mol_midi_artifacts "${CMAKE_CURRENT_BINARY_DIR}/artifacts/midi_parser")
+file(MAKE_DIRECTORY "${_mol_midi_corpus}" "${_mol_midi_artifacts}")
+configure_file(seeds/midi_header ${_mol_midi_corpus}/midi_header COPYONLY)
+add_test(
+  NAME fuzz_midi_parser_smoke
+  COMMAND
+    fuzz_midi_parser -max_total_time=20 -max_len=1048576 -timeout=5
+    -artifact_prefix=${_mol_midi_artifacts}/ ${_mol_midi_corpus})
+set_tests_properties(fuzz_midi_parser_smoke PROPERTIES TIMEOUT 45)

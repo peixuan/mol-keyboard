@@ -244,10 +244,10 @@ std::uint64_t frames_to_ticks(std::uint64_t delta_frames, std::uint32_t time_bas
 
 }  // namespace
 
-SequenceDocument import_midi(const std::string& path, std::uint32_t sample_rate) {
+static SequenceDocument import_midi_data(const std::vector<std::uint8_t>& data,
+                                         std::uint32_t sample_rate) {
   if (sample_rate < 8000u || sample_rate > 192000u)
     throw std::runtime_error("MIDI import sample rate must be 8000..192000");
-  const std::vector<std::uint8_t> data = read_midi(path);
   if (data.size() < 14u || std::string(reinterpret_cast<const char*>(data.data()), 4u) != "MThd")
     throw std::runtime_error("missing MIDI header");
   const std::uint32_t header_length = read_u32(data.data() + 4u);
@@ -388,6 +388,18 @@ SequenceDocument import_midi(const std::string& path, std::uint32_t sample_rate)
     if (mol_sequence_validate_event(&event.event) == MOL_OK) document.events.push_back(event.event);
   }
   return document;
+}
+
+SequenceDocument import_midi(const std::string& path, std::uint32_t sample_rate) {
+  return import_midi_data(read_midi(path), sample_rate);
+}
+
+SequenceDocument import_midi_bytes(const std::uint8_t* data, std::size_t size,
+                                   std::uint32_t sample_rate) {
+  if (data == nullptr && size != 0u) throw std::runtime_error("null MIDI input");
+  std::vector<std::uint8_t> bytes;
+  if (size != 0u) bytes.assign(data, data + size);
+  return import_midi_data(bytes, sample_rate);
 }
 
 void export_midi(const std::string& path, const SequenceDocument& document) {
