@@ -11,6 +11,8 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
+import uuid
 import zipfile
 from pathlib import Path, PurePosixPath
 
@@ -93,7 +95,10 @@ def required_paths(root: Path) -> list[str]:
         "share/mol-keyboard/web/manifest.webmanifest",
         "share/mol-keyboard/web/generated/mol_audio_worklet_core.js",
         "share/mol-keyboard/web/generated/mol_audio_worklet_core.wasm",
+        "share/mol-keyboard/service/cn.zhangpeixuan.molkeyboard.daemon.plist",
+        "share/mol-keyboard/service/install-user-startup.ps1",
         "share/mol-keyboard/service/mol-keyboardd.service",
+        "share/mol-keyboard/service/uninstall-user-startup.ps1",
     ]
     library_candidates = [root / "lib" / "libmol_core.a", root / "lib" / "mol_core.lib"]
     if not any(path.is_file() for path in library_candidates):
@@ -115,6 +120,186 @@ def run_smoke_test(executable: Path, arguments: list[str], expected: str) -> str
             f"smoke test failed for {executable.name}: exit={completed.returncode}, output={output!r}"
         )
     return output.strip()
+
+
+def run_controller(
+    controller: Path, endpoint: str, state_dir: Path, arguments: list[str]
+) -> object:
+    completed = subprocess.run(
+        [
+            str(controller),
+            "--json",
+            "--endpoint",
+            endpoint,
+            "--state-dir",
+            str(state_dir),
+            *arguments,
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    if completed.returncode != 0:
+        raise ValueError(
+            "molctl failed for {}: exit={}, stdout={!r}, stderr={!r}".format(
+                " ".join(arguments),
+                completed.returncode,
+                completed.stdout,
+                completed.stderr,
+            )
+        )
+    response = json.loads(completed.stdout)
+    if not isinstance(response, dict) or "error" in response or "result" not in response:
+        raise ValueError(f"molctl returned an invalid response for {' '.join(arguments)}")
+    return response["result"]
+
+
+def run_headless_runtime_smoke(root: Path, runtime_root: Path) -> dict[str, object]:
+    suffix = ".exe" if os.name == "nt" else ""
+    daemon = root / "bin" / f"mol-keyboardd{suffix}"
+    controller = root / "bin" / f"molctl{suffix}"
+    state_dir = runtime_root / "state"
+    recording = runtime_root / "package-smoke.molseq"
+    endpoint = (
+        rf"\\.\pipe\mol-keyboard-package-{os.getpid()}-{uuid.uuid4().hex}"
+        if os.name == "nt"
+        else str(runtime_root / "service.sock")
+    )
+    stdout_path = runtime_root / "daemon.stdout.log"
+    stderr_path = runtime_root / "daemon.stderr.log"
+    runtime_root.mkdir(parents=True)
+
+    process: subprocess.Popen[bytes] | None = None
+    try:
+        with stdout_path.open("wb") as stdout, stderr_path.open("wb") as stderr:
+            process = subprocess.Popen(
+                [
+                    str(daemon),
+                    "--null-backend",
+                    "--state-dir",
+                    str(state_dir),
+                    "--endpoint",
+                    endpoint,
+                ],
+                stdin=subprocess.DEVNULL,
+                stdout=stdout,
+                stderr=stderr,
+            )
+
+            status: object | None = None
+            last_error = "molctl was not attempted"
+            for _ in range(100):
+                if process.poll() is not None:
+                    raise ValueError(
+                        f"packaged daemon exited before becoming ready: {process.returncode}"
+                    )
+                try:
+                    status = run_controller(controller, endpoint, state_dir, ["status"])
+                    break
+                except (OSError, subprocess.SubprocessError, ValueError) as error:
+                    last_error = str(error)
+                    time.sleep(0.05)
+            if status is None:
+                raise ValueError(f"packaged daemon did not become ready: {last_error}")
+            if not isinstance(status, dict) or status.get("sample_rate") != 48000:
+                raise ValueError("packaged daemon reported an invalid engine state")
+            if status.get("channel_count") != 2:
+                raise ValueError("packaged daemon did not start in stereo")
+
+            capabilities = run_controller(controller, endpoint, state_dir, ["capabilities"])
+            run_controller(controller, endpoint, state_dir, ["preset", "set", "violin"])
+            run_controller(controller, endpoint, state_dir, ["tempo", "123"])
+            run_controller(controller, endpoint, state_dir, ["record", "start"])
+            run_controller(
+                controller,
+                endpoint,
+                state_dir,
+                ["note", "on", "60", "--velocity", "0.8", "--gesture", "7010"],
+            )
+            time.sleep(0.1)
+            run_controller(
+                controller, endpoint, state_dir, ["note", "off", "--gesture", "7010"]
+            )
+            run_controller(
+                controller,
+                endpoint,
+                state_dir,
+                ["record", "stop", "--output", str(recording)],
+            )
+            if not recording.is_file() or recording.stat().st_size == 0:
+                raise ValueError("packaged daemon did not persist its recording")
+            run_controller(controller, endpoint, state_dir, ["play", str(recording)])
+            run_controller(controller, endpoint, state_dir, ["rpc", "playback.stop", "{}"])
+            audio = run_controller(
+                controller, endpoint, state_dir, ["rpc", "audio.getLatency", "{}"]
+            )
+            self_test = run_controller(controller, endpoint, state_dir, ["self-test"])
+            doctor = run_controller(controller, endpoint, state_dir, ["doctor"])
+            benchmark = run_controller(
+                controller,
+                endpoint,
+                state_dir,
+                ["rpc", "diagnostics.benchmark", '{"frames":4096}'],
+            )
+            run_controller(controller, endpoint, state_dir, ["all-notes-off"])
+
+            if not isinstance(capabilities, dict) or not capabilities:
+                raise ValueError("packaged daemon returned no capabilities")
+            if (
+                not isinstance(audio, dict)
+                or str(audio.get("backend", "")).lower() != "null"
+                or audio.get("null_sink") is not True
+            ):
+                raise ValueError("packaged daemon did not use the null audio backend")
+            if not isinstance(self_test, dict) or self_test.get("ok") is not True:
+                raise ValueError("packaged daemon self-test failed")
+            if not isinstance(doctor, dict) or doctor.get("ok") is not True:
+                raise ValueError("packaged daemon doctor failed")
+            if (
+                not isinstance(benchmark, dict)
+                or benchmark.get("frames") != 4096
+                or benchmark.get("non_finite_samples") != 0
+            ):
+                raise ValueError("packaged daemon benchmark failed")
+
+            run_controller(controller, endpoint, state_dir, ["shutdown"])
+            try:
+                exit_code = process.wait(timeout=5)
+            except subprocess.TimeoutExpired as error:
+                raise ValueError("packaged daemon did not exit after shutdown") from error
+            if exit_code != 0:
+                raise ValueError(f"packaged daemon exited with {exit_code}")
+            if os.name != "nt" and Path(endpoint).exists():
+                raise ValueError("packaged daemon left its IPC endpoint behind")
+
+        return {
+            "mode": "headless-null-audio",
+            "sample_rate": status["sample_rate"],
+            "channel_count": status["channel_count"],
+            "recording_bytes": recording.stat().st_size,
+            "benchmark_frames": benchmark["frames"],
+            "non_finite_samples": benchmark["non_finite_samples"],
+            "exit_code": process.returncode,
+        }
+    except Exception as error:
+        if process is not None and process.poll() is None:
+            process.kill()
+            process.wait(timeout=5)
+        daemon_stdout = (
+            stdout_path.read_text(encoding="utf-8", errors="replace")
+            if stdout_path.is_file()
+            else ""
+        )
+        daemon_stderr = (
+            stderr_path.read_text(encoding="utf-8", errors="replace")
+            if stderr_path.is_file()
+            else ""
+        )
+        raise ValueError(
+            f"packaged headless runtime smoke failed: {error}; "
+            f"daemon stdout={daemon_stdout!r}; daemon stderr={daemon_stderr!r}"
+        ) from error
 
 
 def main() -> int:
@@ -153,6 +338,7 @@ def main() -> int:
             cli_output = run_smoke_test(
                 root / "bin" / f"molctl{suffix}", ["--help"], "Commands:"
             )
+            headless_runtime = run_headless_runtime_smoke(root, extraction / "runtime")
             entries = sorted(
                 path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_file()
             )
@@ -161,13 +347,14 @@ def main() -> int:
         return 1
 
     report = {
-        "schema_version": 1,
+        "schema_version": 2,
         "archive": str(archive),
         "archive_bytes": archive.stat().st_size,
         "archive_sha256": archive_hash,
         "file_count": len(entries),
         "daemon_smoke_test": daemon_output,
         "cli_smoke_test": cli_output,
+        "headless_runtime_smoke": headless_runtime,
         "result": "pass",
     }
     report_dir = args.report_dir.resolve()

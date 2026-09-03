@@ -224,6 +224,45 @@ jobs:
             --report-dir build/package-audit \
             --expected-version 0.1.0
 
+  windows-package:
+    runs-on: windows-2025-vs2026
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install pinned Emscripten SDK
+        shell: pwsh
+        run: |
+          $sdk = Join-Path $env:RUNNER_TEMP "emsdk"
+          git init $sdk
+          git -C $sdk remote add origin https://github.com/emscripten-core/emsdk.git
+          git -C $sdk fetch --depth 1 origin dfb9d1a46c3bb8f52e1e6324be23123b9d73c190
+          git -C $sdk checkout --detach FETCH_HEAD
+          & (Join-Path $sdk "emsdk.bat") install 6.0.5
+          & (Join-Path $sdk "emsdk.bat") activate 6.0.5
+          "EMSDK=$sdk" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Build optimized Web artifacts
+        shell: pwsh
+        run: |
+          & "$env:EMSDK\emsdk_env.ps1"
+          cmake --preset wasm-release
+          cmake --build --preset wasm-release
+          npm --prefix apps/web ci
+          npm --prefix apps/web run build
+      - name: Build and exercise portable Windows distribution
+        shell: pwsh
+        run: |
+          cmake --preset package-release
+          cmake --build --preset package-release
+          cpack --config build/package-release/CPackConfig.cmake -B build/packages
+          $archives = @(Get-ChildItem -Path build/packages -File -Filter "mol-keyboard-*.zip")
+          if ($archives.Count -ne 1) {
+            throw "Expected exactly one Windows portable archive, found $($archives.Count)."
+          }
+          python tools/package_audit.py `
+            --archive $archives[0].FullName `
+            --report-dir build/package-audit `
+            --expected-version 0.1.0
+
   coverage:
     runs-on: ubuntu-24.04
     steps:
