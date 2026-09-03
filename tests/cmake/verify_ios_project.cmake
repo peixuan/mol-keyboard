@@ -6,7 +6,9 @@ endif()
 
 set(_ios "${MOL_SOURCE_DIR}/platforms/ios")
 set(_controller "${_ios}/MOLViewController.mm")
+set(_hardware_keys "${_ios}/mol_ios_hardware_keys.c")
 set(_runner "${_ios}/run-simulator-smoke.sh")
+set(_tests "${MOL_SOURCE_DIR}/tests/CMakeLists.txt")
 set(_workflow "${MOL_SOURCE_DIR}/.github/workflows/ci.yml")
 
 foreach(_required
@@ -15,10 +17,39 @@ foreach(_required
         "${_ios}/PrivacyInfo.xcprivacy"
         "${_ios}/build-app.sh"
         "${_controller}"
+        "${_hardware_keys}"
+        "${_ios}/mol_ios_hardware_keys.h"
         "${_runner}"
+        "${_tests}"
         "${_workflow}")
   if(NOT EXISTS "${_required}")
     message(FATAL_ERROR "iOS application or acceptance input is missing: ${_required}")
+  endif()
+endforeach()
+
+file(READ "${_ios}/CMakeLists.txt" _ios_cmake_text)
+file(READ "${_tests}" _tests_text)
+foreach(_text IN ITEMS _ios_cmake_text _tests_text)
+  string(FIND "${${_text}}" "mol_ios_hardware_keys.c" _token_offset)
+  if(_token_offset EQUAL -1)
+    message(FATAL_ERROR "iOS hardware-key production/test build wiring is missing")
+  endif()
+endforeach()
+string(FIND "${_tests_text}" "mol_ios_hardware_key_tests" _test_offset)
+if(_test_offset EQUAL -1)
+  message(FATAL_ERROR "iOS hardware-key executable test is not registered")
+endif()
+
+file(READ "${_hardware_keys}" _hardware_keys_text)
+foreach(_token
+        "MOL_IOS_HARDWARE_KEY_CAPACITY"
+        "MOL_IOS_HARDWARE_KEY_ACTION_SUSTAIN"
+        "MOL_IOS_HARDWARE_GESTURE_PREFIX"
+        "mol_ios_hardware_keys_cancel_press"
+        "mol_ios_hardware_keys_release_all")
+  string(FIND "${_hardware_keys_text}" "${_token}" _token_offset)
+  if(_token_offset EQUAL -1)
+    message(FATAL_ERROR "iOS production hardware-key state is missing ${_token}")
   endif()
 endforeach()
 
@@ -29,7 +60,9 @@ foreach(_token
         "runtime.status"
         [[\"version\":2]]
         "MOL_IOS_SIMULATOR_SMOKE_PASS"
-        "MOL_IOS_SIMULATOR_SMOKE_FAIL")
+        "MOL_IOS_SIMULATOR_SMOKE_FAIL"
+        "mol_ios_hardware_keys_process"
+        "mol_ios_hardware_keys_release_all")
   string(FIND "${_controller_text}" "${_token}" _token_offset)
   if(_token_offset EQUAL -1)
     message(FATAL_ERROR "iOS packaged UI/bridge smoke is missing ${_token}")

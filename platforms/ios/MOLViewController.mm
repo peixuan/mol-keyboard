@@ -4,8 +4,8 @@
 #import <WebKit/WebKit.h>
 
 #import "MOLNativeAudioController.h"
+#include "mol_ios_hardware_keys.h"
 
-#include <cstdint>
 #include <cstdio>
 
 namespace {
@@ -13,74 +13,38 @@ namespace {
 NSString* const kBridgeName = @"MolKeyboardNative";
 NSString* const kApplicationScheme = @"mol-keyboard";
 NSString* const kApplicationHost = @"app";
-constexpr std::uint64_t kHardwareGesturePrefix = 1ULL << 52U;
 
-NSInteger note_for_usage(UIKeyboardHIDUsage usage) {
-  switch (usage) {
-    case UIKeyboardHIDUsageKeyboardZ:
-      return 60;
-    case UIKeyboardHIDUsageKeyboardS:
-      return 61;
-    case UIKeyboardHIDUsageKeyboardX:
-      return 62;
-    case UIKeyboardHIDUsageKeyboardD:
-      return 63;
-    case UIKeyboardHIDUsageKeyboardC:
-      return 64;
-    case UIKeyboardHIDUsageKeyboardV:
-      return 65;
-    case UIKeyboardHIDUsageKeyboardG:
-      return 66;
-    case UIKeyboardHIDUsageKeyboardB:
-      return 67;
-    case UIKeyboardHIDUsageKeyboardH:
-      return 68;
-    case UIKeyboardHIDUsageKeyboardN:
-      return 69;
-    case UIKeyboardHIDUsageKeyboardJ:
-      return 70;
-    case UIKeyboardHIDUsageKeyboardM:
-      return 71;
-    case UIKeyboardHIDUsageKeyboardQ:
-      return 72;
-    case UIKeyboardHIDUsageKeyboard2:
-      return 73;
-    case UIKeyboardHIDUsageKeyboardW:
-      return 74;
-    case UIKeyboardHIDUsageKeyboard3:
-      return 75;
-    case UIKeyboardHIDUsageKeyboardE:
-      return 76;
-    case UIKeyboardHIDUsageKeyboardR:
-      return 77;
-    case UIKeyboardHIDUsageKeyboard5:
-      return 78;
-    case UIKeyboardHIDUsageKeyboardT:
-      return 79;
-    case UIKeyboardHIDUsageKeyboard6:
-      return 80;
-    case UIKeyboardHIDUsageKeyboardY:
-      return 81;
-    case UIKeyboardHIDUsageKeyboard7:
-      return 82;
-    case UIKeyboardHIDUsageKeyboardU:
-      return 83;
-    case UIKeyboardHIDUsageKeyboardI:
-      return 84;
-    case UIKeyboardHIDUsageKeyboard9:
-      return 85;
-    case UIKeyboardHIDUsageKeyboardO:
-      return 86;
-    case UIKeyboardHIDUsageKeyboard0:
-      return 87;
-    case UIKeyboardHIDUsageKeyboardP:
-      return 88;
-    case UIKeyboardHIDUsageKeyboardOpenBracket:
-      return 89;
-    default:
-      return -1;
-  }
-}
+static_assert(UIKeyboardHIDUsageKeyboardZ == 0x1d);
+static_assert(UIKeyboardHIDUsageKeyboardS == 0x16);
+static_assert(UIKeyboardHIDUsageKeyboardX == 0x1b);
+static_assert(UIKeyboardHIDUsageKeyboardD == 0x07);
+static_assert(UIKeyboardHIDUsageKeyboardC == 0x06);
+static_assert(UIKeyboardHIDUsageKeyboardV == 0x19);
+static_assert(UIKeyboardHIDUsageKeyboardG == 0x0a);
+static_assert(UIKeyboardHIDUsageKeyboardB == 0x05);
+static_assert(UIKeyboardHIDUsageKeyboardH == 0x0b);
+static_assert(UIKeyboardHIDUsageKeyboardN == 0x11);
+static_assert(UIKeyboardHIDUsageKeyboardJ == 0x0d);
+static_assert(UIKeyboardHIDUsageKeyboardM == 0x10);
+static_assert(UIKeyboardHIDUsageKeyboardQ == 0x14);
+static_assert(UIKeyboardHIDUsageKeyboard2 == 0x1f);
+static_assert(UIKeyboardHIDUsageKeyboardW == 0x1a);
+static_assert(UIKeyboardHIDUsageKeyboard3 == 0x20);
+static_assert(UIKeyboardHIDUsageKeyboardE == 0x08);
+static_assert(UIKeyboardHIDUsageKeyboardR == 0x15);
+static_assert(UIKeyboardHIDUsageKeyboard5 == 0x22);
+static_assert(UIKeyboardHIDUsageKeyboardT == 0x17);
+static_assert(UIKeyboardHIDUsageKeyboard6 == 0x23);
+static_assert(UIKeyboardHIDUsageKeyboardY == 0x1c);
+static_assert(UIKeyboardHIDUsageKeyboard7 == 0x24);
+static_assert(UIKeyboardHIDUsageKeyboardU == 0x18);
+static_assert(UIKeyboardHIDUsageKeyboardI == 0x0c);
+static_assert(UIKeyboardHIDUsageKeyboard9 == 0x26);
+static_assert(UIKeyboardHIDUsageKeyboardO == 0x12);
+static_assert(UIKeyboardHIDUsageKeyboard0 == 0x27);
+static_assert(UIKeyboardHIDUsageKeyboardP == 0x13);
+static_assert(UIKeyboardHIDUsageKeyboardOpenBracket == 0x2f);
+static_assert(UIKeyboardHIDUsageKeyboardSpacebar == 0x2c);
 
 NSString* mime_type(NSString* path) {
   NSString* extension = path.pathExtension.lowercaseString;
@@ -101,14 +65,13 @@ NSString* mime_type(NSString* path) {
 
 @protocol MOLKeyboardWebViewDelegate <NSObject>
 
-- (BOOL)handleHardwareUsage:(UIKeyboardHIDUsage)usage pressed:(BOOL)pressed;
+- (BOOL)handleHardwareAction:(const mol_ios_hardware_key_action_t*)action;
 
 @end
 
 @interface MOLKeyboardWebView : WKWebView
 
 @property(nonatomic, weak) id<MOLKeyboardWebViewDelegate> keyboardDelegate;
-@property(nonatomic, readonly) NSMutableSet<NSNumber*>* activeUsages;
 
 - (void)releaseAllHardwareKeys;
 - (void)finishPresses:(NSSet<UIPress*>*)presses
@@ -118,17 +81,13 @@ NSString* mime_type(NSString* path) {
 @end
 
 @implementation MOLKeyboardWebView {
-  NSMutableSet<NSNumber*>* _activeUsages;
+  mol_ios_hardware_keys_t _hardwareKeys;
 }
 
 - (instancetype)initWithFrame:(CGRect)frame configuration:(WKWebViewConfiguration*)configuration {
   self = [super initWithFrame:frame configuration:configuration];
-  if (self != nil) _activeUsages = [[NSMutableSet alloc] initWithCapacity:31U];
+  if (self != nil) mol_ios_hardware_keys_init(&_hardwareKeys);
   return self;
-}
-
-- (NSMutableSet<NSNumber*>*)activeUsages {
-  return _activeUsages;
 }
 
 - (void)pressesBegan:(NSSet<UIPress*>*)presses withEvent:(UIPressesEvent*)event {
@@ -136,13 +95,15 @@ NSString* mime_type(NSString* path) {
   for (UIPress* press in presses) {
     UIKey* key = press.key;
     if (key == nil) continue;
-    NSNumber* usage = @(key.keyCode);
-    const BOOL supported =
-        note_for_usage(key.keyCode) >= 0 || key.keyCode == UIKeyboardHIDUsageKeyboardSpacebar;
-    if (!supported) continue;
-    if (![_activeUsages containsObject:usage]) {
-      if (![self.keyboardDelegate handleHardwareUsage:key.keyCode pressed:YES]) continue;
-      [_activeUsages addObject:usage];
+    mol_ios_hardware_key_action_t action;
+    if (!mol_ios_hardware_keys_process(&_hardwareKeys, static_cast<uint32_t>(key.keyCode), true,
+                                       &action)) {
+      continue;
+    }
+    if (action.type != MOL_IOS_HARDWARE_KEY_ACTION_NONE &&
+        ![self.keyboardDelegate handleHardwareAction:&action]) {
+      mol_ios_hardware_keys_cancel_press(&_hardwareKeys, static_cast<uint32_t>(key.keyCode));
+      continue;
     }
     [unhandled removeObject:press];
   }
@@ -164,10 +125,12 @@ NSString* mime_type(NSString* path) {
   for (UIPress* press in presses) {
     UIKey* key = press.key;
     if (key == nil) continue;
-    NSNumber* usage = @(key.keyCode);
-    if (![_activeUsages containsObject:usage]) continue;
-    (void)[self.keyboardDelegate handleHardwareUsage:key.keyCode pressed:NO];
-    [_activeUsages removeObject:usage];
+    mol_ios_hardware_key_action_t action;
+    if (!mol_ios_hardware_keys_process(&_hardwareKeys, static_cast<uint32_t>(key.keyCode), false,
+                                       &action)) {
+      continue;
+    }
+    (void)[self.keyboardDelegate handleHardwareAction:&action];
     [unhandled removeObject:press];
   }
   if (unhandled.count == 0U) return;
@@ -179,12 +142,12 @@ NSString* mime_type(NSString* path) {
 }
 
 - (void)releaseAllHardwareKeys {
-  for (NSNumber* value in _activeUsages.allObjects) {
-    (void)[self.keyboardDelegate
-        handleHardwareUsage:static_cast<UIKeyboardHIDUsage>(value.integerValue)
-                    pressed:NO];
+  mol_ios_hardware_key_action_t actions[MOL_IOS_HARDWARE_KEY_CAPACITY];
+  const size_t count =
+      mol_ios_hardware_keys_release_all(&_hardwareKeys, actions, MOL_IOS_HARDWARE_KEY_CAPACITY);
+  for (size_t index = 0U; index < count; ++index) {
+    (void)[self.keyboardDelegate handleHardwareAction:&actions[index]];
   }
-  [_activeUsages removeAllObjects];
 }
 
 @end
@@ -521,17 +484,15 @@ NSString* mime_type(NSString* path) {
   std::fflush(stderr);
 }
 
-- (BOOL)handleHardwareUsage:(UIKeyboardHIDUsage)usage pressed:(BOOL)pressed {
-  const std::uint64_t gestureId =
-      kHardwareGesturePrefix | (static_cast<std::uint64_t>(usage) & 0xFFFFULL);
-  if (usage == UIKeyboardHIDUsageKeyboardSpacebar) {
-    return [_audioController submitHardwareSustain:pressed gestureId:gestureId];
+- (BOOL)handleHardwareAction:(const mol_ios_hardware_key_action_t*)action {
+  if (action == nullptr) return NO;
+  if (action->type == MOL_IOS_HARDWARE_KEY_ACTION_SUSTAIN) {
+    return [_audioController submitHardwareSustain:action->pressed gestureId:action->gesture_id];
   }
-  const NSInteger note = note_for_usage(usage);
-  if (note < 0) return NO;
-  return [_audioController submitHardwareNote:static_cast<uint8_t>(note)
-                                           on:pressed
-                                    gestureId:gestureId];
+  if (action->type != MOL_IOS_HARDWARE_KEY_ACTION_NOTE) return NO;
+  return [_audioController submitHardwareNote:action->note
+                                           on:action->pressed
+                                    gestureId:action->gesture_id];
 }
 
 - (void)applicationDidBecomeActive:(NSNotification*)notification {

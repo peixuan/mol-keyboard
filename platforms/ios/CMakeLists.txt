@@ -26,6 +26,8 @@ add_executable(
   MOLNativeAudioController.mm
   mol_ios_audio_lifecycle.c
   mol_ios_audio_lifecycle.h
+  mol_ios_hardware_keys.c
+  mol_ios_hardware_keys.h
   MOLViewController.h
   MOLViewController.mm
   Assets.xcassets)
