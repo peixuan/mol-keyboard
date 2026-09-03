@@ -22,26 +22,34 @@ gap. Linux AArch64 also passes an end-to-end QEMU product gate and 59/59 target
 tests, while execution on native ARM64 hosts remains unclaimed. Android
 emulator coverage now also stops and reopens AAudio across injected transient
 focus loss/gain. The exact background-policy state machine consumed by the iOS
-controller now also executes under MSVC, Linux GCC, and Emscripten. M0 through
-M9 are implementation-complete, but the Definition of Done is not complete: native
+controller now also executes under MSVC, Linux GCC, and Emscripten. A checked-in
+iPhone Simulator gate now installs and launches the packaged application and
+requires both production-UI readiness and valid/rejected reply-bridge behavior;
+it still requires a real Apple CI execution. M0 through M9 are
+implementation-complete, but the Definition of Done is not complete: native
 ARM64 runtime, Apple and Harmony toolchains, current Safari, physical mobile
 devices, ESP32 hardware, physical audio routes, and instrumented end-to-end
 latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`a184c02` (`test(ios): execute background lifecycle state machine`) is the
-latest locally validated code candidate. The Objective-C++ iOS controller now
-directly consumes a portable production state machine for user-start gating,
-foreground/background transitions, playback and metronome continuation, idle
-stop, route recovery, and media-services reset. That same C source passes under
-MSVC, Linux GCC, and Emscripten. The preceding `dbc4374` candidate's ESP32 and
+`f34aef3` (`test(ios): add simulator bridge smoke gate`) is the latest locally
+validated code candidate. The CI-bound Simulator runner selects and boots an
+available iPhone, installs and launches the real application bundle, and fails
+unless the packaged production UI reaches the reply-capable native bridge for
+both a valid `runtime.status` request and an invalid-version rejection. Its
+project wiring is audited on every portable test configuration. The preceding
+`a184c02` candidate's Objective-C++ iOS controller directly consumes a portable
+production state machine for user-start gating, foreground/background
+transitions, playback and metronome continuation, idle stop, route recovery,
+and media-services reset. That same C source passes under MSVC, Linux GCC, and
+Emscripten. The preceding `dbc4374` candidate's ESP32 and
 ESP32-S3 images boot under Espressif QEMU, mount/format transactional storage,
 pass the shared sequence and C4 checks, drain 12 production input commands, and
 render more than 100,000 frames with non-silent finite output and zero project
 failure counters. All four physical-board configurations still compile with
 the emulator option disabled. Windows MSVC Release and Linux x86_64 GCC pass
-80/80 tests; Emscripten MinSizeRel passes 33/33. System Chrome on Windows and
+81/81 tests; Emscripten MinSizeRel passes 34/34. System Chrome on Windows and
 bundled Chromium on Linux each pass the five applicable desktop application
 cases, including a real platform daemon process and authenticated service
 controller. Current core coverage remains 94.10%, Clang static analysis passes
@@ -272,7 +280,7 @@ cmake --build --preset dev-release
 ctest --preset dev-release --output-on-failure
 ```
 
-MSVC 19.51.36248 passes 80/80 tests in the current LTO Release build; the prior
+MSVC 19.51.36248 passes 81/81 tests in the current LTO Release build; the prior
 Debug build passed 78/78. These runs include the iOS production lifecycle
 policy, strict Web form protocol and HIL evidence-parser tests in addition to
 the independent daemon process, realtime runtime, local IPC, all service
@@ -282,7 +290,7 @@ GNU 15 Release+LTO presets previously passed 75/75 for Tiny, 76/76 for
 Standard, and 75/75 for Full. The Full run exercises 64 voices, 4,096 sequence
 events, the complete desktop daemon, and the expanded fixed host arenas.
 
-Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 80/80
+Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 81/81
 tests; the prior Clang 21.1.8 candidate passed 78/78. The daemon process used
 its null sink and a private Unix socket; the production Web UI additionally
 controlled it under bundled Chromium. Physical Linux devices remain unclaimed.
@@ -321,7 +329,7 @@ cmake --build --preset wasm-release
 ctest --preset wasm-release --output-on-failure
 ```
 
-Emscripten 6.0.5 and Node.js 22.16.0 pass 33/33 tests in the current LTO
+Emscripten 6.0.5 and Node.js 22.16.0 pass 34/34 tests in the current LTO
 MinSizeRel build; the prior Debug candidate passed 31/31. Both configurations
 match the Native event, sequence-fixture, and 18-preset audio-metric goldens.
 
@@ -530,7 +538,7 @@ tests.
 - Cross-platform source checks are not promoted to device verification.
 
 The HarmonyOS application descriptors, project audit, and native source-check
-boundary pass locally. Windows MSVC Release and Linux GCC pass 80/80 tests. The
+boundary pass locally. Windows MSVC Release and Linux GCC pass 81/81 tests. The
 official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor 5.8.9 build and audit
 both Debug and Release compatibility HAPs; the Release artifact is an unsigned
 2,951,842-byte package containing ArkTS bytecode and both required native ABIs.

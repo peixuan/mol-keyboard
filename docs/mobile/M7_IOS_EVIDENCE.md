@@ -4,9 +4,12 @@
 
 The iOS application implementation is complete and source-reviewed. Its exact
 production background-policy state machine is executable under non-Apple
-toolchains, but the application is not marked `build-verified`,
-`runtime-verified`, or `device-verified`: this Windows host has no Xcode, iOS
-SDK, Simulator, Apple signing identity, or physical Apple device.
+toolchains. A fail-closed Simulator runner now builds, installs, launches, and
+checks the packaged production UI and real reply-capable bridge when executed
+on macOS. It is checked into CI but has not executed on this host, so the
+application is not marked `build-verified`, `runtime-verified`, or
+`device-verified`: this Windows host has no Xcode, iOS SDK, Simulator, Apple
+signing identity, or physical Apple device.
 
 ## Implemented product path
 
@@ -42,7 +45,15 @@ The application provides:
   IndexedDB storage;
 - localized display names, a real app icon, the `audio` background mode, an
   empty-data/no-tracking privacy manifest, and configurable bundle/signing
-  settings.
+  settings;
+- an opt-in in-application Simulator acceptance path which waits for the
+  packaged UI, invokes `runtime.status` through the production
+  `WKScriptMessageHandlerWithReply`, proves an invalid protocol version is
+  rejected, and emits a machine-readable success marker; and
+- a `simctl` runner which selects an available iPhone runtime, boots it when
+  needed, installs and launches the real app, captures separate process logs
+  and a screenshot, fails on an explicit rejection or 60-second timeout, and
+  cleans up only the exact app and Simulator it used.
 
 The AudioUnit callback contains no Objective-C dispatch, allocation, locks,
 logging, file access, or lifecycle work. It accepts variable slice sizes,
@@ -57,12 +68,14 @@ tests cover user-start gating, foreground resignation, idle background stop,
 playback continuation and completion, the metronome-plus-transport rule,
 engine reset, route restoration, foreground/background media-services reset,
 restart failure, route-revision saturation, and invalid/null calls. The same
-production C source passed as part of Windows MSVC Release 80/80, Linux GCC
-80/80, Emscripten MinSizeRel 33/33, and ASan/UBSan 47/47 suites; Clang static
-analysis also includes this production translation unit. This validates
-deterministic application policy only; it does not simulate or claim UIKit,
-AVAudioSession, RemoteIO, OS notifications, actual background scheduling, or an
-audio route.
+production C source passed as part of Windows MSVC Release 81/81, Linux GCC
+81/81, Emscripten MinSizeRel 34/34, and the prior ASan/UBSan 47/47 suites;
+Clang static analysis also includes this production translation unit. A new
+cross-platform project audit fails if the app-side smoke, valid and rejected
+bridge requests, `simctl` install/launch runner, result markers, screenshot, or
+CI invocation is removed. This validates deterministic application policy and
+acceptance wiring only; it does not simulate or claim UIKit, AVAudioSession,
+RemoteIO, OS notifications, actual background scheduling, or an audio route.
 
 The source was formatted with Visual Studio ClangFormat 22 and passed
 `git diff --check`. The property lists parsed as XML, the asset catalogs parsed
@@ -73,31 +86,38 @@ resolution.
 The shared Web UI passed 12/12 Node tests, strict TypeScript checking, and a
 production Vite build after adding Promise-based WKWebView reply support.
 MSVC Release rebuilt the complete native project with warnings as errors and
-passed 80/80 CTest cases, including the production iOS lifecycle state machine,
-macOS platform simulations, and dependency license audit.
+passed 81/81 CTest cases; Linux GCC passed 81/81 and Emscripten MinSizeRel
+passed 34/34. These include the production iOS lifecycle state machine, the
+Simulator acceptance-project audit, macOS platform simulations, and dependency
+license audit. `build-app.sh` and `run-simulator-smoke.sh` both pass `bash -n`.
 
 ## Reproducible Apple commands
 
 On a Mac with Xcode and the pinned Emscripten 6.0.5 environment active:
 
 ~~~bash
-platforms/ios/build-app.sh Simulator
+platforms/ios/run-simulator-smoke.sh
 MOL_SKIP_WEB_BUILD=1 platforms/ios/build-app.sh Device
 ~~~
 
-The scripts require a real generated `MoLKeyboard.app`, executable, compiled
-`Assets.car`, privacy manifest, application property list, and packaged Web
-entry. They lint both property lists. CI executes both unsigned configurations
-on `macos-15`. Supply `MOL_APPLE_DEVELOPMENT_TEAM`,
-`MOL_APPLE_BUNDLE_IDENTIFIER`, and optionally
+The build scripts require a real generated `MoLKeyboard.app`, executable,
+compiled `Assets.car`, privacy manifest, application property list, and
+packaged Web entry. They lint both property lists. The Simulator command also
+requires an installed available iPhone runtime and writes logs plus
+`screenshot.png` below `build/ios-simulator-smoke/`. CI builds both unsigned
+configurations on `macos-15` and then runs this smoke gate. Supply
+`MOL_APPLE_DEVELOPMENT_TEAM`, `MOL_APPLE_BUNDLE_IDENTIFIER`, and optionally
 `MOL_APPLE_SIGNING_IDENTITY` for a signed device bundle.
 
 ## Pending real Apple acceptance
 
 The following remain mandatory before status promotion:
 
-1. Xcode warnings-as-errors simulator and arm64 device builds.
-2. Simulator launch of the packaged UI and strict bridge rejection tests.
+1. Xcode warnings-as-errors Simulator and arm64 device builds on the exact
+   release candidate.
+2. A passing `run-simulator-smoke.sh` result and retained logs/screenshot from
+   that same candidate; the runner is implemented but no Apple execution is
+   claimed here.
 3. Physical audible note/record/playback with finite callback counters.
 4. Background and lock-screen callback advance only for active playback or
    metronome transport, followed by idle shutdown.
