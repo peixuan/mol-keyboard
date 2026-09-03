@@ -8,8 +8,10 @@ Bluetooth audio/keyboard verification remain unavailable here.
 
 The complete Windows ARM64 and Linux AArch64 products cross-build and their
 object formats were inspected as COFF-ARM64 and AArch64 ELF respectively. They
-have not executed on a native ARM64 host, so audio, input, service lifecycle,
-and package behavior on those architectures remain unverified. Native ARM64
+have not executed on a native ARM64 host. QEMU 10.2.1 now passes 59/59 Linux
+AArch64 target tests and an end-to-end null-audio daemon/CLI/render gate, which
+checks ISA execution and process behavior but not native scheduling, audio,
+input, latency, or hardware lifecycle. Native ARM64
 GitHub runner jobs are checked in, but no result is claimed before the commits
 are present on a remote workflow run.
 
@@ -40,13 +42,19 @@ physical AP authorization, sustained operation, and ESP32 Classic A2DP Source
 remain unverified. The ESP32 Web map leaves 6,596 bytes in the primary DRAM
 layout before runtime allocations, so its Wi-Fi/Bluetooth heap watermark is a
 mandatory HIL result, not an inferred capability. The fail-closed procedure is
-documented in `docs/hardware/M9_ESP32_EVIDENCE.md`.
+documented in `docs/hardware/M9_ESP32_EVIDENCE.md`. A virtual-clock model now
+validates 180 ten-second telemetry snapshots for each chip family and proves
+reset, deadline, stalled-audio, and firmware-error injection are rejected; it
+is parser/control evidence, not firmware or hardware execution.
 
 Android now provides a complete dual-ABI application and is runtime-verified on
 an Android 15 x86_64 emulator, including AAudio rendering, legal foreground
-state, background/screen-off continuation, and idle shutdown. No physical
+state, an injected transient focus-loss/gain cycle, background/screen-off
+continuation, and idle shutdown. The injection calls the same service listener
+used by Android and verifies actual AAudio stop/reopen, but is not evidence from
+a competing application. No physical
 Android device was available, so arm64 playback, hardware keyboard, actual
-Bluetooth or wired route changes, focus interruption, latency, and sustained
+Bluetooth or wired route changes, external focus arbitration, latency, and sustained
 playback remain unverified.
 
 The iOS application implementation is complete, including the packaged shared

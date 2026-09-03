@@ -37,6 +37,7 @@ refreshed at code candidate `3a1da43`.
 | Windows MSVC Debug | 63/63 | local IPC recovery, all 41 RPC methods, runtime callback, independent daemon process, CLI, recording/playback, rendering |
 | Windows MSVC LTO Release | 63/63 | same optimized suite; daemon plus CLI total 586,240 bytes |
 | Linux x86_64 Clang (WSL) | 63/63 | Unix socket mode/cleanup, null-audio service process, CLI lifecycle, Linux adapter compilation |
+| Linux AArch64 QEMU 10.2.1 | 59/59 | target core/DSP/music tests, 18-preset metrics, null playback, nested daemon process, CLI/render lifecycle |
 | Windows Clang ASan/UBSan | 30/30 | all sanitizer-enabled portable/control tests and four 20-second parser fuzz sessions |
 | Emscripten Debug/MinSizeRel | 31/31 each | current core/worklet regression after the control-plane changes |
 | ESP32 / ESP32-S3 | build passed | firmware regression; application binaries remain 153,440 and 179,328 bytes |
@@ -61,3 +62,12 @@ with checked-in presets. GNU 15.2.0 produced AArch64 ELF daemon, CLI, playback,
 sequence, render, patch, analyzer, and core outputs. LLVM-MinGW 20260826/Clang
 23.1.0 produced the equivalent COFF-ARM64 outputs. These results promote both
 architectures to `build-verified`; they are not native ARM64 runtime evidence.
+
+At candidate `b3b7e14`, QEMU user-mode emulation additionally executed the
+Release AArch64 daemon and CLI over a private Unix socket. Record/playback,
+doctor, self-test, a 96,000-frame finite benchmark, all-sound-off, persistent
+configuration, and clean shutdown passed; the AArch64 renderer produced a
+finite, non-silent 4.25-second WAV with no clipping or underruns. A separate
+Debug cross-test build passed 59/59 tests. The JSON report labels this
+`simulated-runtime` and excludes native scheduling, physical audio/input,
+latency, route change, suspend, and device-loss claims.

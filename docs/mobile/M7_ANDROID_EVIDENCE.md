@@ -38,13 +38,14 @@ contain `arm64-v8a` and `x86_64` native libraries. A separate Debug build with
 `-PmolApplicationId=org.example.molkeyboard` produced that exact package ID,
 confirming the release identifier is configurable.
 
-The final artifacts were:
+The Debug, unsigned Release, and instrumentation artifacts were refreshed at
+`240b207`:
 
 | Artifact | Bytes | SHA-256 |
 |---|---:|---|
-| `app-debug.apk` | 3,692,937 | `67bd0b0a10b87c08bda0921df0fc96f424f392613e80e4db1c81e3c274e26288` |
-| `app-release-unsigned.apk` | 2,589,628 | `89a36140090b99e4918aef5dcd26e405275ab3c8fe2d8e3a54ff2ec67fb5cdd6` |
-| `app-debug-androidTest.apk` | 22,058 | `5ba1b2b367a641dcfd3021af4398c4abc00cf063c68bb5de65540cea06955860` |
+| `app-debug.apk` | 5,004,335 | `3e699a544d57f2cb0e8aba5b2cdf1cc8087dbc67bcfc2ef7beac3ee93930c6f1` |
+| `app-release-unsigned.apk` | 2,589,500 | `c6e47e541edf4e839dcc2eee3ef700605172375285e06c38c3856cfa0757ad7e` |
+| `app-debug-androidTest.apk` | 24,844 | `9a9c8fca1218a0255ade2a5376fb120747789bce64abb495d1832813fdfa3518` |
 
 The unsigned Release APK targets API 36 with minimum API 26. Archive
 inspection found both native ABIs, the packaged local `index.html`,
@@ -72,11 +73,13 @@ The final result was:
 
 ```text
 INSTRUMENTATION_RESULT: audioApi=2
-INSTRUMENTATION_RESULT: backgroundCallbacks=162
-INSTRUMENTATION_RESULT: callbacks=65
-INSTRUMENTATION_RESULT: frames=36480
+INSTRUMENTATION_RESULT: backgroundCallbacks=98
+INSTRUMENTATION_RESULT: callbacks=57
+INSTRUMENTATION_RESULT: focusInterrupted=true
+INSTRUMENTATION_RESULT: focusResumedCallbacks=2
+INSTRUMENTATION_RESULT: frames=32640
 INSTRUMENTATION_RESULT: idleBackgroundStopped=true
-INSTRUMENTATION_RESULT: lockedCallbacks=263
+INSTRUMENTATION_RESULT: lockedCallbacks=203
 INSTRUMENTATION_RESULT: sampleRate=48000
 INSTRUMENTATION_CODE: -1
 ```
@@ -84,11 +87,16 @@ INSTRUMENTATION_CODE: -1
 `audioApi=2` is the Oboe AAudio backend. The test drives the real packaged
 start button and then crosses the Web UI, strict JavaScript bridge, bound
 foreground service, JNI, Oboe, and shared C engine. It sends Note On/Off and
-asserts finite rendering with zero render failures. It then starts the core
+asserts finite rendering with zero render failures. The instrumentation then
+injects transient focus loss into the production service listener, observes
+the AAudio runtime stop, injects focus gain, and requires a newly opened stream
+to resume finite callbacks. This found and fixed foreground resume eligibility;
+the injection validates service recovery but does not claim Android focus
+arbitration from a competing application. It then starts the core
 metronome/transport, backgrounds the activity, confirms the service is a
 `mediaPlayback` foreground service with its notification, and observes the
-callback count advance. After turning the screen off it advances from 162 to
-263 callbacks. The test wakes the emulator, disables active content,
+callback count advance. After turning the screen off it advances from 98 to
+203 callbacks. The test wakes the emulator, disables active content,
 backgrounds the app again, and verifies both the native stream and foreground
 state stop instead of abusing background execution.
 
@@ -114,7 +122,7 @@ state stop instead of abusing background execution.
 
 No physical Android device was available. Arm64 packaging is build-verified,
 but actual arm64 playback, hardware-key input, wired/Bluetooth route changes,
-audio-focus interruption by another application, measured end-to-end latency,
+audio-focus arbitration by another application, measured end-to-end latency,
 and long-duration underrun behavior remain device checks. Production signing
 credentials are also intentionally absent. Android therefore has emulator
 `runtime-verified` evidence, not `device-verified` or `release-ready` status.

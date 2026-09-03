@@ -122,6 +122,11 @@ low-latency path, hardware keyboard, wired/Bluetooth routes, background and
 screen-off lifecycle, interruption, persistence, and measured latency. Apple
 and Harmony follow equivalent official-toolchain and physical-device matrices.
 
+The Android emulator instrumentation injects transient focus loss/gain into
+the production service listener and requires AAudio to stop, reopen, and resume
+finite callbacks. This covers the restoration state machine; a competing app
+and physical output routes remain device acceptance.
+
 ## ESP32 hardware-in-loop
 
 Both chip families must build default and Web variants within flash and static
@@ -130,6 +135,11 @@ capture for 30 minutes. It rejects resets, watchdogs, deadline misses, queue or
 persistence errors, missing target capabilities, silence, or clipped capture.
 ESP32 additionally tests Classic A2DP; ESP32-S3 tests USB HID and confirms A2DP
 absence. Parser self-tests alone are not device evidence.
+
+The device-free `esp32_hil.py --simulate` gate runs 30 minutes of virtual
+telemetry for both chip families and injects reset, deadline, stalled-audio,
+and firmware-error failures. It verifies the HIL state machine and reporting,
+is always labeled `simulated-hil`, and never satisfies the release HIL row.
 
 ## Performance, latency, size, and packages
 

@@ -18,7 +18,7 @@ It does not contain code or assets from an earlier MoL Keyboard project.
 
 The portable core, music/DSP, recording/tooling, desktop, Web/PWA, Android,
 iOS, HarmonyOS, and ESP32 implementations are present. Native, Wasm, Android
-emulator, and all four ESP-IDF builds have current evidence; Apple, DevEco,
+emulator, Linux AArch64 QEMU execution, and all four ESP-IDF builds have current evidence; Apple, DevEco,
 physical mobile/ESP32 hardware, Safari, and measured end-to-end latency remain
 release blockers. This repository is therefore a 0.1.0 prerelease and is not
 tagged v1.0.0. Platform claims are recorded only after real builds or runtime checks. See
@@ -27,7 +27,8 @@ and [`docs/status/PLATFORM_MATRIX.md`](docs/status/PLATFORM_MATRIX.md) for curre
 evidence.
 
 可移植核心、音乐与 DSP、录音工具、桌面、Web/PWA、Android、iOS、HarmonyOS 和
-ESP32 实现均已落地。Native、Wasm、Android 模拟器及四个 ESP-IDF 构建已有当前证据；
+ESP32 实现均已落地。Native、Wasm、Android 模拟器、Linux AArch64 QEMU 执行及四个
+ESP-IDF 构建已有当前证据；
 Apple、DevEco、移动与 ESP32 真机、Safari 以及真实端到端延迟仍是发布门禁。因此当前版本
 仍为 0.1.0 预发布版，不标记为 v1.0.0。平台支持只在真实构建或运行验证后声明。
 
@@ -164,10 +165,10 @@ UI→JNI→Oboe/AAudio→C 核心及后台/锁屏生命周期验证。iOS 完整
 | Target / 目标 | Implementation / 实现 | Current evidence / 当前证据 |
 | --- | --- | --- |
 | Windows | daemon, CLI, WASAPI, Raw Input | x64 tests/runtime and ARM64 cross-build passed; ARM64 runtime pending / x64 测试运行及 ARM64 交叉构建通过，ARM64 运行待验 |
-| Linux | daemon, CLI, native audio/evdev host | x86_64 tests/runtime and AArch64 cross-build passed; physical devices pending / x86_64 测试运行及 AArch64 交叉构建通过，物理设备待验 |
+| Linux | daemon, CLI, native audio/evdev host | x86_64 runtime plus AArch64 QEMU product and 59-test suite passed; native ARM64 and physical devices pending / x86_64 运行及 AArch64 QEMU 产品与 59 项测试通过，原生 ARM64 与物理设备待验 |
 | macOS | daemon, CoreAudio, IOHIDManager | source present; Apple build/runtime pending / 源码已实现，Apple 构建运行待验 |
 | Web/PWA | Wasm AudioWorklet, offline shell | supported-browser automation passed; Safari pending / 已支持浏览器自动化通过，Safari 待验 |
-| Android | Oboe/AAudio foreground service | dual-ABI builds and Android 15 emulator passed; device pending / 双 ABI 与模拟器通过，真机待验 |
+| Android | Oboe/AAudio foreground service | dual-ABI builds plus Android 15 audio-focus/lifecycle simulation passed; device pending / 双 ABI 及 Android 15 音频焦点与生命周期仿真通过，真机待验 |
 | iOS | AudioUnit, AVAudioSession, offline WKWebView | implementation present; Xcode/device pending / 实现已完成，Xcode 与真机待验 |
 | HarmonyOS | OHAudio, AVSession, continuous task | source audit passed; DevEco/device pending / 源码审计通过，DevEco 与真机待验 |
 | ESP32 | I2S, GPIO/BLE/Classic HID, A2DP Source | ESP-IDF image/map passed; board HIL pending / 固件与 map 通过，开发板 HIL 待验 |

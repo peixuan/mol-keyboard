@@ -9,27 +9,36 @@ Linux ThreadSanitizer, optimized endurance, release-size budgets, dependency/lic
 and SBOM audits, Windows/Linux package audits, Android packaging, and clean
 checkout reproduction pass. Complete Windows ARM64 and Linux AArch64 desktop
 products now cross-build through checked-in presets, closing their local build
-gap; execution on native ARM64 hosts remains unclaimed. M0 through M9 are
-implementation-complete, but the Definition of Done is not complete: native
+gap. Linux AArch64 also passes an end-to-end QEMU product gate and 59/59 target
+tests, while execution on native ARM64 hosts remains unclaimed. Android
+emulator coverage now also stops and reopens AAudio across injected transient
+focus loss/gain. M0 through M9 are implementation-complete, but the Definition
+of Done is not complete: native
 ARM64 runtime, Apple and Harmony toolchains, current Safari, physical mobile
 devices, ESP32 hardware, physical audio routes, and instrumented end-to-end
 latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`4f77f56` (`test(fuzz): cover remaining input parsers`) is the latest
-locally validated candidate commit. MSVC Debug/LTO Release and Linux Clang pass
+`240b207` (`fix(android): resume foreground audio after focus gain`) is the
+latest locally validated candidate commit. Its dual-ABI Debug and
+instrumentation APKs, unsigned Release/R8/lintVital package, and full lint gate
+all pass. Android 15/API 35 emulator instrumentation also passes with injected focus loss/gain
+and resumed AAudio callbacks. The prior `b3b7e14` candidate's
+Linux AArch64 Release products pass the QEMU lifecycle/render gate, its AArch64
+Debug suite passes 59/59, affected MSVC tests pass 5/5, and ESP32 HIL
+parser/model self-tests pass 5/5. The prior
+`4f77f56` candidate retains the complete MSVC Debug/LTO Release, Linux Clang,
+ABI, sanitizer, analysis, endurance, size, package, and clean-checkout evidence
+documented below. MSVC Debug/LTO Release and Linux Clang pass
 76/76 tests; Emscripten MinSizeRel passes 31/31. Windows and Linux shared-core
 builds pass 74/74 public-boundary tests, expose exactly the 47 version 1.0 API
 symbols, and Linux ABI Compliance Checker reports 100% binary and source
 compatibility with zero problems. GNU 15 Release+LTO Tiny, Standard, and Full
 profiles pass 75/75, 76/76, and 75/75. ASan/UBSan passes 45/45 including all
 eleven fuzzers. LLVM-MinGW 20260826/Clang 23.1.0 and GNU 15.2.0 produced the
-complete Windows ARM64 and Linux AArch64 products. Native ARM64 execution is
-not inferred from those cross-builds. The prior `3a1da43` candidate retains the
-complete platform and clean-checkout evidence documented below; all affected local
-Native, Wasm, ABI, sanitizer, analysis, endurance, size, and package gates have
-been refreshed on the newer commit. Validation ran on 2026-09-03.
+complete Windows ARM64 and Linux AArch64 products. QEMU evidence is not inferred
+to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
 
 ## Completed requirements
 
@@ -109,6 +118,10 @@ been refreshed on the newer commit. Validation ran on 2026-09-03.
   `mol-keyboardd`, `molctl`, `mol-play`, `mol-render`, `mol-seq`,
   `mol-patchc`, `mol-audio-analyze`, and `mol_core`, as Windows ARM64 COFF and
   Linux AArch64 ELF. CI also includes native Windows and Ubuntu ARM64 runners.
+- QEMU 10.2.1 executes the Linux AArch64 Release daemon, CLI, and renderer as a
+  fail-closed product gate. A separate Debug target build passes 59/59 tests,
+  including the 18-preset audio golden, local IPC, nested daemon/renderer
+  processes, null playback, latency analyzer, and C/C++ consumers.
 - An independent Windows Release process used the active 48 kHz stereo WASAPI
   device, exposed the physical Raw Input adapter, passed doctor and a 96,000
   frame benchmark at 80.68 times realtime with no non-finite samples, and shut
@@ -134,9 +147,10 @@ been refreshed on the newer commit. Validation ran on 2026-09-03.
   hardware keys, and private recording persistence are implemented.
 - The Android 15 x86_64 emulator exercised the real packaged UI-to-AAudio path
   at 48 kHz with zero render/non-finite failures. Callback count advanced from
-  162 in background to 263 with the screen off, then the idle background stream
-  and foreground state stopped. Detailed evidence and physical-device
-  boundaries are in `docs/mobile/M7_ANDROID_EVIDENCE.md`.
+  98 in background to 203 with the screen off, then the idle background stream
+  and foreground state stopped. Injected transient focus loss stopped AAudio;
+  focus gain reopened it and resumed finite callbacks. Detailed evidence and
+  physical-device boundaries are in `docs/mobile/M7_ANDROID_EVIDENCE.md`.
 - The iOS source now packages the same production UI with an offline-only
   WKURLSchemeHandler, Promise reply bridge, exact request schema, allow-listed
   commands, bounded event/recording transfer, foreground UIKit HID mapping,
@@ -162,12 +176,15 @@ been refreshed on the newer commit. Validation ran on 2026-09-03.
   archive remains below 28 KiB and the queried eight-voice engine uses 37,664
   bytes of its 37,888-byte arena. A host-tested HIL verifier now fails on reset,
   underrun, watchdog, queue, persistence, capability, input, or real I2S-capture
-  violations.
+  violations. Its virtual-clock mode passes 180 healthy snapshots for each
+  chip family and rejects reset, deadline, stalled-audio, and firmware-error
+  injection without claiming board execution.
 
 ## In-progress work
 
 - No locally actionable implementation or automated release gate is known to
-  remain. Release acceptance now requires the external hosts, devices, routes,
+  remain after adding AArch64 QEMU execution and ESP32 virtual HIL fault
+  injection. Release acceptance now requires the external hosts, devices, routes,
   and measurement equipment listed below. Documentation remains a draft and
   `v1.0.0` remains forbidden until those results pass.
 
@@ -180,9 +197,10 @@ been refreshed on the newer commit. Validation ran on 2026-09-03.
   physical evdev keyboard nor native Linux audio hardware. Those M5 acceptance
   paths and macOS compilation/runtime remain unverified.
 - Windows ARM64 and Linux AArch64 binaries are build-verified, but no native
-  ARM64 host was available locally to execute their service, input, or audio
-  paths. Native ARM64 CI jobs are configured but an unpushed local commit is not
-  reported as a CI result.
+  ARM64 host was available locally. Linux AArch64 QEMU execution covers target
+  instructions, service IPC, rendering, and tests, but cannot verify native
+  scheduling, input, audio, latency, or hardware lifecycle. Native ARM64 CI jobs
+  are configured but an unpushed local commit is not reported as a CI result.
 - Physical Android/Apple/Harmony/ESP32 devices, I2S capture equipment, signing
   credentials, and long-run device time are not available. The Android emulator
   result and ESP-IDF builds are not promoted to device verification.
@@ -280,9 +298,11 @@ build. Debug, unsigned Release, device-test APKs, R8/lintVital, and full Debug
 lint all passed. Archive inspection confirmed the paired
 `mol_audio_worklet_core.js` and `.wasm` assets in both final APK variants. The
 official Android 15/API 35 x86_64 emulator returned AAudio
-API 2, 48 kHz, 36,480 rendered frames at the foreground checkpoint, 162
-background callbacks, 263 screen-off callbacks, no render/non-finite failure,
-successful idle shutdown, and instrumentation code `-1`.
+API 2, 48 kHz, 32,640 rendered frames at the foreground checkpoint, a stopped
+runtime after injected transient focus loss, 2 callbacks after focus-gain
+reopen, 98 background callbacks, 203 screen-off callbacks, no
+render/non-finite failure, successful idle shutdown, and instrumentation code
+`-1`.
 
 For sanitizer and parser fuzz validation, activate the Visual Studio environment
 and place Clang 22 on `PATH`:
@@ -347,6 +367,25 @@ The complete desktop products also pass the checked-in cross-build presets:
 cmake --preset ci-linux-aarch64
 cmake --build --preset ci-linux-aarch64
 ```
+
+With QEMU user mode and the AArch64 runtime prefix available, the target test
+binaries and final products execute under emulation:
+
+```sh
+cmake --preset ci-linux-aarch64-qemu
+cmake --build --preset ci-linux-aarch64-qemu
+ctest --preset ci-linux-aarch64-qemu
+python3 tools/aarch64_emulation_gate.py \
+  --qemu /usr/bin/qemu-aarch64 --sysroot /usr/aarch64-linux-gnu \
+  --build-dir build/ci-linux-aarch64 \
+  --artifact-commit "$(git rev-parse HEAD)" \
+  --report build/aarch64-emulation-report.json
+```
+
+The local QEMU 10.2.1 run passed 59/59 AArch64 tests in 92.91 seconds. The
+Release product report for `b3b7e14` passed daemon/CLI IPC, record/playback,
+doctor, self-test, finite benchmark, clean shutdown, and deterministic WAV
+validation. It is explicitly `simulated-runtime`, not native/device evidence.
 
 ```powershell
 # Extract LLVM-MinGW 20260826 UCRT, then select it explicitly.

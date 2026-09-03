@@ -109,4 +109,23 @@ python tests/hardware/esp32_hil.py --self-test
 ctest --preset dev-debug -R mol_esp32_hil_parser_tests --output-on-failure
 ```
 
-These tests validate the evidence parser only; they do not emulate a board.
+The deterministic virtual-clock mode advances a complete 30-minute telemetry
+session without waiting 30 wall-clock minutes. It requires modeled GPIO and
+Bluetooth activity, Web authorization and pair clearing, original-ESP32 A2DP
+PCM progress, ESP32-S3 USB HID activity, 57,600,000 I2S frames, and 180 healthy
+diagnostic snapshots. Negative self-tests inject a reset, deadline miss,
+stalled audio, and firmware error and require every case to fail closed:
+
+```powershell
+python tests/hardware/esp32_hil.py --simulate --target esp32 `
+  --report build/esp32-simulated-hil.json
+python tests/hardware/esp32_hil.py --simulate --target esp32s3 `
+  --report build/esp32s3-simulated-hil.json
+python tests/hardware/esp32_hil.py --simulate --target esp32 `
+  --inject-fault deadline-miss
+```
+
+The final command is expected to fail. Every report is labeled
+`simulated-hil` and lists excluded physical claims. These tests validate the
+evidence parser and long-run acceptance logic only; they do not execute
+firmware, emulate a board, or replace UART/I2S/radio evidence.
