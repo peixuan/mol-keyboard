@@ -16,9 +16,9 @@ The Standard Release engine rendered 1,800 seconds of 48 kHz stereo audio:
 | --- | ---: |
 | Rendered frames | 86,400,000 |
 | Configured / active gestures | 32 voices / up to 16 |
-| CPU wall time | 284.807 s |
-| Simulated/realtime ratio | 6.32x |
-| Approximate one-core utilization | 15.82% |
+| CPU wall time | 268.567 s |
+| Simulated/realtime ratio | 6.70x |
+| Approximate one-core utilization | 14.92% |
 | Random note-ons | 57,600 |
 | Preset switches | 360 (20 complete rotations) |
 | Recording cycles | 120 |
@@ -31,7 +31,7 @@ core on this host. This is a single-process simulation without a physical audio
 driver; it does not establish callback P95, underrun, or device thermal results.
 
 The null-backend runtime recovery test performed 30 full device stop/rebuild
-cycles in 1.55 seconds, 580 callbacks, and 74,240 frames with zero render
+cycles in 1.42 seconds with zero render
 failures. Exact transport arithmetic reached frame 345,600,000 after the
 two-hour conformance case with zero drift.
 
@@ -49,22 +49,22 @@ archive and deterministic gzip level 9 for Wasm:
 
 | Measurement | Actual | Exclusive limit | Result |
 | --- | ---: | ---: | --- |
-| Stripped `mol_core` archive | 510,220 B | 1,048,576 B | pass |
+| Stripped `mol_core` archive | 505,468 B | 1,048,576 B | pass |
 | Headless daemon + CLI | 943,392 B | 5,242,880 B | pass |
-| Compressed Standard Wasm | 22,943 B | 1,572,864 B | pass |
+| Compressed Standard Wasm | 22,978 B | 1,572,864 B | pass |
 | Web core resources, excluding maps | 157,413 B | 2,097,152 B | pass |
 
 The Web total includes HTML, JavaScript, CSS, manifest, service worker, icons,
 and the paired AudioWorklet JavaScript and Wasm artifacts. It excludes only
 source maps and contains no optional samples.
 
-Audited CPack outputs from code candidate `16b7df8` contained 146 files each,
+Audited CPack outputs from code candidate `4f77f56` contained 146 files each,
 including both worklet artifacts, the complete C SDK/export header, the latency
 probe, and its physical measurement procedure. The Windows AMD64 ZIP was
-1,291,607 bytes with SHA-256
-`28c94f7cc8a93653e94cd665be2841ff04baa02cac6c4ec7188cdbc5894b3c56`.
-The Linux x86_64 TGZ was 1,683,387 bytes with SHA-256
-`89e650a5d6f59bab17c0b8711404a8a9f0c766e66f0c046adfa930399884b70d`.
+1,291,580 bytes with SHA-256
+`0d419cce06880e24ca871548bbbbe8f1a4ef0f59c38f56bd75baf2157907b7ab`.
+The Linux x86_64 TGZ was 1,676,870 bytes with SHA-256
+`255bc2069c9d33b8506f2d03d9d8732a26295308ebdb6dd7862202e95e6b5492`.
 Both installed daemon/CLI smoke tests passed, and the audit requires the latency
 probe executable. These are unsigned local 0.1.0 pre-release artifacts, not
 v1.0.0 releases.

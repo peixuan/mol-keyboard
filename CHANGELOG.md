@@ -15,7 +15,7 @@ All notable changes to this project will be documented in this file.
   hotplug recovery, atomic configuration, diagnostics, and user startup assets.
 - Added sanitizer-backed fuzzing for all six required Patch, Sequence, service
   configuration, JSON-RPC, Wire, and MIDI parser boundaries, plus the latency
-  capture parser.
+  capture, WAV analyzer, ESP32 settings/Web-form, and HID report parsers.
 - Added the complete installable offline Web/PWA instrument with paired
   AudioWorklet/Wasm loading, MessagePort and SharedArrayBuffer transports,
   IndexedDB persistence, keyboard/touch control, authenticated service mode,
@@ -39,3 +39,10 @@ All notable changes to this project will be documented in this file.
 - Added `mol-latency-probe` for fail-closed analysis of multichannel PCM16
   physical captures, with report metadata, capture hashes, raw observations,
   P50/P95/maximum statistics, acceptance thresholds, and malformed-input fuzzing.
+- Added explicit Release+LTO Tiny, Standard, and Full resource-profile presets
+  and CI coverage, including Full-profile host storage and recording capacity.
+
+### Fixed
+
+- Disabled strict-alias optimization for the C core's documented caller-owned
+  opaque storage contract, preventing cross-language GCC LTO miscompilation.

@@ -52,16 +52,36 @@ frame with no accumulated drift.
 
 ## Parser and memory safety
 
-`fuzz-clang` enables ASan, UBSan, and seven libFuzzer targets for Patch,
-Sequence, service configuration, JSON-RPC, MolWireEventV1, MIDI, and latency
-capture parsing. Each CI smoke session runs at least 20 seconds and
-reparses/canonicalizes successful inputs where applicable. Reproducer artifacts
-are reviewed privately before disclosure.
+`fuzz-clang` enables ASan, UBSan, and eleven libFuzzer targets for Patch,
+Sequence, service configuration, JSON-RPC, MolWireEventV1, MIDI, latency and
+audio WAV captures, ESP32 settings and Web forms, and HID report parsing. Each
+CI smoke session runs at least 20 seconds and reparses/canonicalizes successful
+inputs where applicable. Reproducer artifacts are reviewed privately before
+disclosure.
 
 ```sh
 cmake --preset fuzz-clang
 cmake --build --preset fuzz-clang
 ctest --preset fuzz-clang
+```
+
+## Resource profiles
+
+All three compile-time resource profiles have dedicated optimized presets and
+run the complete applicable suite with LTO. Standard includes the calibrated
+audio-metric golden; Tiny and Full omit that deliberately Standard-specific
+comparison while retaining all other conformance, service, and tool tests.
+
+```sh
+cmake --preset profile-tiny
+cmake --build --preset profile-tiny
+ctest --preset profile-tiny
+cmake --preset profile-standard
+cmake --build --preset profile-standard
+ctest --preset profile-standard
+cmake --preset profile-full
+cmake --build --preset profile-full
+ctest --preset profile-full
 ```
 
 ThreadSanitizer runs the Linux concurrent service, queue, IPC, and process

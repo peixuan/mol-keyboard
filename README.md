@@ -47,6 +47,13 @@ Ninja is on `PATH`. Linux uses the same presets with GCC or Clang.
 Windows 用户需在 Visual Studio 开发者终端中运行，并确保 `PATH` 中包含 Ninja；Linux
 可用同一组预设配合 GCC 或 Clang。
 
+Use `profile-tiny`, `profile-standard`, or `profile-full` in place of
+`dev-debug` to build and test that resource profile with Release optimization
+and LTO. CI exercises all three profiles; exactly one is selected per build.
+
+将 `dev-debug` 替换为 `profile-tiny`、`profile-standard` 或 `profile-full`，即可用
+Release 优化与 LTO 构建并测试对应资源档位；每次构建只能选择一个档位，CI 会覆盖三档。
+
 Build and test the installable shared-library form, including independent C11
 and C++17 consumers, with the dedicated preset:
 

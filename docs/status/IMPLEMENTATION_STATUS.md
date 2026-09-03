@@ -3,9 +3,9 @@
 ## Current milestone
 
 All locally actionable M10 release gates are complete. Native and Wasm
-regression, static/shared ABI verification, coverage, static analysis,
-ASan/UBSan with all seven fuzzers, Linux
-ThreadSanitizer, optimized endurance, release-size budgets, dependency/license
+regression, Release+LTO Tiny/Standard/Full profiles, static/shared ABI
+verification, coverage, static analysis, ASan/UBSan with all eleven fuzzers,
+Linux ThreadSanitizer, optimized endurance, release-size budgets, dependency/license
 and SBOM audits, Windows/Linux package audits, Android packaging, and clean
 checkout reproduction pass. Complete Windows ARM64 and Linux AArch64 desktop
 products now cross-build through checked-in presets, closing their local build
@@ -17,18 +17,19 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`16b7df8` (`docs: record ABI and latency tooling evidence`) is the latest
+`4f77f56` (`test(fuzz): cover remaining input parsers`) is the latest
 locally validated candidate commit. MSVC Debug/LTO Release and Linux Clang pass
 76/76 tests; Emscripten MinSizeRel passes 31/31. Windows and Linux shared-core
 builds pass 74/74 public-boundary tests, expose exactly the 47 version 1.0 API
 symbols, and Linux ABI Compliance Checker reports 100% binary and source
-compatibility with zero problems. ASan/UBSan passes 41/41 including all seven
-fuzzers. LLVM-MinGW 20260826/Clang 23.1.0 and GNU 15.2.0 produced the complete
-Windows ARM64 and Linux AArch64 products. Native ARM64 execution is not inferred
-from those cross-builds. The prior `3a1da43` candidate retains the complete
-endurance, platform, package, and clean-checkout evidence documented below;
-affected gates have been refreshed on the newer commit. Validation ran on
-2026-09-03.
+compatibility with zero problems. GNU 15 Release+LTO Tiny, Standard, and Full
+profiles pass 75/75, 76/76, and 75/75. ASan/UBSan passes 45/45 including all
+eleven fuzzers. LLVM-MinGW 20260826/Clang 23.1.0 and GNU 15.2.0 produced the
+complete Windows ARM64 and Linux AArch64 products. Native ARM64 execution is
+not inferred from those cross-builds. The prior `3a1da43` candidate retains the
+complete platform and clean-checkout evidence documented below; all affected local
+Native, Wasm, ABI, sanitizer, analysis, endurance, size, and package gates have
+been refreshed on the newer commit. Validation ran on 2026-09-03.
 
 ## Completed requirements
 
@@ -90,10 +91,10 @@ affected gates have been refreshed on the newer commit. Validation ran on
   optional fail-closed P95 limit. Its deterministic 20-event fixture produces
   19.5/28.05/29 ms, while corrupt input and a 20 ms P95 limit are rejected.
 - Patch, Mol Sequence, service configuration, JSON-RPC, MolWireEventV1, MIDI,
-  and latency-capture Clang libFuzzer entries cover arbitrary bounded input and
-  successful-parse round trips where applicable. ASan/UBSan builds all portable
-  and control-plane tests; the Windows ASan runtime is deployed for all test
-  binaries.
+  latency/audio captures, ESP32 settings/Web forms, and HID-report Clang
+  libFuzzer entries cover arbitrary bounded input and successful-parse round
+  trips where applicable. ASan/UBSan builds all portable and control-plane
+  tests; the Windows ASan runtime is deployed for all test binaries.
 - Native and Wasm parse the exact same generated 12-event sequence fixture and
   match one golden summary. The ESP32 and ESP32-S3 startup paths parse those
   same checked-in bytes before I2S starts; both firmware targets compile. The
@@ -203,8 +204,9 @@ MSVC 19.51.36248 passed 76/76 tests in Debug and LTO Release. These runs include
 the strict Web form protocol and HIL evidence-parser tests in addition to the
 independent daemon process, realtime runtime, local IPC, all service methods,
 CLI validation, configuration restart, recording/playback, and prior core/tool
-coverage. A separate Tiny profile passed 21/21; a Standard build with Chorus,
-Delay, and Reverb all disabled passed 21/21.
+coverage. Dedicated GNU 15 Release+LTO presets passed 75/75 for Tiny, 76/76 for
+Standard, and 75/75 for Full. The Full run exercises 64 voices, 4,096 sequence
+events, the complete desktop daemon, and the expanded fixed host arenas.
 
 Under WSL, Linux x86_64 Clang 21.1.8 built the desktop service and passed 76/76
 tests. The daemon process used its null sink and a private Unix socket; physical
@@ -291,11 +293,11 @@ cmake --build --preset fuzz-clang
 ctest --preset fuzz-clang --output-on-failure
 ```
 
-The ASan/UBSan configuration passed 41/41 tests. Patch, Mol Sequence, service
-configuration, JSON-RPC, MolWireEventV1, MIDI, and latency-capture libFuzzer
-smoke sessions each ran for 20 seconds and produced no finding. Accepted MIDI
-inputs are also reparsed and compared through the canonical sequence JSON
-representation.
+The ASan/UBSan configuration passed 45/45 tests. Patch, Mol Sequence, service
+configuration, JSON-RPC, MolWireEventV1, MIDI, latency/audio captures, ESP32
+settings/Web forms, and HID-report libFuzzer smoke sessions each ran for 20
+seconds and produced no finding. Accepted MIDI inputs are also reparsed and
+compared through the canonical sequence JSON representation.
 
 The latency analyzer's five native tests pass in static and shared suites. The
 synthetic fixture checks its 20 raw observations and 19.5/28.05/29 ms
@@ -362,22 +364,22 @@ object tools after the build. The LLVM-MinGW archive used locally was
 Coverage passed at 94.10% overall, including 95.95% queue/memory, 97.78%
 music-state, 97.49% Patch, and 95.57% Sequence coverage. Clang static analysis
 passed all 38 first-party production translation units. Linux Clang
-ThreadSanitizer passed 40/40 tests in 15.62 seconds. The GCC 15 optimized
-endurance suite passed 2/2 in 286.80 seconds: the engine simulated 1,800 seconds
-in 284.807 seconds (6.32x realtime, approximately 15.82% of one core), emitted
-230,136 events, and produced no non-finite samples. Runtime recovery completed
-30 rebuild cycles in 1.55 seconds.
+ThreadSanitizer passed 40/40 tests in 15.62 seconds. The refreshed GCC 15
+optimized endurance suite passed 2/2 in 270.38 seconds: the engine simulated
+1,800 seconds in 268.567 seconds (6.70x realtime, approximately 14.92% of one
+core), emitted 230,136 events, and produced no non-finite samples. Runtime
+recovery completed 30 rebuild cycles in 1.42 seconds.
 
-The refreshed release size gate passed at 510,220 bytes for the stripped core,
-943,392 bytes for daemon plus CLI, 22,943 bytes for gzip-compressed Wasm, and
+The refreshed release size gate passed at 505,468 bytes for the stripped core,
+943,392 bytes for daemon plus CLI, 22,978 bytes for gzip-compressed Wasm, and
 157,413 bytes for deployable Web resources. Dependency locks, notices,
 licenses, npm audit, and SPDX SBOM validation passed. CPack package audits each found 146
 required files, including `mol-latency-probe`, and passed installed daemon/CLI
-smoke tests: the Windows AMD64 ZIP is 1,291,607 bytes with SHA-256
-`28c94f7cc8a93653e94cd665be2841ff04baa02cac6c4ec7188cdbc5894b3c56`;
-the Linux x86_64 TGZ is 1,683,387 bytes with SHA-256
-`89e650a5d6f59bab17c0b8711404a8a9f0c766e66f0c046adfa930399884b70d`.
-They are unsigned 0.1.0 candidate archives built from `16b7df8`, not releases.
+smoke tests: the Windows AMD64 ZIP is 1,291,580 bytes with SHA-256
+`0d419cce06880e24ca871548bbbbe8f1a4ef0f59c38f56bd75baf2157907b7ab`;
+the Linux x86_64 TGZ is 1,676,870 bytes with SHA-256
+`255bc2069c9d33b8506f2d03d9d8732a26295308ebdb6dd7862202e95e6b5492`.
+They are unsigned 0.1.0 candidate archives built from `4f77f56`, not releases.
 
 ```sh
 python3 tools/release_size_gate.py \
