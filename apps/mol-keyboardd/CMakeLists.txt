@@ -36,6 +36,14 @@ install(
   DESTINATION ${CMAKE_INSTALL_DATADIR}/mol-keyboard/service)
 
 if(MOL_BUILD_TESTS)
+  add_executable(mol_midi_input_tests test_midi_input.cpp midi_input.cpp)
+  target_link_libraries(mol_midi_input_tests PRIVATE mol::core)
+  set_target_properties(mol_midi_input_tests PROPERTIES CXX_EXTENSIONS OFF
+                                                        CXX_STANDARD_REQUIRED ON)
+  mol_enable_warnings(mol_midi_input_tests)
+  mol_enable_optional_instrumentation(mol_midi_input_tests)
+  add_test(NAME mol_midi_input_tests COMMAND mol_midi_input_tests)
+
   add_executable(mol_daemon_runtime_tests test_audio_runtime.cpp)
   target_link_libraries(mol_daemon_runtime_tests PRIVATE mol_daemon_runtime)
   set_target_properties(mol_daemon_runtime_tests PROPERTIES CXX_EXTENSIONS OFF
