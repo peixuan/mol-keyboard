@@ -7,8 +7,8 @@ typedef struct mol_ios_hardware_key_binding {
   uint8_t note;
 } mol_ios_hardware_key_binding_t;
 
-_Static_assert(MOL_IOS_HARDWARE_KEY_CAPACITY <= 32u,
-               "the iOS hardware-key state uses a 32-bit ownership mask");
+typedef char
+    mol_ios_hardware_key_capacity_must_fit_mask[(MOL_IOS_HARDWARE_KEY_CAPACITY <= 32u) ? 1 : -1];
 
 // USB HID keyboard usages used by UIKit's UIKeyboardHIDUsage values.
 static const mol_ios_hardware_key_binding_t k_bindings[MOL_IOS_HARDWARE_KEY_CAPACITY] = {
