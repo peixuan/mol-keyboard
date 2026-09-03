@@ -5,6 +5,9 @@
 The desktop application and headless-service matrix remains the first priority,
 followed by mobile and ESP32. The production Web UI controls real Windows and
 Linux daemon processes, and both platforms pass their complete native suites.
+The Linux suite now also validates the shipped hardened unit with
+`systemd-analyze` and runs the real daemon/CLI lifecycle under the actual
+systemd 259 user manager, removing its runtime-only unit afterward.
 The exact macOS IOHID and CoreAudio-selected production sources also pass
 controlled lifecycle simulations under two non-Apple compilers; this does not
 replace an Apple SDK or macOS runtime result. The Apple-only CTest bootstraps
@@ -12,8 +15,8 @@ the shipped LaunchAgent and exercises the real daemon/CLI lifecycle with null
 audio. Linux now executes that exact runner unchanged against a controlled
 launchd process model and the real product binaries, while the portable audit
 keeps both paths fail-closed. Native Apple execution remains pending. With those
-locally reachable desktop/service gates exhausted, both real ESP-IDF firmware images now also
-execute through their production storage, input/control, shared-core, and
+locally reachable desktop/service gates exhausted, both real ESP-IDF firmware
+images now also execute through their production storage, input/control, shared-core, and
 FreeRTOS audio paths in Espressif QEMU. Other locally actionable M10 release
 gates are complete. Native and Wasm
 regression, Release+LTO Tiny/Standard/Full profiles, static/shared ABI
@@ -37,8 +40,12 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`a9b8e98` (`test(macos): simulate launchd service acceptance`) is the latest
-locally validated code candidate. Linux runs the exact production Apple smoke
+`938f955` (`test(linux): exercise daemon through systemd`) is the latest locally
+validated code candidate. A real systemd 259 user manager validates and links a
+temporary unit retaining the shipped sandbox/restart policy, launches the real
+daemon and CLI, and requires complete control/record/play/diagnostic coverage,
+zero-exit shutdown, socket removal, and removal of the runtime unit link. The
+preceding `a9b8e98` candidate runs the exact production Apple smoke
 script unchanged against a controlled `launchctl`, `plutil`, and Darwin-host
 model. That model launches the real daemon and CLI, enforces the expected plist
 and executable contract, and verifies null-audio startup, state/capabilities,
@@ -61,10 +68,10 @@ ESP32-S3 images boot under Espressif QEMU, mount/format transactional storage,
 pass the shared sequence and C4 checks, drain 12 production input commands, and
 render more than 100,000 frames with non-silent finite output and zero project
 failure counters. All four physical-board configurations still compile with
-the emulator option disabled. Windows MSVC Release passes 82/82 tests, Linux
-x86_64 GCC passes 83/83, and Emscripten MinSizeRel passes 35/35. System Chrome
-on Windows and bundled Chromium on Linux each pass the five applicable desktop application
-cases, including a real platform daemon process and authenticated service
+the emulator option disabled. Windows MSVC Release passes 83/83 tests, Linux
+x86_64 GCC passes 85/85, and Emscripten MinSizeRel passes 36/36. System Chrome
+on Windows and bundled Chromium on Linux each pass the five applicable desktop
+application cases, including a real platform daemon process and authenticated service
 controller. Current core coverage remains 94.10%, Clang static analysis passes
 40 production translation units, and ASan/UBSan passes 47/47 with all eleven
 fuzzers. The earlier `61b3342` candidate adds the
@@ -163,6 +170,9 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   adapters, bounded local IPC, all 41 specified JSON-RPC methods, strict atomic
   configuration, recording/playback, actionable doctor/self-test/benchmark,
   and user startup assets for Windows, systemd, and launchd.
+- The shipped Linux systemd policy passes native user-manager acceptance under
+  WSL: the runtime-only unit preserves restart and sandbox directives, starts
+  the real daemon/CLI, exits successfully, removes its socket, and is unlinked.
 - Checked-in cross toolchains build that complete desktop product, including
   `mol-keyboardd`, `molctl`, `mol-play`, `mol-render`, `mol-seq`,
   `mol-patchc`, `mol-audio-analyze`, and `mol_core`, as Windows ARM64 COFF and
@@ -300,7 +310,7 @@ cmake --build --preset dev-release
 ctest --preset dev-release --output-on-failure
 ```
 
-MSVC 19.51.36248 passes 82/82 tests in the current LTO Release build; the prior
+MSVC 19.51.36248 passes 83/83 tests in the current LTO Release build; the prior
 Debug build passed 78/78. These runs include the iOS production lifecycle
 policy, strict Web form protocol and HIL evidence-parser tests in addition to
 the independent daemon process, realtime runtime, local IPC, all service
@@ -310,9 +320,10 @@ GNU 15 Release+LTO presets previously passed 75/75 for Tiny, 76/76 for
 Standard, and 75/75 for Full. The Full run exercises 64 voices, 4,096 sequence
 events, the complete desktop daemon, and the expanded fixed host arenas.
 
-Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 83/83
-tests; the prior Clang 21.1.8 candidate passed 78/78. The current suite runs the
-production macOS service smoke unchanged through a controlled launchd model and
+Under WSL, Linux x86_64 GCC 15.2.0 builds the current tree and passes 85/85
+tests; the prior Clang 21.1.8 candidate passed 78/78. The current suite runs a
+real systemd user unit lifecycle plus the production macOS service smoke
+unchanged through a controlled launchd model and
 the real Linux daemon/CLI. The daemon process used its null sink and a private
 Unix socket; the production Web UI additionally controlled it under bundled
 Chromium. Physical Linux devices and native Apple behavior remain unclaimed.
@@ -351,7 +362,7 @@ cmake --build --preset wasm-release
 ctest --preset wasm-release --output-on-failure
 ```
 
-Emscripten 6.0.5 and Node.js 22.16.0 pass 35/35 tests in the current LTO
+Emscripten 6.0.5 and Node.js 22.16.0 pass 36/36 tests in the current LTO
 MinSizeRel build; the prior Debug candidate passed 31/31. Both configurations
 match the Native event, sequence-fixture, and 18-preset audio-metric goldens.
 
@@ -565,8 +576,8 @@ tests.
 - Cross-platform source checks are not promoted to device verification.
 
 The HarmonyOS application descriptors, project audit, and native source-check
-boundary pass locally. Windows MSVC Release passes 82/82 tests and Linux GCC
-passes 83/83. The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
+boundary pass locally. Windows MSVC Release passes 83/83 tests and Linux GCC
+passes 85/85. The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
 5.8.9 build and audit
 both Debug and Release compatibility HAPs; the Release artifact is an unsigned
 2,951,842-byte package containing ArkTS bytecode and both required native ABIs.

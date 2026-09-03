@@ -1,7 +1,7 @@
 # M5 Desktop Headless Evidence
 
 Verified on 2026-09-03 at commit `c87e1a1`; the desktop-first regression and
-device-free acceptance were refreshed through code candidate `a9b8e98`.
+device-free acceptance were refreshed through code candidate `938f955`.
 
 ## Implemented surface
 
@@ -29,6 +29,11 @@ device-free acceptance were refreshed through code candidate `a9b8e98`.
 - User-level startup assets are supplied for systemd, launchd, and the current
   Windows user's Startup folder. Shutdown sends all-sound-off before input,
   audio, IPC, and engine resources are released.
+- On a WSL host with a running systemd user manager, the shipped hardened unit
+  policy is transformed only for temporary executable/state paths, validated by
+  `systemd-analyze`, linked into the runtime user-unit directory, and started by
+  the real systemd manager. The gate requires clean process status and removes
+  the runtime unit link before succeeding.
 - The macOS CTest lane now bootstraps a temporary user LaunchAgent from the
   shipped property-list template. It runs the exact built daemon with a null
   sink, drives the exact built CLI through status, capability, preset, tempo,
@@ -45,12 +50,12 @@ device-free acceptance were refreshed through code candidate `a9b8e98`.
 | Configuration | Result | Relevant evidence |
 |---|---:|---|
 | Windows MSVC Debug | 78/78 | local IPC recovery, all 41 RPC methods, runtime callback, independent daemon process, CLI, recording/playback, rendering, macOS interface simulations |
-| Windows MSVC LTO Release | 82/82 | current optimized suite, including the desktop platform simulations and macOS LaunchAgent project audit |
-| Linux x86_64 GCC (WSL) | 83/83 | current Unix socket/null-audio product suite plus executable macOS LaunchAgent orchestration simulation |
+| Windows MSVC LTO Release | 83/83 | current optimized suite, including the desktop platform simulations and portable service-asset audits |
+| Linux x86_64 GCC (WSL) | 85/85 | current Unix socket/null-audio product suite, real systemd user-service lifecycle, and executable macOS LaunchAgent orchestration simulation |
 | Linux x86_64 Clang (WSL) | 78/78 | Unix socket mode/cleanup, null-audio service process, CLI lifecycle, Linux adapter compilation, macOS interface simulations |
 | Linux AArch64 QEMU 10.2.1 | 59/59 | target core/DSP/music tests, 18-preset metrics, null playback, nested daemon process, CLI/render lifecycle |
 | Windows Clang ASan/UBSan | 30/30 | all sanitizer-enabled portable/control tests and four 20-second parser fuzz sessions |
-| Emscripten MinSizeRel | 35/35 | current core/worklet regression plus platform acceptance-project audits |
+| Emscripten MinSizeRel | 36/36 | current core/worklet regression plus platform acceptance-project audits |
 | ESP32 / ESP32-S3 | build passed | firmware regression; application binaries remain 153,440 and 179,328 bytes |
 
 The production Web/PWA application was also run against the current desktop
@@ -120,3 +125,11 @@ clean shutdown, socket removal, and both bootstrap and bootout. This raised the
 current Linux suite to 83/83. The runner also exposed and fixed a case-sensitive
 null-backend assertion (`Null` is miniaudio's real backend name). This is
 device-free service-orchestration evidence, not native macOS evidence.
+
+At candidate `938f955`, the WSL systemd 259 user manager validated, linked, and
+started a unique runtime unit retaining the shipped restart and sandbox policy.
+The real daemon and CLI completed the same null-audio control, recording,
+playback, diagnostic, benchmark, and shutdown checks. Systemd reported
+`ActiveState=inactive`, `Result=success`, and `ExecMainStatus=0`; the socket and
+runtime unit link were gone before the test passed. Environments without a
+systemd user manager report an explicit CTest skip instead of imitating one.

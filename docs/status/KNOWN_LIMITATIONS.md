@@ -4,7 +4,9 @@ The M0-M4 gates, M5 desktop implementation, and M6 Web/PWA implementation are
 complete. The current Windows host has Visual Studio 2026, MSVC 19.51.36248,
 CMake 4.4.0, Ninja 1.13.2, Emscripten 6.0.5, and ESP-IDF 6.1. Linux/Clang service
 validation runs under WSL with null audio. The production desktop Web UI now
-controls real Windows and Linux service processes in browser automation.
+controls real Windows and Linux service processes in browser automation. The
+shipped Linux service policy also passes real systemd 259 user-manager startup,
+sandboxed execution, clean shutdown, socket cleanup, and runtime-unit removal.
 macOS compilation and physical Bluetooth audio/keyboard verification remain
 unavailable here.
 

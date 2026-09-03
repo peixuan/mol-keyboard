@@ -47,6 +47,18 @@ systemctl --user daemon-reload
 systemctl --user enable --now mol-keyboardd.service
 ```
 
+Developers with a running systemd user manager can validate the shipped unit
+policy and real background lifecycle without installing a persistent unit:
+
+```sh
+platforms/linux/run-systemd-user-smoke.sh \
+  build/ci-linux-gcc/apps/mol-keyboardd/mol-keyboardd \
+  build/ci-linux-gcc/apps/molctl/molctl
+```
+
+The runner uses a unique runtime-only user unit, null audio, private state and
+IPC paths, and removes the link after the service exits successfully.
+
 macOS users may copy `cn.zhangpeixuan.molkeyboard.daemon.plist` to
 `~/Library/LaunchAgents/`, adjust `/usr/local/bin/mol-keyboardd` when needed, and
 run:

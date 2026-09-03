@@ -174,7 +174,7 @@ HarmonyOS 共享应用源码也已用官方 OpenHarmony API 12 公共 SDK 完成
 | Target / 目标 | Implementation / 实现 | Current evidence / 当前证据 |
 | --- | --- | --- |
 | Windows | daemon, CLI, WASAPI, Raw Input | x64 tests/runtime and ARM64 cross-build passed; ARM64 runtime pending / x64 测试运行及 ARM64 交叉构建通过，ARM64 运行待验 |
-| Linux | daemon, CLI, native audio/evdev host | x86_64 runtime plus AArch64 QEMU product and 59-test suite passed; native ARM64 and physical devices pending / x86_64 运行及 AArch64 QEMU 产品与 59 项测试通过，原生 ARM64 与物理设备待验 |
+| Linux | daemon, CLI, native audio/evdev host | x86_64 runtime and real systemd user service plus AArch64 QEMU product and 59-test suite passed; native ARM64 and physical devices pending / x86_64 运行、真实 systemd 用户服务及 AArch64 QEMU 产品与 59 项测试通过，原生 ARM64 与物理设备待验 |
 | macOS | daemon, CoreAudio, IOHIDManager | source and LaunchAgent orchestration simulations pass; native Apple gate pending / 源码及 LaunchAgent 编排仿真通过，原生 Apple 门禁待验 |
 | Web/PWA | Wasm AudioWorklet, offline shell | supported-browser automation passed; Safari pending / 已支持浏览器自动化通过，Safari 待验 |
 | Android | Oboe/AAudio foreground service | dual-ABI builds plus Android 15 audio-focus/lifecycle simulation passed; device pending / 双 ABI 及 Android 15 音频焦点与生命周期仿真通过，真机待验 |
