@@ -99,6 +99,16 @@
       }
     },
     {
+      "name": "static-analysis-clang",
+      "inherits": "base",
+      "displayName": "Clang Static Analysis",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
       "name": "ci-macos",
       "inherits": "base",
       "cacheVariables": {
@@ -203,6 +213,7 @@
     { "name": "ci-windows-msvc", "configurePreset": "ci-windows-msvc" },
     { "name": "fuzz-clang", "configurePreset": "fuzz-clang" },
     { "name": "coverage-clang", "configurePreset": "coverage-clang" },
+    { "name": "static-analysis-clang", "configurePreset": "static-analysis-clang" },
     { "name": "ci-macos", "configurePreset": "ci-macos" },
     { "name": "wasm-debug", "configurePreset": "wasm-debug" },
     { "name": "wasm-release", "configurePreset": "wasm-release" },
