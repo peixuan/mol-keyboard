@@ -27,4 +27,12 @@ if(MOL_BUILD_TESTS)
     set_tests_properties(molctl_render PROPERTIES PASS_REGULAR_EXPRESSION
                                                   "non_finite_samples=0")
   endif()
+  if(APPLE)
+    add_test(
+      NAME mol_macos_launchd_service_smoke
+      COMMAND ${PROJECT_SOURCE_DIR}/platforms/macos/run-launchd-smoke.sh
+              $<TARGET_FILE:mol-keyboardd> $<TARGET_FILE:molctl>)
+    set_tests_properties(mol_macos_launchd_service_smoke
+                         PROPERTIES RUN_SERIAL TRUE TIMEOUT 30)
+  endif()
 endif()
