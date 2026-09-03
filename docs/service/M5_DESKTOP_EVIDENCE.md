@@ -1,7 +1,7 @@
 # M5 Desktop Headless Evidence
 
-Verified on 2026-09-03 at commit `c87e1a1`; the desktop-first regression was
-refreshed through code candidate `61b3342`.
+Verified on 2026-09-03 at commit `c87e1a1`; the desktop-first regression and
+device-free acceptance wiring were refreshed through code candidate `5b0640b`.
 
 ## Implemented surface
 
@@ -29,17 +29,23 @@ refreshed through code candidate `61b3342`.
 - User-level startup assets are supplied for systemd, launchd, and the current
   Windows user's Startup folder. Shutdown sends all-sound-off before input,
   audio, IPC, and engine resources are released.
+- The macOS CTest lane now bootstraps a temporary user LaunchAgent from the
+  shipped property-list template. It runs the exact built daemon with a null
+  sink, drives the exact built CLI through status, capability, preset, tempo,
+  note, recording, playback, self-test, doctor, benchmark, all-notes-off, and
+  shutdown paths, and requires launchd exit code zero plus socket cleanup.
 
 ## Verification results
 
 | Configuration | Result | Relevant evidence |
 |---|---:|---|
 | Windows MSVC Debug | 78/78 | local IPC recovery, all 41 RPC methods, runtime callback, independent daemon process, CLI, recording/playback, rendering, macOS interface simulations |
-| Windows MSVC LTO Release | 78/78 | same optimized suite, including the desktop platform simulations |
+| Windows MSVC LTO Release | 82/82 | current optimized suite, including the desktop platform simulations and macOS LaunchAgent project audit |
+| Linux x86_64 GCC (WSL) | 82/82 | current Unix socket/null-audio product suite and macOS LaunchAgent project audit |
 | Linux x86_64 Clang (WSL) | 78/78 | Unix socket mode/cleanup, null-audio service process, CLI lifecycle, Linux adapter compilation, macOS interface simulations |
 | Linux AArch64 QEMU 10.2.1 | 59/59 | target core/DSP/music tests, 18-preset metrics, null playback, nested daemon process, CLI/render lifecycle |
 | Windows Clang ASan/UBSan | 30/30 | all sanitizer-enabled portable/control tests and four 20-second parser fuzz sessions |
-| Emscripten Debug/MinSizeRel | 31/31 each | current core/worklet regression after the control-plane changes |
+| Emscripten MinSizeRel | 35/35 | current core/worklet regression plus platform acceptance-project audits |
 | ESP32 / ESP32-S3 | build passed | firmware regression; application binaries remain 153,440 and 179,328 bytes |
 
 The production Web/PWA application was also run against the current desktop
@@ -68,9 +74,12 @@ Clang, covering enumeration, press/repeat/release, gesture ownership, and detach
 cleanup. The exact production `audio_runtime.cpp` also executes with a
 controlled CoreAudio/miniaudio model, covering backend selection, effective
 stream configuration, callbacks, device selection, reroute/stopped
-notifications, recovery, and cleanup. These are explicitly simulation results:
-the launchd asset, Apple framework ABI, CoreAudio device, IOHID permissions, and
-macOS daemon process still require a real macOS run.
+notifications, recovery, and cleanup. A new fail-closed runner now gives the
+macOS CI lane a real LaunchAgent daemon/CLI process acceptance path without
+requiring audio hardware. These are still explicitly unexecuted Apple results
+on this host: launchd execution, Apple framework ABI, CoreAudio devices, IOHID
+permissions, and the native macOS daemon process require a real macOS run before
+promotion.
 
 The later `d45383b` release audit also cross-built the complete desktop product
 with checked-in presets. GNU 15.2.0 produced AArch64 ELF daemon, CLI, playback,
@@ -86,3 +95,11 @@ finite, non-silent 4.25-second WAV with no clipping or underruns. A separate
 Debug cross-test build passed 59/59 tests. The JSON report labels this
 `simulated-runtime` and excludes native scheduling, physical audio/input,
 latency, route change, suspend, and device-loss claims.
+
+At candidate `5b0640b`, `platforms/macos/run-launchd-smoke.sh` was registered as
+an Apple-only CTest with a 30-second fail-closed timeout. A portable project
+audit proves that the shipped LaunchAgent template, Apple-only registration,
+macOS CI runner, null-audio process launch, complete CLI lifecycle, diagnostic
+assertions, zero-exit check, and success marker remain connected. That audit
+passes under MSVC, Linux GCC, and Emscripten; the actual LaunchAgent CTest has
+not run on this Windows host and is not recorded as macOS runtime evidence.
