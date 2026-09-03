@@ -4,9 +4,12 @@
 
 The HarmonyOS application implementation is complete and source-checked. Its
 exact production Node-API bridge and OHAudio host now pass executable
-controlled-API simulations, including AArch64 QEMU runs. A separate OpenHarmony
-API 12 compatibility product is `build-verified` with the official public
-OpenHarmony SDK, but this does not qualify the formal HarmonyOS/DevEco product.
+controlled-API simulations, including AArch64 QEMU runs. The exact
+ECMAScript-compatible production background-policy `.ets` source is also
+executed without transformation under Node.js and is compiled into the HAP by
+the strict ArkTS toolchain. A separate OpenHarmony API 12 compatibility product
+is `build-verified` with the official public OpenHarmony SDK, but this does not
+qualify the formal HarmonyOS/DevEco product.
 Neither product is `runtime-verified` or `device-verified`: this Windows host
 has no DevEco Studio, HarmonyOS SDK, signing identity, emulator, or physical
 HarmonyOS/OpenHarmony device.
@@ -59,9 +62,9 @@ The official OpenHarmony 5.0.0 Release public SDK 5.0.0.71 (API 12), Hvigor
 21.0.12.1 built both Debug and Release compatibility HAPs. The SDK archive
 SHA-256 was
 `F06A2A8AE38A3CF01C583557F5A4BB1E6E3626DF975599AA71F4A59E9AF70ECC`,
-matching its published checksum. The Release output was an unsigned 2,951,842
+matching its published checksum. The Release output was an unsigned 2,953,954
 byte HAP with SHA-256
-`56DC8642463BA3550940D022C1810CB3D540045E606AF164A0E0ED6438A93439`.
+`1569570FFA9D096026B2BB62EE800A90715D98FB41A36C9DCA093BBCF0A3F1B3`.
 Its 13 audited entries include `ets/modules.abc`, `module.json`,
 `resources.index`, and `libmol_harmony_audio.so` for `arm64-v8a` and `x86_64`.
 LLVM inspection identifies those libraries as AArch64 and x86-64 ELF64 shared
@@ -77,7 +80,7 @@ record/export/load/playback. Failure injection rejects bad negotiated formats,
 renderer creation, and renderer startup. MSVC Release, Linux x86_64 GCC,
 Emscripten, and Clang ASan/UBSan execute this exact host. The same test also
 cross-compiles with GNU 15.2.0 and passes under AArch64 QEMU as part of the
-current 70/70 target suite. These are host API and target-instruction
+current 71/71 target suite. These are host API and target-instruction
 simulations, not HarmonyOS runtime or device evidence.
 
 The unchanged production `napi_module.cpp` also executes inside a controlled
@@ -90,6 +93,16 @@ loss and recovery are observed through the public bridge rather than by calling
 the host directly. MSVC, Linux GCC, Emscripten, Clang ASan/UBSan, and AArch64
 QEMU all execute the exact production bridge.
 
+The `AudioService` now directly consumes `HarmonyAudioPolicy.ets` for user
+start intent, foreground/background transitions, playback, metronome plus
+transport eligibility, continuous-task retention, idle release, and route
+recovery. Node.js 22.16.0 imports that exact file from a data URL without a
+transpilation or copied implementation and executes all policy transitions.
+The same source then passes OpenHarmony ArkTS type checking and bytecode
+compilation in both Debug and Release HAP builds. This closes the device-free
+policy-state gap, but it does not execute AudioSession, AVSession, continuous
+task delivery, application lifecycle callbacks, or HarmonyOS scheduling.
+
 ArkTS strict checking found and drove fixes for explicitly typed selector data,
 the component `scale` name collision, API 12 AudioSession/WantAgent signatures,
 and asynchronous Preferences flush. Native cross-compilation found and drove
@@ -101,11 +114,13 @@ handled, but only device execution can settle those runtime paths.
 
 MSVC 19.51 and Linux Clang 21.1.8 also compile the OHAudio host and Node-API
 bridge against the declaration-only API 12 source-check boundary with warnings
-as errors. The current Windows, Linux, and Emscripten suites pass 88/88, 89/89,
-and 40/40 respectively, including the executable bridge/host simulations and
-`mol_harmony_project_audit`; both build wrappers pass shell syntax checks. This
-is real OpenHarmony package evidence plus controlled native-boundary
-simulation, not a formal HarmonyOS build or runtime/device result.
+as errors. The current Windows, Linux, Emscripten, and Linux AArch64 QEMU suites
+pass 89/89, 90/90, 41/41, and 71/71 respectively, including the executable
+policy, bridge, and host simulations plus `mol_harmony_project_audit`; both
+build wrappers pass shell syntax checks. The targeted Clang ASan/UBSan audit
+and exact-source policy cases also pass. This is real OpenHarmony package
+evidence plus controlled policy/native-boundary simulation, not a formal
+HarmonyOS build or runtime/device result.
 
 ## Reproducible HarmonyOS commands
 

@@ -179,7 +179,7 @@ HarmonyOS 共享应用源码也已用官方 OpenHarmony API 12 公共 SDK 完成
 | Web/PWA | Wasm AudioWorklet, offline shell | supported-browser automation passed; Safari pending / 已支持浏览器自动化通过，Safari 待验 |
 | Android | Oboe/AAudio foreground service | dual-ABI builds plus Android 15 audio-focus/lifecycle simulation passed; device pending / 双 ABI 及 Android 15 音频焦点与生命周期仿真通过，真机待验 |
 | iOS | AudioUnit, AVAudioSession, offline WKWebView | production background policy and hardware-key ownership simulations pass; fail-closed Simulator UI/bridge gate checked in; Apple run/device pending / 生产后台策略及硬件键所有权仿真通过，已纳入失败关闭的模拟器 UI/桥接门禁，Apple 运行与真机待验 |
-| HarmonyOS | OHAudio, AVSession, continuous task | production native bridge/host simulations and OpenHarmony API 12 compatibility HAPs passed; formal DevEco/device pending / 生产原生桥与 OHAudio 宿主仿真及 OpenHarmony API 12 兼容 HAP 通过，正式 DevEco 与真机待验 |
+| HarmonyOS | OHAudio, AVSession, continuous task | exact production policy and native bridge/host simulations plus OpenHarmony API 12 compatibility HAPs passed; formal DevEco/device pending / 精确生产策略与原生桥、OHAudio 宿主仿真及 OpenHarmony API 12 兼容 HAP 通过，正式 DevEco 与真机待验 |
 | ESP32 | I2S, GPIO/BLE/Classic HID, A2DP Source | image/map and real firmware QEMU smoke passed; board HIL pending / 固件、map 与真实固件 QEMU 冒烟通过，开发板 HIL 待验 |
 | ESP32-S3 | I2S, GPIO/BLE/USB HID | image/map and real firmware QEMU smoke passed; board HIL pending / 固件、map 与真实固件 QEMU 冒烟通过，开发板 HIL 待验 |
 

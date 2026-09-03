@@ -1,7 +1,7 @@
 # M5 Desktop Headless Evidence
 
 Verified on 2026-09-03 at commit `c87e1a1`; the desktop-first regression and
-device-free acceptance were refreshed through code candidate `bcde79a`.
+device-free acceptance were refreshed through code candidate `b48c680`.
 
 ## Implemented surface
 
@@ -54,12 +54,12 @@ device-free acceptance were refreshed through code candidate `bcde79a`.
 | Configuration | Result | Relevant evidence |
 |---|---:|---|
 | Windows MSVC Debug | 78/78 | local IPC recovery, all 41 RPC methods, runtime callback, independent daemon process, CLI, recording/playback, rendering, macOS interface simulations |
-| Windows MSVC LTO Release | 88/88 | current optimized suite plus real temporary Startup-shortcut product lifecycle, portable service-asset audits, and iOS/HarmonyOS native-boundary simulations |
-| Linux x86_64 GCC (WSL) | 89/89 | current Unix socket/null-audio product suite, real systemd user-service lifecycle, executable macOS LaunchAgent orchestration simulation, portable Windows service audit, and iOS/HarmonyOS native-boundary simulations |
+| Windows MSVC LTO Release | 89/89 | current optimized suite plus real temporary Startup-shortcut product lifecycle, portable service-asset audits, and mobile policy/native-boundary simulations |
+| Linux x86_64 GCC (WSL) | 90/90 | current Unix socket/null-audio product suite, real systemd user-service lifecycle, executable macOS LaunchAgent orchestration simulation, portable Windows service audit, and mobile policy/native-boundary simulations |
 | Linux x86_64 Clang (WSL) | 78/78 | Unix socket mode/cleanup, null-audio service process, CLI lifecycle, Linux adapter compilation, macOS interface simulations |
-| Linux AArch64 QEMU 10.2.1 | 70/70 | target core/DSP/music tests, 18-preset metrics, mobile native-boundary simulations, null playback, nested daemon process, CLI/render lifecycle |
-| Windows Clang ASan/UBSan | 30/30 | all sanitizer-enabled portable/control tests and four 20-second parser fuzz sessions |
-| Emscripten MinSizeRel | 40/40 | current core/worklet regression plus platform acceptance-project audits and iOS/HarmonyOS native-boundary simulations |
+| Linux AArch64 QEMU 10.2.1 | 71/71 | target core/DSP/music tests, 18-preset metrics, mobile policy/native-boundary simulations, null playback, nested daemon process, CLI/render lifecycle |
+| Windows Clang ASan/UBSan | 47/47 | all sanitizer-enabled portable/control tests and eleven 20-second parser fuzz sessions; current Harmony policy audit/source cases pass targeted validation |
+| Emscripten MinSizeRel | 41/41 | current core/worklet regression plus platform acceptance-project audits and mobile policy/native-boundary simulations |
 | ESP32 / ESP32-S3 | build passed | firmware regression; application binaries remain 153,440 and 179,328 bytes |
 
 The production Web/PWA application was also run against the current desktop
