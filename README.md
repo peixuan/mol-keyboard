@@ -47,6 +47,18 @@ Ninja is on `PATH`. Linux uses the same presets with GCC or Clang.
 Windows 用户需在 Visual Studio 开发者终端中运行，并确保 `PATH` 中包含 Ninja；Linux
 可用同一组预设配合 GCC 或 Clang。
 
+Build and test the installable shared-library form, including independent C11
+and C++17 consumers, with the dedicated preset:
+
+```powershell
+cmake --preset ci-shared
+cmake --build --preset ci-shared
+ctest --preset ci-shared
+```
+
+上述预设验证可安装的动态 `mol_core`、严格公共符号边界，以及独立 C11/C++17
+调用方；默认原生预设仍构建静态库。
+
 Render the included sequence to a deterministic 24-bit mono WAV without an audio device:
 
 ```powershell
@@ -74,6 +86,21 @@ build/dev-release/apps/mol-play/mol-play --duration 2 --note 60
 
 上述命令可列出桌面输出设备，或通过系统默认设备实时播放同一个 C4；蓝牙音箱由操作系统
 作为普通音频设备提供，本项目不重复实现系统配对。
+
+Analyze a two-channel physical stimulus/capture recording with the latency
+probe. Route, device, effective buffer configuration, and tested commit are
+mandatory report metadata:
+
+```powershell
+build/dev-release/tools/latency-probe/mol-latency-probe capture.wav `
+  --report latency-wired.json --route built-in-wired `
+  --device "interface and output model" --buffer-config "48kHz/128x3" `
+  --artifact-commit (git rev-parse HEAD) --p95-limit-ms 50
+```
+
+延迟探针分析双声道物理刺激/采集 WAV，并输出原始测量值、P50、P95、最大值和采集文件
+SHA-256。其合成 fixture 只验证分析器，不能替代真实设备证据。完整接线、阈值与分路由流程见
+[`LATENCY_MEASUREMENT.md`](docs/testing/LATENCY_MEASUREMENT.md)。
 
 ## Physical key map / 物理键位
 

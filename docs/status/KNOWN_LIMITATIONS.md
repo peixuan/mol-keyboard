@@ -27,6 +27,12 @@ all require unavailable official platform toolchains, physical devices/routes,
 or loopback measurement equipment. This is why the repository truthfully
 remains at 0.1.0 and has no `v1.0.0` tag.
 
+The `mol-latency-probe` executable, deterministic analyzer tests, malformed
+capture fuzzer, and fail-closed physical acquisition procedure are complete.
+No synchronized two-channel capture equipment or required output routes were
+available, so the synthetic 19.5/28.05/29 ms fixture statistics are tool tests
+only and every platform latency row remains unmeasured.
+
 The M9 ESP-IDF implementation is complete and all four ESP32/ESP32-S3 default
 and optional-Web variants build. It has not run on a physical board. I2S
 signal, sound, timing, GPIO/BLE/Classic/USB input, NVS/FAT power-cycle recovery,

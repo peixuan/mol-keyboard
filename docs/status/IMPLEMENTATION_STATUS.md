@@ -3,7 +3,8 @@
 ## Current milestone
 
 All locally actionable M10 release gates are complete. Native and Wasm
-regression, coverage, static analysis, ASan/UBSan with all six fuzzers, Linux
+regression, static/shared ABI verification, coverage, static analysis,
+ASan/UBSan with all seven fuzzers, Linux
 ThreadSanitizer, optimized endurance, release-size budgets, dependency/license
 and SBOM audits, Windows/Linux package audits, Android packaging, and clean
 checkout reproduction pass. Complete Windows ARM64 and Linux AArch64 desktop
@@ -16,15 +17,18 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`d45383b` (`build: add reproducible Windows arm64 cross target`) is the latest
-locally validated implementation commit. MSVC Debug passed 71/71 tests and
-Emscripten MinSizeRel passed 31/31 after the cross-build fix. LLVM-MinGW
-20260826/Clang 23.1.0 produced the complete Windows ARM64 product, and an
-Ubuntu cross sysroot with GNU 15.2.0 produced the complete Linux AArch64
-product. Native ARM64 execution is not inferred from these builds. The prior
-`3a1da43` candidate remains covered by the complete Release, sanitizer, fuzz,
-coverage, endurance, platform, package, and clean-checkout matrix documented
-below. Validation ran on 2026-09-03.
+`ad020e2` (`fix(build): cache LTO capability checks`) is the latest locally
+validated implementation commit. MSVC Debug/LTO Release and Linux Clang pass
+76/76 tests; Emscripten MinSizeRel passes 31/31. Windows and Linux shared-core
+builds pass 74/74 public-boundary tests, expose exactly the 47 version 1.0 API
+symbols, and Linux ABI Compliance Checker reports 100% binary and source
+compatibility with zero problems. ASan/UBSan passes 41/41 including all seven
+fuzzers. LLVM-MinGW 20260826/Clang 23.1.0 and GNU 15.2.0 produced the complete
+Windows ARM64 and Linux AArch64 products. Native ARM64 execution is not inferred
+from those cross-builds. The prior `3a1da43` candidate retains the complete
+endurance, platform, package, and clean-checkout evidence documented below;
+affected gates have been refreshed on the newer commit. Validation ran on
+2026-09-03.
 
 ## Completed requirements
 
@@ -34,6 +38,10 @@ below. Validation ran on 2026-09-03.
 - `mol_core` is ISO C11 with a stable public C ABI and caller-owned aligned
   storage. Its render path has no allocation, blocking, logging, or language
   runtime callback.
+- Static and shared builds install the same `mol::core` package. Shared builds
+  hide every internal symbol and export exactly 47 `MOL_API` functions. The
+  checked-in symbol and ABI Dumper baselines are enforced by a three-OS shared
+  CI matrix and Linux ABI Compliance Checker.
 - The same core sources build and run under MSVC, Emscripten, and ESP-IDF. C and
   C++17 consumers link against the public API.
 - The M1 path renders measured C4 through Native, WebAssembly/AudioWorklet,
@@ -76,10 +84,16 @@ below. Validation ran on 2026-09-03.
   and normal or 2x high-quality rendering; and emits duration, peak, RMS,
   clipped, NaN/Inf, underrun, SHA-256, and JSON-report evidence. CTest checks
   WAV headers and independently recomputes each report hash.
-- Patch and Mol Sequence parser/writer, MolWireEventV1, and JSON-RPC Clang
-  libFuzzer entries cover arbitrary bounded input and successful-parse round
-  trips where applicable. ASan/UBSan builds all portable and control-plane
-  tests; the Windows ASan runtime is deployed for all test binaries.
+- `mol-latency-probe` analyzes bounded multichannel PCM16 physical captures,
+  requires route/device/buffer/commit metadata, and emits the capture SHA-256,
+  sorted individual observations, P50/P95/maximum, unmatched counts, and an
+  optional fail-closed P95 limit. Its deterministic 20-event fixture produces
+  19.5/28.05/29 ms, while corrupt input and a 20 ms P95 limit are rejected.
+- Patch, Mol Sequence, service configuration, JSON-RPC, MolWireEventV1, MIDI,
+  and latency-capture Clang libFuzzer entries cover arbitrary bounded input and
+  successful-parse round trips where applicable. ASan/UBSan builds all portable
+  and control-plane tests; the Windows ASan runtime is deployed for all test
+  binaries.
 - Native and Wasm parse the exact same generated 12-event sequence fixture and
   match one golden summary. The ESP32 and ESP32-S3 startup paths parse those
   same checked-in bytes before I2S starts; both firmware targets compile. The
@@ -185,16 +199,39 @@ cmake --build --preset dev-release
 ctest --preset dev-release --output-on-failure
 ```
 
-MSVC 19.51.36248 passed 71/71 tests in Debug and LTO Release. These runs include
+MSVC 19.51.36248 passed 76/76 tests in Debug and LTO Release. These runs include
 the strict Web form protocol and HIL evidence-parser tests in addition to the
 independent daemon process, realtime runtime, local IPC, all service methods,
 CLI validation, configuration restart, recording/playback, and prior core/tool
 coverage. A separate Tiny profile passed 21/21; a Standard build with Chorus,
 Delay, and Reverb all disabled passed 21/21.
 
-Under WSL, Linux x86_64 Clang 21.1.8 built the desktop service and passed 63/63
+Under WSL, Linux x86_64 Clang 21.1.8 built the desktop service and passed 76/76
 tests. The daemon process used its null sink and a private Unix socket; physical
 Linux devices remain unclaimed.
+
+Static/shared API parity is checked separately:
+
+```sh
+cmake --preset ci-shared
+cmake --build --preset ci-shared
+ctest --preset ci-shared --output-on-failure
+nm --dynamic --defined-only --format=posix \
+  build/ci-shared/libmol_core.so.0.1.0 \
+  | cut -d ' ' -f 1 | LC_ALL=C sort > build/mol_core-current.symbols
+diff -u abi/mol_core-1.0.symbols build/mol_core-current.symbols
+abi-dumper build/ci-shared/libmol_core.so.0.1.0 \
+  -lver current -o build/mol_core-current.dump
+abi-compliance-checker -l mol_core -old abi/mol_core-1.0.dump \
+  -new build/mol_core-current.dump \
+  -report-path build/mol_core-abi-report.html
+```
+
+Windows and Linux shared builds passed 74/74 tests. The current dynamic library
+matches all 47 expected symbols exactly; ABI Compliance Checker reports 100%
+binary and source compatibility, zero problems, and zero warnings. Independent
+installed C11 and C++17 consumers also compile and execute against the Windows
+shared package.
 
 With the pinned Emscripten environment active:
 
@@ -254,10 +291,17 @@ cmake --build --preset fuzz-clang
 ctest --preset fuzz-clang --output-on-failure
 ```
 
-The ASan/UBSan configuration passed 40/40 tests. Patch, Mol Sequence, service
-configuration, JSON-RPC, MolWireEventV1, and MIDI libFuzzer smoke sessions each
-ran for 20 seconds and produced no finding. Accepted MIDI inputs are also
-reparsed and compared through the canonical sequence JSON representation.
+The ASan/UBSan configuration passed 41/41 tests. Patch, Mol Sequence, service
+configuration, JSON-RPC, MolWireEventV1, MIDI, and latency-capture libFuzzer
+smoke sessions each ran for 20 seconds and produced no finding. Accepted MIDI
+inputs are also reparsed and compared through the canonical sequence JSON
+representation.
+
+The latency analyzer's five native tests pass in static and shared suites. The
+synthetic fixture checks its 20 raw observations and 19.5/28.05/29 ms
+P50/P95/maximum, but is explicitly not physical product evidence. Real route
+commands and fail-closed acquisition rules are in
+`docs/testing/LATENCY_MEASUREMENT.md`; all hardware rows remain open.
 
 With the pinned ESP-IDF environment active, from `platforms/esp32`:
 

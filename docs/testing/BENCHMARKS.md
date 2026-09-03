@@ -83,8 +83,15 @@ mandatory release gate.
 
 ## End-to-end latency
 
+The installed `mol-latency-probe` has five passing native tests and a seventh
+sanitizer-backed fuzz boundary. Its deterministic 20-event analyzer fixture
+reports P50 19.5 ms, P95 28.05 ms, and maximum 29 ms; the tests also verify
+threshold failure and corrupt-container rejection. These are analyzer results,
+not product latency.
+
 No physical loopback/capture instrument was available. Consequently all
-required latency rows remain open rather than receiving estimated values:
+required product latency rows remain open rather than receiving estimated
+values:
 
 | Route | P50 | P95 | Maximum | State |
 | --- | ---: | ---: | ---: | --- |
@@ -97,4 +104,5 @@ required latency rows remain open rather than receiving estimated values:
 
 The release report must add stimulus method, hardware models, route, effective
 sample rate and buffer, run count, distribution, and artifact commit before
-these rows can close.
+these rows can close. Use the synchronized two-channel, fail-closed procedure
+and exact probe invocation in `docs/testing/LATENCY_MEASUREMENT.md`.

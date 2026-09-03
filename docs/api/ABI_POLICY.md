@@ -54,10 +54,27 @@ promise ABI compatibility for internal C++ libraries, daemon internals, or
 platform host classes. Static and shared builds must expose the same public C
 symbols and behavior.
 
+Public declarations carry `MOL_API`. A shared build defines
+`MOL_CORE_SHARED`; Windows then uses explicit import/export attributes, while
+ELF and Mach-O shared builds use default visibility only for those declarations.
+All other symbols are hidden. The authoritative version 1.0 allow-list is
+`abi/mol_core-1.0.symbols`; the corresponding Linux x86_64 ABI Dumper baseline
+is `abi/mol_core-1.0.dump`. Baseline provenance and update rules are recorded in
+`abi/README.md`.
+
 ## Verification
 
-CI compiles and runs independent C11 and C++17 consumers, checks structure and
+CI compiles and runs independent C11 and C++17 consumers in both the ordinary
+static configuration and the `ci-shared` configuration, checks structure and
 format constants in unit tests, and exercises Native and Wasm conformance
-fixtures. Release packaging verifies the installed `mol::core` import target,
-headers, library, and versioned CMake package files. Any ABI-affecting change
-requires these tests, this policy review, and an explicit changelog entry.
+fixtures. The Linux shared job compares the exported symbol set exactly against
+the 47-symbol allow-list, generates a fresh ABI dump, and requires ABI
+Compliance Checker to report binary and source compatibility with the 1.0
+baseline. Windows and macOS shared jobs build and execute the public consumers.
+
+Release packaging verifies the installed `mol::core` import target, headers,
+library, and versioned CMake package files. Any ABI-affecting change requires
+all of these tests, a reviewed baseline decision, this policy review, and an
+explicit changelog entry. A compatible symbol addition updates both baseline
+files in the same change; a removal or incompatible signature/layout change
+requires a new ABI major and migration notes rather than overwriting history.

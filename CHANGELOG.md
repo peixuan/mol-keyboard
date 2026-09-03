@@ -14,7 +14,8 @@ All notable changes to this project will be documented in this file.
   local IPC and JSON-RPC, realtime miniaudio output, native keyboard adapters,
   hotplug recovery, atomic configuration, diagnostics, and user startup assets.
 - Added sanitizer-backed fuzzing for all six required Patch, Sequence, service
-  configuration, JSON-RPC, Wire, and MIDI parser boundaries.
+  configuration, JSON-RPC, Wire, and MIDI parser boundaries, plus the latency
+  capture parser.
 - Added the complete installable offline Web/PWA instrument with paired
   AudioWorklet/Wasm loading, MessagePort and SharedArrayBuffer transports,
   IndexedDB persistence, keyboard/touch control, authenticated service mode,
@@ -32,3 +33,9 @@ All notable changes to this project will be documented in this file.
   remain required before v1.0.0.
 - Added reproducible Windows ARM64 and Linux AArch64 cross-build targets for the
   complete headless product, plus native ARM64 CI runners.
+- Added explicit static/shared `mol_core` builds, a hidden-by-default 47-symbol
+  public export boundary, installed shared-library consumers, and Linux ABI
+  symbol/layout/signature compatibility checks against the version 1.0 baseline.
+- Added `mol-latency-probe` for fail-closed analysis of multichannel PCM16
+  physical captures, with report metadata, capture hashes, raw observations,
+  P50/P95/maximum statistics, acceptance thresholds, and malformed-input fuzzing.

@@ -31,11 +31,14 @@ Do not change the public C API major merely to match a product release. Follow
    authoritative source, and update the SPDX SBOM and notices.
 3. Run MSVC, GCC, Clang, Emscripten, coverage, static-analysis, sanitizer/fuzz,
    ThreadSanitizer, optimized endurance, browser matrices, both ARM64
-   cross-build presets, and the native ARM64 CI jobs.
+   cross-build presets, the native ARM64 CI jobs, and the three-platform
+   `ci-shared` matrix. On Linux, require the exact public symbol comparison and
+   ABI Compliance Checker result against `abi/mol_core-1.0.dump`.
 4. Build the Android, iOS, HarmonyOS, ESP32, and ESP32-S3 products with their
    pinned official toolchains.
 5. Run the physical device, input, route, background, 30-minute, I2S capture,
-   A2DP, and latency procedures in `docs/testing/TEST_PLAN.md`.
+   A2DP, and latency procedures in `docs/testing/TEST_PLAN.md` and
+   `docs/testing/LATENCY_MEASUREMENT.md`.
 6. Update the platform matrix, benchmark/size report, implementation status,
    limitations, CHANGELOG, and bilingual release notes with actual results.
 
@@ -80,6 +83,11 @@ application image, merged flash instructions, map/size output, and HIL report.
 Record a cryptographic hash for every distributed artifact. Store public
 checksums and licenses beside downloads, but keep raw hardware logs free of
 credentials and personal/device identifiers.
+
+Every latency report must name the exact candidate commit and effective route,
+device, sample rate, and buffer configuration. Retain the capture SHA-256 and
+all individual observations with the report. Synthetic latency fixtures are
+tool tests, never candidate hardware evidence.
 
 ## Final review and tag
 

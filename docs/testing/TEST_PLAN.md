@@ -52,10 +52,11 @@ frame with no accumulated drift.
 
 ## Parser and memory safety
 
-`fuzz-clang` enables ASan, UBSan, and six libFuzzer targets for Patch, Sequence,
-service configuration, JSON-RPC, MolWireEventV1, and MIDI. Each CI smoke session
-runs at least 20 seconds and reparses/canonicalizes successful inputs where
-applicable. Reproducer artifacts are reviewed privately before disclosure.
+`fuzz-clang` enables ASan, UBSan, and seven libFuzzer targets for Patch,
+Sequence, service configuration, JSON-RPC, MolWireEventV1, MIDI, and latency
+capture parsing. Each CI smoke session runs at least 20 seconds and
+reparses/canonicalizes successful inputs where applicable. Reproducer artifacts
+are reviewed privately before disclosure.
 
 ```sh
 cmake --preset fuzz-clang
@@ -122,6 +123,12 @@ response. Report P50/P95/max separately for built-in or wired, USB, OS Bluetooth
 Web Audio, ESP32 I2S, and ESP32 A2DP routes. Built-in/wired acceptance is P95 at
 most 50 ms with a 30 ms target; supported desktop Web targets require P95 at
 most 50 ms. Bluetooth has no fabricated 50 ms threshold.
+
+Use `mol-latency-probe` and the fail-closed acquisition procedure in
+`docs/testing/LATENCY_MEASUREMENT.md`. The committed analyzer tests generate a
+deterministic synthetic recording, verify its statistics and threshold failure,
+and reject corrupt containers. Those tests prove the measurement code only;
+they never close a physical route row.
 
 ## Release decision
 
