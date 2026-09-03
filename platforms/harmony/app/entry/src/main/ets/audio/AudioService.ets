@@ -6,6 +6,7 @@ import { preferences } from '@kit.ArkData';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { backgroundTaskManager } from '@kit.BackgroundTasksKit';
 import { fileIo } from '@kit.CoreFileKit';
+import { HarmonyAudioPolicy } from './AudioPolicy';
 import { AudioRuntime, NativeAudioEvent } from './AudioRuntime';
 import { NativeCommands, NativeEvents } from './NativeCommands';
 
@@ -89,6 +90,7 @@ export class AudioService {
   private settingStore: preferences.Preferences | undefined = undefined;
   private audioSessionManager: audio.AudioSessionManager | undefined = undefined;
   private mediaSession: avSession.AVSession | undefined = undefined;
+  private readonly policy: HarmonyAudioPolicy = new HarmonyAudioPolicy();
   private settings: AudioSettings = {
     masterGain: DEFAULT_SETTINGS.masterGain,
     preset: DEFAULT_SETTINGS.preset,
@@ -111,14 +113,9 @@ export class AudioService {
     portamentoTimeMs: DEFAULT_SETTINGS.portamentoTimeMs,
   };
   private initialized: boolean = false;
-  private userStarted: boolean = false;
-  private foreground: boolean = true;
   private focusActive: boolean = false;
-  private continuousTaskActive: boolean = false;
-  private transportRunning: boolean = false;
   private recording: boolean = false;
   private recordingAvailable: boolean = false;
-  private playbackRunning: boolean = false;
   private statusMessage: string = 'Tap Start Audio to begin';
   private timerId: number = -1;
   private tickInProgress: boolean = false;
@@ -158,6 +155,9 @@ export class AudioService {
     this.context = context;
     this.settingStore = preferences.getPreferencesSync(context, { name: SETTINGS_STORE });
     this.settings = this.readSettings();
+    if (this.settings.metronomeEnabled !== this.policy.metronomeEnabled) {
+      this.policy.metronomeEnabledChanged();
+    }
     this.audioSessionManager = audio.getAudioManager().getSessionManager();
     this.audioSessionManager.on('audioSessionDeactivated', this.onAudioSessionDeactivated);
     this.recordingAvailable = this.hasPersistedSequence();
@@ -168,18 +168,16 @@ export class AudioService {
   }
 
   async startByUser(): Promise<number> {
-    this.userStarted = true;
+    this.policy.userStartRequested();
     const result: number = await this.startNativeAudio();
     if (result !== 0) {
-      this.userStarted = false;
+      this.policy.userStartFailed();
     }
     return result;
   }
 
   async stopByUser(): Promise<void> {
-    this.userStarted = false;
-    this.transportRunning = false;
-    this.playbackRunning = false;
+    this.policy.userStopped();
     this.recording = false;
     if (this.runtime.status().active) {
       this.runtime.submitControl(NativeCommands.ALL_SOUND_OFF);
@@ -192,15 +190,15 @@ export class AudioService {
   }
 
   async onForeground(): Promise<void> {
-    this.foreground = true;
+    this.policy.enteredForeground();
     await this.stopContinuousTask();
-    if (this.userStarted && !this.runtime.status().active) {
+    if (this.policy.userStarted && !this.runtime.status().active) {
       await this.startNativeAudio();
     }
   }
 
   async onBackground(): Promise<void> {
-    this.foreground = false;
+    this.policy.enteredBackground();
     if (this.runtime.status().active) {
       this.runtime.submitControl(NativeCommands.ALL_NOTES_OFF);
     }
@@ -208,7 +206,7 @@ export class AudioService {
   }
 
   async onAbilityDestroy(): Promise<void> {
-    if (this.continuousTaskActive && this.shouldContinueInBackground()) {
+    if (this.policy.shouldRetainOnDestroy()) {
       return;
     }
     await this.stopByUser();
@@ -322,6 +320,9 @@ export class AudioService {
   setMetronome(enabled: boolean, level: number): boolean {
     if (!this.inRange(level, 0, 1)) return false;
     this.settings.metronomeEnabled = enabled;
+    if (enabled !== this.policy.metronomeEnabled) {
+      this.policy.metronomeEnabledChanged();
+    }
     this.settings.metronomeLevel = level;
     this.persistBoolean('metronomeEnabled', enabled);
     this.persistNumber('metronomeLevel', level);
@@ -341,10 +342,10 @@ export class AudioService {
   }
 
   toggleTransport(): boolean {
-    const next: boolean = !this.transportRunning;
+    const next: boolean = !this.policy.transportRunning;
     const accepted: boolean = this.submitIfActive(next ? NativeCommands.TRANSPORT_START :
       NativeCommands.TRANSPORT_STOP);
-    if (accepted) this.transportRunning = next;
+    if (accepted) this.policy.transportToggleAccepted();
     void this.reconcileBackgroundPolicy();
     return accepted;
   }
@@ -358,14 +359,14 @@ export class AudioService {
   }
 
   async startPlayback(): Promise<boolean> {
-    this.userStarted = true;
+    this.policy.userStartRequested();
     if (!this.runtime.status().active && await this.startNativeAudio() !== 0) {
-      this.userStarted = false;
+      this.policy.userStartFailed();
       return false;
     }
     const accepted: boolean = this.submitIfActive(NativeCommands.PLAYBACK_START);
     if (accepted) {
-      this.playbackRunning = true;
+      this.policy.playbackStarted();
       this.updateMediaPlaybackState(true);
       await this.reconcileBackgroundPolicy();
     }
@@ -375,7 +376,7 @@ export class AudioService {
   stopPlayback(): boolean {
     const accepted: boolean = this.submitIfActive(NativeCommands.PLAYBACK_STOP);
     if (accepted) {
-      this.playbackRunning = false;
+      this.policy.playbackStopped();
       this.updateMediaPlaybackState(false);
       void this.reconcileBackgroundPolicy();
     }
@@ -410,7 +411,7 @@ export class AudioService {
     const nativeStatus = this.runtime.status();
     return {
       initialized: this.initialized,
-      userStarted: this.userStarted,
+      userStarted: this.policy.userStarted,
       active: nativeStatus.active,
       fastPathActive: nativeStatus.fastPathActive,
       latencyFallbackUsed: nativeStatus.latencyFallbackUsed,
@@ -424,11 +425,11 @@ export class AudioService {
       routeChanges: nativeStatus.routeChanges,
       interruptions: nativeStatus.interruptions,
       lastError: nativeStatus.lastError,
-      transportRunning: this.transportRunning,
+      transportRunning: this.policy.transportRunning,
       recording: this.recording,
       recordingAvailable: this.recordingAvailable,
-      playbackRunning: this.playbackRunning,
-      backgroundTaskActive: this.continuousTaskActive,
+      playbackRunning: this.policy.playbackRunning,
+      backgroundTaskActive: this.policy.continuousTaskActive,
       statusMessage: this.statusMessage,
     };
   }
@@ -512,10 +513,10 @@ export class AudioService {
   }
 
   private restoreTransportState(): void {
-    if (this.transportRunning) {
+    if (this.policy.transportRunning) {
       this.runtime.submitControl(NativeCommands.TRANSPORT_START);
     }
-    if (this.playbackRunning) {
+    if (this.policy.playbackRunning) {
       this.runtime.submitControl(NativeCommands.PLAYBACK_START);
     }
   }
@@ -533,8 +534,7 @@ export class AudioService {
     this.tickInProgress = true;
     try {
       const status = this.runtime.status();
-      if (status.needsRestart && this.userStarted &&
-        (this.foreground || this.shouldContinueInBackground())) {
+      if (status.needsRestart && this.policy.shouldAttemptRecovery()) {
         const result: number = this.runtime.recover();
         if (result === 0) {
           this.applyPersistentControls();
@@ -562,19 +562,22 @@ export class AudioService {
         this.recordingAvailable = this.saveRecording();
       }
     } else if (event.eventType === NativeEvents.PLAYBACK_CHANGED) {
-      this.playbackRunning = event.value !== 0;
-      this.updateMediaPlaybackState(this.playbackRunning);
+      if (event.value !== 0) {
+        this.policy.playbackStarted();
+      } else {
+        this.policy.playbackStopped();
+      }
+      this.updateMediaPlaybackState(this.policy.playbackRunning);
       void this.reconcileBackgroundPolicy();
     }
   }
 
   private shouldContinueInBackground(): boolean {
-    return this.userStarted && (this.playbackRunning ||
-      (this.settings.metronomeEnabled && this.transportRunning));
+    return this.policy.shouldContinueInBackground();
   }
 
   private async reconcileBackgroundPolicy(): Promise<void> {
-    if (this.foreground) {
+    if (this.policy.foreground) {
       await this.stopContinuousTask();
       return;
     }
@@ -593,7 +596,7 @@ export class AudioService {
   }
 
   private async startContinuousTask(): Promise<void> {
-    if (this.continuousTaskActive || this.context === undefined) return;
+    if (this.policy.continuousTaskActive || this.context === undefined) return;
     const context: common.UIAbilityContext = this.context;
     const agentInfo: wantAgent.WantAgentInfo = {
       wants: [{
@@ -608,7 +611,7 @@ export class AudioService {
       const agent: WantAgent = await wantAgent.getWantAgent(agentInfo);
       await backgroundTaskManager.startBackgroundRunning(context,
         backgroundTaskManager.BackgroundMode.AUDIO_PLAYBACK, agent);
-      this.continuousTaskActive = true;
+      this.policy.continuousTaskStarted();
       this.statusMessage = 'Official audio playback continuous task active';
     } catch (error) {
       const failure: BusinessError = error as BusinessError;
@@ -620,14 +623,14 @@ export class AudioService {
   }
 
   private async stopContinuousTask(): Promise<void> {
-    if (!this.continuousTaskActive || this.context === undefined) return;
+    if (!this.policy.continuousTaskActive || this.context === undefined) return;
     try {
       await backgroundTaskManager.stopBackgroundRunning(this.context);
     } catch (error) {
       const failure: BusinessError = error as BusinessError;
       console.error(`MoL continuous task stop failed: ${failure.code} ${failure.message}`);
     }
-    this.continuousTaskActive = false;
+    this.policy.continuousTaskStopped();
   }
 
   private async ensureMediaSession(): Promise<void> {

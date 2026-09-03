@@ -10,6 +10,7 @@ set(_module "${_app}/entry/src/main/module.json5")
 set(_compat_module "${_app}/entry-openharmony/src/main/module.json5")
 set(_compat_profile "${_app}/entry-openharmony/build-profile.json5")
 set(_service "${_app}/entry/src/main/ets/audio/AudioService.ets")
+set(_audio_policy "${_app}/entry/src/main/ets/audio/AudioPolicy.ets")
 set(_page "${_app}/entry/src/main/ets/pages/Index.ets")
 set(_native "${MOL_SOURCE_DIR}/platforms/harmony/native/napi_module.cpp")
 set(_audio_host "${MOL_SOURCE_DIR}/platforms/harmony/native/oh_audio_host.cpp")
@@ -17,6 +18,7 @@ set(_audio_host_sim "${MOL_SOURCE_DIR}/tests/platform/test_harmony_audio_host_si
 set(_ohaudio_sim "${MOL_SOURCE_DIR}/tests/platform/harmony_ohaudio_sim.cpp")
 set(_napi_bridge_sim "${MOL_SOURCE_DIR}/tests/platform/test_harmony_napi_bridge_sim.cpp")
 set(_napi_sim "${MOL_SOURCE_DIR}/tests/platform/harmony_napi_sim.cpp")
+set(_audio_policy_sim "${MOL_SOURCE_DIR}/tests/integration/test_harmony_audio_policy.mjs")
 set(_tests_cmake "${MOL_SOURCE_DIR}/tests/CMakeLists.txt")
 set(_types "${_app}/entry/src/main/cpp/types/libmol_harmony_audio/index.d.ts")
 set(_compat_script "${MOL_SOURCE_DIR}/platforms/harmony/build-openharmony-compat.sh")
@@ -31,12 +33,14 @@ foreach(_required
         "${_compat_profile}"
         "${_module}"
         "${_service}"
+        "${_audio_policy}"
         "${_page}"
         "${_audio_host}"
         "${_audio_host_sim}"
         "${_ohaudio_sim}"
         "${_napi_bridge_sim}"
         "${_napi_sim}"
+        "${_audio_policy_sim}"
         "${_tests_cmake}"
         "${_types}"
         "${_compat_script}"
@@ -52,6 +56,7 @@ file(READ "${_audio_host_sim}" _audio_host_sim_text)
 file(READ "${_ohaudio_sim}" _ohaudio_sim_text)
 file(READ "${_napi_bridge_sim}" _napi_bridge_sim_text)
 file(READ "${_napi_sim}" _napi_sim_text)
+file(READ "${_audio_policy_sim}" _audio_policy_sim_text)
 file(READ "${_tests_cmake}" _tests_cmake_text)
 foreach(_token
         "reject_fast_latency"
@@ -80,12 +85,24 @@ endforeach()
 foreach(_token
         "mol_harmony_audio_host_simulation_tests"
         "mol_harmony_napi_bridge_simulation_tests"
+        "mol_harmony_audio_policy_simulation"
         [[platforms/harmony/native/oh_audio_host.cpp]]
         [[platforms/harmony/native/napi_module.cpp]]
         [[platform/harmony_napi_sim.cpp]]
         [[platform/harmony_ohaudio_sim.cpp]])
   if(NOT _tests_cmake_text MATCHES "${_token}")
     message(FATAL_ERROR "HarmonyOS OHAudio simulation build wiring is missing ${_token}")
+  endif()
+endforeach()
+foreach(_token
+        "readFile"
+        "process.argv"
+        "moduleUrl"
+        "shouldContinueInBackground"
+        "shouldRetainOnDestroy"
+        "shouldAttemptRecovery")
+  if(NOT _audio_policy_sim_text MATCHES "${_token}")
+    message(FATAL_ERROR "HarmonyOS production audio policy simulation is missing ${_token}")
   endif()
 endforeach()
 
@@ -130,6 +147,11 @@ endforeach()
 
 file(READ "${_service}" _service_text)
 foreach(_token
+        "import { HarmonyAudioPolicy } from './AudioPolicy'"
+        "new HarmonyAudioPolicy"
+        "this.policy.shouldContinueInBackground"
+        "this.policy.shouldRetainOnDestroy"
+        "this.policy.shouldAttemptRecovery"
         "getSessionManager"
         "activateAudioSession"
         "audioSessionDeactivated"
@@ -141,6 +163,24 @@ foreach(_token
         "renameSync")
   if(NOT _service_text MATCHES "${_token}")
     message(FATAL_ERROR "HarmonyOS service is missing ${_token}")
+  endif()
+endforeach()
+
+file(READ "${_audio_policy}" _audio_policy_text)
+foreach(_token
+        "export class HarmonyAudioPolicy"
+        "userStartRequested"
+        "enteredForeground"
+        "enteredBackground"
+        "transportToggleAccepted"
+        "playbackStarted"
+        "metronomeEnabledChanged"
+        "continuousTaskStarted"
+        "shouldContinueInBackground"
+        "shouldRetainOnDestroy"
+        "shouldAttemptRecovery")
+  if(NOT _audio_policy_text MATCHES "${_token}")
+    message(FATAL_ERROR "HarmonyOS audio policy is missing ${_token}")
   endif()
 endforeach()
 

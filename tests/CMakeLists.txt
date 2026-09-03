@@ -140,6 +140,20 @@ add_test(
     ${CMAKE_COMMAND} -DMOL_SOURCE_DIR=${PROJECT_SOURCE_DIR} -P
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_harmony_project.cmake)
 
+if(DEFINED ENV{EMSDK_NODE} AND EXISTS "$ENV{EMSDK_NODE}")
+  set(MOL_HARMONY_NODE_EXECUTABLE "$ENV{EMSDK_NODE}")
+else()
+  find_program(MOL_HARMONY_NODE_EXECUTABLE NAMES node node.exe NO_CMAKE_FIND_ROOT_PATH)
+endif()
+if(MOL_HARMONY_NODE_EXECUTABLE)
+  add_test(
+    NAME mol_harmony_audio_policy_simulation
+    COMMAND
+      ${MOL_HARMONY_NODE_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_harmony_audio_policy.mjs
+      ${PROJECT_SOURCE_DIR}/platforms/harmony/app/entry/src/main/ets/audio/AudioPolicy.ets)
+endif()
+
 add_test(
   NAME mol_ios_project_audit
   COMMAND
