@@ -492,13 +492,17 @@ python3 tools/package_audit.py --archive <archive> \
   --report-dir <report-directory> --expected-version 0.1.0
 ```
 
-A clean local clone of `40cf588949b5ed0084b43d4eeaa0be44396a2002` with no
-copied build or dependency cache was built in a new directory. MSVC Debug
-passed 76/76 tests; Emscripten MinSizeRel passed 31/31; a clean `npm ci`
-reported zero vulnerabilities, the Web unit suite passed 12/12, TypeScript
-strict checking passed, and the production bundle built. The Emscripten
-configure used the Ninja executable shipped with Visual Studio because Ninja
-is not on this host's default `PATH`.
+A clean local clone of `d0fa3d6f96fe0df9e5dd61ae944bc5a9e1e6e030` with no
+copied repository build output or managed-dependency directory was built in a
+new directory. MSVC LTO Release passed 79/79 tests; Emscripten MinSizeRel passed
+32/32; a clean `npm ci` reported zero vulnerabilities, the Web unit suite
+passed 12/12, TypeScript strict checking passed, and the production bundle
+built. Fresh ESP32 and ESP32-S3 QEMU builds used the external official ESP-IDF
+6.1 installation, booted both firmware images, and passed their three-snapshot
+runtime gates with 107,904 and 104,960 rendered frames respectively, 12 input
+commands each, finite non-silent output, and zero render or write failures. The
+Emscripten configure used the Ninja executable shipped with Visual Studio
+because Ninja is not on this host's default `PATH`.
 
 ## Known failures
 
@@ -514,7 +518,7 @@ tests.
 - Cross-platform source checks are not promoted to device verification.
 
 The HarmonyOS application descriptors, project audit, and native source-check
-boundary pass locally. Windows MSVC and Linux Clang pass 78/78 tests. The
+boundary pass locally. Windows MSVC Release and Linux GCC pass 79/79 tests. The
 official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor 5.8.9 build and audit
 both Debug and Release compatibility HAPs; the Release artifact is an unsigned
 2,951,842-byte package containing ArkTS bytecode and both required native ABIs.
