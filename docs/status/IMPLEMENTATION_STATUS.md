@@ -53,17 +53,21 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`5e84b49` (`test(web): require real daemon acceptance`) is the latest locally
-validated code candidate. Browser acceptance now fails when the real desktop
-daemon is absent, and the checked-in Linux CI path builds that daemon before
-running the locked production Web bundle across Chromium, Firefox, and WebKit.
-The missing-daemon rejection and real Windows/Linux daemon paths execute
-locally; Windows passes 90/90, Linux passes 91/91, and Wasm passes 42/42 with
-the new portable wiring audit. The CI workflow itself remains unexecuted for
-this unpushed commit. The preceding `00a0e50` candidate makes native test
-configuration fail closed when Node.js is unavailable instead of silently
-omitting the exact HarmonyOS production-policy test. The production Web
-controller was rebuilt from locked dependencies and passed all five applicable
+`5c230cd` (`test: require Python for complete suites`) is the latest locally
+validated code candidate. Test-enabled CMake configuration now requires Python
+instead of silently omitting both ESP32 evidence-parser tests and the Linux
+launchd-process simulation. An intentionally invalid interpreter fails
+configuration; Python 3.14.6 on Windows and 3.14.4 on Linux configure
+successfully. Windows passes 90/90, Linux passes 91/91, and Wasm passes 42/42.
+The preceding `5e84b49` candidate makes browser acceptance fail when the real
+desktop daemon is absent, and the checked-in Linux CI path builds that daemon
+before running the locked production Web bundle across Chromium, Firefox, and
+WebKit. The missing-daemon rejection and real Windows/Linux daemon paths
+execute locally with the new portable wiring audit. The CI workflow itself
+remains unexecuted for this unpushed commit. The preceding `00a0e50` candidate
+makes native test configuration fail closed when Node.js is unavailable instead
+of silently omitting the exact HarmonyOS production-policy test. The production
+Web controller was rebuilt from locked dependencies and passed all five applicable
 Chrome desktop cases against real Windows and Linux daemon processes at
 repository candidate `4cdb929`. The preceding `098ddf4` candidate makes the
 OpenHarmony compatibility wrappers run
@@ -685,6 +689,8 @@ tests.
 
 - `cl`, Emscripten, ESP-IDF, and the Clang ASan runtime are activated through
   their toolchain environments and are not all on the default `PATH`.
+- Test-enabled CMake configuration requires Python 3 and Node.js; unavailable
+  runtimes stop configuration instead of reducing the registered test set.
 - Cross-platform source checks are not promoted to device verification.
 
 The HarmonyOS application descriptors, project audit, executable production

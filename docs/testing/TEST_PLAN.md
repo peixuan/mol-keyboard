@@ -18,7 +18,8 @@ The default Debug and optimized Release presets compile with warnings as
 errors and run all applicable unit, integration, format, tool, service, source
 audit, and consumer tests. Node.js must be on `PATH`, or `EMSDK_NODE` must name
 its executable, so the exact production HarmonyOS policy test cannot disappear
-from a native suite:
+from a native suite. Python 3 is also required so the HIL/QEMU evidence parsers
+and Linux launchd-process simulation cannot disappear:
 
 ```sh
 cmake --preset dev-debug

@@ -2,7 +2,7 @@
 
 | Gate | State | Evidence |
 |---|---|---|
-| M0 engineering baseline | passed | Windows x64 and Wasm Debug/Release tests pass; native configuration fails closed if Node.js cannot register the exact HarmonyOS production-policy test; C/C++ consumers link; ESP32 and ESP32-S3 firmware compile the same ISO C11 core with ESP-IDF 6.1 |
+| M0 engineering baseline | passed | Windows x64 and Wasm Debug/Release tests pass; test-enabled configuration fails closed if Node.js cannot register the exact HarmonyOS production-policy test or Python cannot register the evidence-parser/process-simulation tests; C/C++ consumers link; ESP32 and ESP32-S3 firmware compile the same ISO C11 core with ESP-IDF 6.1 |
 | M1 portable sound path | passed | Same C4 sequence is 261.25 Hz with finite output in Native, Wasm, and the ESP32 32 kHz core path; allocation-free desktop/worklet/I2S callbacks and Android Oboe, Apple AudioUnit, and Harmony OHAudio call entries exist |
 | M2 music semantics | passed | All required transforms, gesture ownership, sustain, portamento, transport, metronome, and six arpeggiator modes pass 17 Native and 15 Wasm tests; both targets match the 35-event golden digest; exact transport math reaches the two-hour frame with zero drift |
 | M3 instruments and DSP | passed | All DSP primitives, 18 compiled procedural patches, stereo effects/master safety, calibrated audio golden, Native/Wasm metric conformance, sanitizer fuzzing, Tiny/feature-off builds, and current ESP32/ESP32-S3 map evidence pass |

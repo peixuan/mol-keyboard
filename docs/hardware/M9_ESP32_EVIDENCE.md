@@ -148,7 +148,9 @@ Do not commit raw device logs, credentials, or local absolute paths.
 ## Host validation of the verifier
 
 The HIL parser is part of normal CTest. It has passing ESP32/ESP32-S3 fixtures
-and negative tests for resets, deadline failures, and capability mismatches:
+and negative tests for resets, deadline failures, and capability mismatches.
+Test-enabled CMake configuration now requires Python, so these cases cannot
+silently disappear when the interpreter is unavailable:
 
 ```powershell
 python tests/hardware/esp32_hil.py --self-test
