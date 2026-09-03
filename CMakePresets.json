@@ -40,6 +40,36 @@
       }
     },
     {
+      "name": "profile-tiny",
+      "inherits": "dev-release",
+      "displayName": "Tiny Resource Profile",
+      "cacheVariables": {
+        "MOL_PROFILE_TINY": "ON",
+        "MOL_PROFILE_STANDARD": "OFF",
+        "MOL_PROFILE_FULL": "OFF"
+      }
+    },
+    {
+      "name": "profile-standard",
+      "inherits": "dev-release",
+      "displayName": "Standard Resource Profile",
+      "cacheVariables": {
+        "MOL_PROFILE_TINY": "OFF",
+        "MOL_PROFILE_STANDARD": "ON",
+        "MOL_PROFILE_FULL": "OFF"
+      }
+    },
+    {
+      "name": "profile-full",
+      "inherits": "dev-release",
+      "displayName": "Full Resource Profile",
+      "cacheVariables": {
+        "MOL_PROFILE_TINY": "OFF",
+        "MOL_PROFILE_STANDARD": "OFF",
+        "MOL_PROFILE_FULL": "ON"
+      }
+    },
+    {
       "name": "ci-linux-gcc",
       "inherits": "base",
       "cacheVariables": {
@@ -282,6 +312,9 @@
   "buildPresets": [
     { "name": "dev-debug", "configurePreset": "dev-debug" },
     { "name": "dev-release", "configurePreset": "dev-release" },
+    { "name": "profile-tiny", "configurePreset": "profile-tiny" },
+    { "name": "profile-standard", "configurePreset": "profile-standard" },
+    { "name": "profile-full", "configurePreset": "profile-full" },
     { "name": "ci-linux-gcc", "configurePreset": "ci-linux-gcc" },
     { "name": "ci-linux-clang", "configurePreset": "ci-linux-clang" },
     { "name": "ci-linux-aarch64", "configurePreset": "ci-linux-aarch64" },
@@ -305,6 +338,9 @@
   "testPresets": [
     { "name": "dev-debug", "configurePreset": "dev-debug", "output": { "outputOnFailure": true } },
     { "name": "dev-release", "configurePreset": "dev-release", "output": { "outputOnFailure": true } },
+    { "name": "profile-tiny", "configurePreset": "profile-tiny", "output": { "outputOnFailure": true } },
+    { "name": "profile-standard", "configurePreset": "profile-standard", "output": { "outputOnFailure": true } },
+    { "name": "profile-full", "configurePreset": "profile-full", "output": { "outputOnFailure": true } },
     { "name": "ci-linux-gcc", "configurePreset": "ci-linux-gcc", "output": { "outputOnFailure": true } },
     { "name": "ci-linux-clang", "configurePreset": "ci-linux-clang", "output": { "outputOnFailure": true } },
     { "name": "ci-windows-msvc", "configurePreset": "ci-windows-msvc", "output": { "outputOnFailure": true } },

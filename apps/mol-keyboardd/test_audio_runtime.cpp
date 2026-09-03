@@ -69,17 +69,22 @@ int main() {
   }
   std::this_thread::sleep_for(std::chrono::milliseconds(40));
   molseq::SequenceDocument recording;
-  if (runtime.copy_recording(recording) != MOL_OK || recording.events.empty()) {
-    std::fprintf(stderr, "Runtime recording copy failed\n");
+  const mol_result_t recording_result = runtime.copy_recording(recording);
+  if (recording_result != MOL_OK || recording.events.empty()) {
+    std::fprintf(stderr, "Runtime recording copy failed: %s, events=%zu\n",
+                 mol_result_string(recording_result), recording.events.size());
     return 1;
   }
   if (runtime.load_sequence(recording) != MOL_OK) return 1;
 
   molcontrol::BenchmarkResult benchmark;
-  if (runtime.benchmark(48000u, benchmark) != MOL_OK || benchmark.frames != 48000u ||
+  const mol_result_t benchmark_result = runtime.benchmark(48000u, benchmark);
+  if (benchmark_result != MOL_OK || benchmark.frames != 48000u ||
       benchmark.non_finite_samples != 0u || benchmark.peak <= 0.0 ||
       !std::isfinite(benchmark.realtime_ratio) || benchmark.realtime_ratio <= 1.0) {
-    std::fprintf(stderr, "Runtime benchmark failed\n");
+    std::fprintf(stderr, "Runtime benchmark failed: %s, frames=%llu, peak=%f\n",
+                 mol_result_string(benchmark_result),
+                 static_cast<unsigned long long>(benchmark.frames), benchmark.peak);
     return 1;
   }
   std::string detail;

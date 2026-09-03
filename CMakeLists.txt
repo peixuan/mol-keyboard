@@ -71,6 +71,11 @@ if(BUILD_SHARED_LIBS)
 endif()
 mol_enable_warnings(mol_core)
 mol_enable_optional_instrumentation(mol_core)
+# The public API constructs opaque engine objects in caller-owned byte storage.
+# Keep that supported contract well-defined under whole-program C/C++ optimization.
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(mol_core PRIVATE -fno-strict-aliasing)
+endif()
 
 if(MOL_ENABLE_CHORUS)
   target_compile_definitions(mol_core PUBLIC MOL_ENABLE_CHORUS=1)

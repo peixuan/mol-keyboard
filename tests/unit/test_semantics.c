@@ -11,7 +11,7 @@ typedef union semantics_test_storage {
   long double floating_alignment;
   void* pointer_alignment;
   uint64_t integer_alignment;
-  unsigned char bytes[1048576];
+  unsigned char bytes[2097152];
 } semantics_test_storage_t;
 
 static int failures = 0;

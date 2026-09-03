@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-#define MOL_PLATFORM_AUDIO_MEMORY_BYTES 1048576U
+#define MOL_PLATFORM_AUDIO_MEMORY_BYTES 2097152U
 
 typedef union mol_platform_audio_memory {
   long double floating_alignment;

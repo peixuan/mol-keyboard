@@ -25,7 +25,7 @@
 namespace molkeyboardd {
 namespace {
 
-constexpr std::size_t kEngineMemoryBytes = 1048576u;
+constexpr std::size_t kEngineMemoryBytes = 2097152u;
 constexpr std::size_t kCommandQueueCapacity = 1024u;
 constexpr std::size_t kCommandQueueMask = kCommandQueueCapacity - 1u;
 constexpr std::size_t kEventQueueCapacity = 2048u;
@@ -484,7 +484,7 @@ mol_result_t AudioRuntime::Impl::synchronize(mol_engine_state_t* state,
     result = mol_engine_load_sequence(engine, &load->config, load->events.data(),
                                       static_cast<std::uint32_t>(load->events.size()));
   if (result == MOL_OK && recording != nullptr) {
-    recording->events.resize(2048u);
+    recording->events.resize(MOL_PROFILE_SEQUENCE_EVENTS);
     std::uint32_t count = 0u;
     result =
         mol_engine_copy_recording(engine, &recording->config, recording->events.data(),

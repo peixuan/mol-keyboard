@@ -16,7 +16,7 @@
 
 namespace {
 
-constexpr std::size_t kEngineMemoryBytes = 1048576u;
+constexpr std::size_t kEngineMemoryBytes = 2097152u;
 std::vector<std::string> exercised_methods;
 
 struct EngineMemory {
