@@ -83,6 +83,19 @@ mol_enable_optional_instrumentation(mol_esp32_settings_tests)
 add_test(NAME mol_esp32_settings_tests COMMAND mol_esp32_settings_tests)
 
 add_executable(
+  mol_esp32_web_protocol_tests unit/test_esp32_web_protocol.c
+                               ${PROJECT_SOURCE_DIR}/platforms/esp32/main/device_settings.c
+                               ${PROJECT_SOURCE_DIR}/platforms/esp32/main/web_config_protocol.c)
+target_include_directories(mol_esp32_web_protocol_tests
+                           PRIVATE ${PROJECT_SOURCE_DIR}/platforms/esp32/main)
+target_link_libraries(mol_esp32_web_protocol_tests PRIVATE mol::core)
+set_target_properties(mol_esp32_web_protocol_tests PROPERTIES C_EXTENSIONS OFF
+                                                          C_STANDARD_REQUIRED ON)
+mol_enable_warnings(mol_esp32_web_protocol_tests)
+mol_enable_optional_instrumentation(mol_esp32_web_protocol_tests)
+add_test(NAME mol_esp32_web_protocol_tests COMMAND mol_esp32_web_protocol_tests)
+
+add_executable(
   mol_esp32_sequence_store_tests unit/test_esp32_sequence_store.c
                                  ${PROJECT_SOURCE_DIR}/platforms/esp32/main/sequence_store.c)
 target_include_directories(mol_esp32_sequence_store_tests
