@@ -133,6 +133,28 @@ Sustain: Space
 
 ## Headless and Web use / 无界面与 Web 使用
 
+On Windows, build or extract the portable package and start the desktop
+instrument directly:
+
+```powershell
+build/dev-release/apps/mol-keyboard/mol-keyboard.exe
+# From the extracted portable package:
+bin/mol-keyboard.exe
+```
+
+The executable opens the packaged production UI in a dedicated Microsoft Edge
+application window. Its bounded HTTP server listens only on a random
+`127.0.0.1` port, serves only the local UI directory, and exits when the window
+closes. Standalone synthesis uses the bundled AudioWorklet/Wasm engine and does
+not require the daemon. Edge can be selected explicitly with `--browser PATH`,
+and a development UI directory can be selected with `--web-root PATH`.
+
+Windows 用户可以直接双击构建产物或便携包中的 `mol-keyboard.exe`。它会用 Microsoft
+Edge 的独立应用窗口打开随包分发的完整界面；本地资源服务器只监听随机的
+`127.0.0.1` 端口，并随窗口关闭。默认独立演奏使用包内 AudioWorklet/Wasm，不要求
+先启动后台服务。`--browser PATH` 可明确选择 Edge 路径，`--web-root PATH` 可用于开发
+目录。
+
 Start the foreground desktop service and control it from another terminal:
 
 ```powershell
@@ -183,7 +205,7 @@ HarmonyOS 共享应用源码也已用官方 OpenHarmony API 12 公共 SDK 完成
 
 | Target / 目标 | Implementation / 实现 | Current evidence / 当前证据 |
 | --- | --- | --- |
-| Windows | daemon, CLI, WASAPI, Raw Input, WinMM MIDI | x64 app, real temporary Startup shortcut/service lifecycle, and ARM64 cross-build passed; MIDI byte-stream simulation passed; ARM64 and physical MIDI runtime pending / x64 应用、真实临时启动快捷方式/服务生命周期及 ARM64 交叉构建通过，MIDI 字节流仿真通过，ARM64 与物理 MIDI 运行待验 |
+| Windows | desktop Web UI launcher, daemon, CLI, WASAPI, Raw Input, WinMM MIDI | x64 GUI launcher and package, real temporary Startup shortcut/service lifecycle, and ARM64 cross-build passed; MIDI byte-stream simulation passed; ARM64 and physical MIDI runtime pending / x64 GUI 启动器与安装包、真实临时启动快捷方式/服务生命周期及 ARM64 交叉构建通过，MIDI 字节流仿真通过，ARM64 与物理 MIDI 运行待验 |
 | Linux | daemon, CLI, native audio/evdev/raw-MIDI host | x86_64 runtime and real systemd user service plus AArch64 QEMU product and 71-test suite passed; kernel-FIFO MIDI simulation passed; native ARM64 and physical devices pending / x86_64 运行、真实 systemd 用户服务及 AArch64 QEMU 产品与 71 项测试通过，内核 FIFO MIDI 仿真通过，原生 ARM64 与物理设备待验 |
 | macOS | daemon, CoreAudio, IOHIDManager, CoreMIDI | production-source API simulations and LaunchAgent orchestration simulation pass; native Apple gate pending / 生产源码 API 与 LaunchAgent 编排仿真通过，原生 Apple 门禁待验 |
 | Web/PWA | Wasm AudioWorklet, offline shell | supported-browser automation passed; Safari pending / 已支持浏览器自动化通过，Safari 待验 |

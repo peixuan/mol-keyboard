@@ -41,8 +41,8 @@ std::string_view MimeType(const std::filesystem::path& path) {
   return "application/octet-stream";
 }
 
-void SendResponse(SOCKET client, int status, std::string_view reason,
-                  std::string_view content_type, std::string_view body, bool head_only) {
+void SendResponse(SOCKET client, int status, std::string_view reason, std::string_view content_type,
+                  std::string_view body, bool head_only) {
   std::ostringstream headers;
   headers << "HTTP/1.1 " << status << ' ' << reason << "\r\n"
           << "Content-Type: " << content_type << "\r\n"
@@ -53,7 +53,7 @@ void SendResponse(SOCKET client, int status, std::string_view reason,
           << "Cross-Origin-Opener-Policy: same-origin\r\n"
           << "Cross-Origin-Embedder-Policy: require-corp\r\n"
           << "Cross-Origin-Resource-Policy: same-origin\r\n"
-          << "Content-Security-Policy: default-src 'self'; script-src 'self'; "
+          << "Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; "
              "style-src 'self'; img-src 'self' data:; worker-src 'self'; "
              "connect-src 'self' ws: wss:\r\n\r\n";
   const std::string header_bytes = headers.str();
@@ -87,8 +87,8 @@ bool IsInsideRoot(const std::filesystem::path& root, const std::filesystem::path
 
 void HandleClient(SOCKET client, const std::filesystem::path& root) {
   DWORD timeout_ms = 2000U;
-  (void)setsockopt(client, SOL_SOCKET, SO_RCVTIMEO,
-                   reinterpret_cast<const char*>(&timeout_ms), sizeof(timeout_ms));
+  (void)setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout_ms),
+                   sizeof(timeout_ms));
   std::string request;
   std::array<char, 2048> buffer{};
   while (request.find("\r\n\r\n") == request.npos && request.size() < kMaximumRequestBytes) {
@@ -195,8 +195,8 @@ bool WebServer::Start(const std::filesystem::path& web_root, std::uint16_t reque
   address.sin_family = AF_INET;
   address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   address.sin_port = htons(requested_port);
-  if (bind(implementation->listener, reinterpret_cast<const sockaddr*>(&address), sizeof(address)) !=
-          0 ||
+  if (bind(implementation->listener, reinterpret_cast<const sockaddr*>(&address),
+           sizeof(address)) != 0 ||
       listen(implementation->listener, SOMAXCONN) != 0) {
     closesocket(implementation->listener);
     WSACleanup();

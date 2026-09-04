@@ -100,6 +100,8 @@ def required_paths(root: Path) -> list[str]:
         "share/mol-keyboard/service/mol-keyboardd.service",
         "share/mol-keyboard/service/uninstall-user-startup.ps1",
     ]
+    if os.name == "nt":
+        fixed.append("bin/mol-keyboard.exe")
     library_candidates = [root / "lib" / "libmol_core.a", root / "lib" / "mol_core.lib"]
     if not any(path.is_file() for path in library_candidates):
         fixed.append("lib/{libmol_core.a|mol_core.lib}")
