@@ -5,6 +5,11 @@
 The desktop application and headless-service matrix remains the first priority,
 followed by mobile and ESP32. The production Web UI controls real Windows and
 Linux daemon processes, and both platforms pass their complete native suites.
+Windows now also ships a user-launchable `mol-keyboard.exe` that serves the
+packaged production UI from a bounded loopback-only HTTP server and opens it in
+a dedicated Edge application window. The real window reached the expected
+document title and its close request stopped the launcher cleanly; the daemon
+and CLI remain independent and continue to pass without any UI process.
 Windows now also creates, validates, launches, and uninstalls a real WScript
 Startup shortcut in an isolated directory while exercising the real daemon and
 CLI; the actual user Startup folder is untouched.
@@ -53,13 +58,21 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`23ff832` (`fix(build): require C++17 for MIDI tests`) is the latest locally
-validated code candidate. It includes a bounded streaming MIDI 1.0 decoder,
+`9f6f455` (`feat(desktop): launch Windows instrument UI`) is the latest locally
+validated code candidate. Together with server foundation `2bccc1e`, it adds a
+Windows GUI-subsystem executable, bounded loopback static server, installed and
+development Web-root discovery, dedicated Edge app-window startup, exact
+browser-process/window lifetime tracking, and package enforcement. The two
+targeted MSVC tests pass; a real Edge window reached
+`MoL Keyboard · Play the browser`, remained owned by the launcher, and closed
+with launcher exit code zero. The fresh LTO package contains 147 required files
+and preserves the complete no-UI daemon/CLI smoke. The preceding `23ff832`
+candidate includes a bounded streaming MIDI 1.0 decoder,
 public CC1 modulation, native WinMM/Linux raw-MIDI/CoreMIDI adapters, explicit
 Omni or Channel 1--16 filtering, truthful service capability/device reporting,
 and feature-off support. The realtime decoder has a dedicated ASan/UBSan
 libFuzzer target that checks arbitrary chunk-boundary equivalence and bounded
-gesture cleanup. Windows LTO Release passes 93/93, Linux GCC passes
+gesture cleanup. Windows LTO Release passes 95/95, Linux GCC passes
 95/95, and Emscripten MinSizeRel passes 42/42. Linux runs the exact raw-MIDI
 adapter through a kernel FIFO; the exact CoreMIDI source passes controlled API
 execution under MSVC and GCC. No physical MIDI or native Apple claim is made.
@@ -267,6 +280,12 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   adapters, bounded local IPC, all 41 specified JSON-RPC methods, strict atomic
   configuration, recording/playback, actionable doctor/self-test/benchmark,
   and user startup assets for Windows, systemd, and launchd.
+- The Windows desktop product also includes `mol-keyboard.exe`. It hosts only
+  the packaged production UI on a random `127.0.0.1` port, rejects traversal
+  and oversized requests, supplies the isolation/CSP headers required by the
+  AudioWorklet/Wasm path, opens a dedicated Edge application window, and stops
+  the server when that exact browser window closes. Standalone GUI synthesis
+  does not require or weaken the independently tested headless service.
 - The shipped Linux systemd policy passes native user-manager acceptance under
   WSL: the runtime-only unit preserves restart and sandbox directives, starts
   the real daemon/CLI, exits successfully, removes its socket, and is unlinked.
@@ -423,7 +442,30 @@ cmake --build --preset dev-release
 ctest --preset dev-release --output-on-failure
 ```
 
-MSVC 19.51.36248 passes 93/93 tests in the current LTO Release build; the prior
+The Windows desktop launcher and its package were validated separately:
+
+```powershell
+cmake --preset dev-debug -DMOL_BUILD_WEB_SERVER=ON
+cmake --build --preset dev-debug --target mol-keyboard `
+  mol_desktop_web_server_tests mol_desktop_fake_browser
+ctest --test-dir build/dev-debug `
+  -R "mol_desktop_(web_server|launcher)_tests" --output-on-failure
+cmake --preset package-release -DMOL_BUILD_WEB_SERVER=ON
+cmake --build --preset package-release
+cpack --config build/package-release/CPackConfig.cmake -B build/packages-gui
+python tools/package_audit.py `
+  --archive build/packages-gui/mol-keyboard-0.1.0-Windows-AMD64.zip `
+  --report-dir build/package-gui-audit --expected-version 0.1.0
+```
+
+The server and launcher tests pass 2/2 under MSVC. The real system Edge app
+window reported the expected MoL Keyboard title and a window close produced
+launcher exit code zero. The 1,376,640-byte archive has SHA-256
+`2d9af266fd2eab9a7b7b8a4f50f7508696b37575258bc03c98d7354c514bf356`;
+its audit passes all 147 required files and the full packaged headless runtime
+lifecycle.
+
+MSVC 19.51.36248 passes 95/95 tests in the current LTO Release build; the prior
 Debug build passed 78/78. These runs include the iOS production lifecycle
 policy, exact HarmonyOS production policy source, strict Web form protocol, and
 HIL evidence-parser tests in addition to
@@ -656,12 +698,13 @@ The refreshed release size gate passed at 505,956 bytes for the stripped core,
 976,136 bytes for daemon plus CLI, 23,018 bytes for gzip-compressed Wasm, and
 157,610 bytes for deployable Web resources. Dependency locks, notices,
 licenses, npm audit, and SPDX SBOM validation passed. Current CPack package
-audits each found 146 required files, including `mol-latency-probe` and every
+audits found 147 required files on Windows and 146 on Linux, including
+`mol-keyboard.exe` on Windows, `mol-latency-probe`, and every
 desktop service definition, then ran the extracted daemon and CLI through the
 complete no-UI null-audio lifecycle and required native MIDI capability. The
-Windows AMD64 ZIP is 1,328,430 bytes
+Windows AMD64 ZIP is 1,376,640 bytes
 with SHA-256
-`a6d83dee02dcdb6c10dd774d84d587fc53611d9e0020bf39fb2f1f4f0f088237`;
+`2d9af266fd2eab9a7b7b8a4f50f7508696b37575258bc03c98d7354c514bf356`;
 its recording is 327 bytes. The Linux x86_64 TGZ is 1,714,599 bytes with SHA-256
 `648105f02ce5765859c7e209a50e6718458f34b6c347624403a76d45af9fd6fc`;
 its recording is 326 bytes. Both report schema 2, 48 kHz stereo, 4,096 finite
@@ -758,7 +801,7 @@ tests.
 
 The HarmonyOS application descriptors, project audit, executable production
 policy/bridge/host simulations, and native source-check boundary pass locally.
-Windows MSVC Release passes 93/93 tests, Linux GCC passes 95/95, Emscripten
+Windows MSVC Release passes 95/95 tests, Linux GCC passes 95/95, Emscripten
 passes 42/42, and Linux AArch64 QEMU passes 71/71.
 The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
 5.8.9 build and audit
