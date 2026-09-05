@@ -597,9 +597,10 @@ Emscripten 6.0.5 and Node.js 22.16.0 pass 46/46 tests in the current LTO
 MinSizeRel build; the prior Debug candidate passed 31/31. Both configurations
 match the Native event, sequence-fixture, and 18-preset audio-metric goldens.
 
-The production Web bundle passed 12/12 Node tests. Playwright 1.62.1 ran 42
-browser project/test combinations: 15 applicable cases passed and 27 were
-explicitly skipped by capability. System Chrome 151.0.7922.175, system Edge
+The exact clean `19735a9` production Web bundle passed 12/12 Node tests.
+Playwright 1.62.1 then ran 42 browser project/test combinations against the
+exact Windows Release daemon: 15 applicable cases passed and 27 were explicitly
+skipped by capability. System Chrome 151.0.7922.175, system Edge
 152.0.4191.53, Firefox 153.0, Chromium 151.0.7922.34 mobile emulation, and
 WebKit 26.5 desktop/mobile rendering were covered. Chrome and Edge exercised
 the realtime AudioWorklet; Firefox executed the real worklet and Wasm DSP in
@@ -607,15 +608,12 @@ an offline audio graph because the headless runner exposes no realtime output
 device. Chrome also reloaded offline, started audio, played a note, and observed
 the core event. Actual Safari is not claimed.
 
-The desktop application path was refreshed at repository candidate `4cdb929`.
-Independent lockfile installs on Windows and in a clean Linux checkout reported
-zero vulnerabilities; both passed 12/12 Node tests, strict type checking, and
-the production Vite build. Windows system Chrome 151.0.7922.175 and Linux
-bundled Chrome for Testing 151.0.7922.34 each passed five applicable desktop
-cases with two capability-specific skips. Each service-controller run spawned
-the real platform daemon and verified authenticated WebSocket control, engine
-events, service recording, invalid-token rejection, IPC shutdown, and a clean
-process exit.
+The preceding Linux targeted refresh used bundled Chrome for Testing
+151.0.7922.34 and passed five applicable desktop cases with two
+capability-specific skips. Both service-controller runs spawned the real
+platform daemon and verified authenticated WebSocket control, engine events,
+service recording, invalid-token rejection, IPC shutdown, and a clean process
+exit.
 
 With JDK 21, Android API 36, Build Tools 36.0.0, NDK 28.2.13676358, and CMake
 3.31.6 installed:

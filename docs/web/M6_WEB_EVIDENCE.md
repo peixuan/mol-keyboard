@@ -1,8 +1,8 @@
 # M6 Web/PWA evidence
 
-Verified on 2026-09-03 at code candidate `3a1da43` and refreshed through
-repository candidate `4cdb929`. The checked product is the production Vite
-bundle, not a test-only page.
+Verified on 2026-09-03 and refreshed from an exact clean clone of candidate
+`19735a9`. The checked product is the production Vite bundle, not a test-only
+page.
 
 ## Implemented product paths
 
@@ -43,13 +43,14 @@ The Chrome desktop service-controller case fails if that executable is missing;
 it is no longer reported as a capability skip.
 
 The production build type-checks and bundles successfully. Its complete output
-is 327,230 bytes including the source map. The application entry is 67,856
-bytes; the worklet JavaScript is 26,408 bytes and its Wasm is 44,632 bytes. The
-release gate counts 157,610 deployable bytes after excluding the source map,
+is 329,232 bytes including the source map. The application entry is 68,388
+bytes; the worklet JavaScript is 26,408 bytes and its Wasm is 44,778 bytes. The
+release gate counts 158,288 deployable bytes after excluding the source map,
 well below the exclusive 2 MiB Web budget.
 
-The browser run executed 42 project/test combinations: 15 applicable paths
-passed and 27 capability-specific paths were explicitly skipped. It verified:
+The exact-candidate browser run executed 42 project/test combinations: 15
+applicable paths passed and 27 capability-specific paths were explicitly
+skipped. It used the exact Windows Release daemon and verified:
 
 - system Chrome 151.0.7922.175 and system Edge 152.0.4191.53;
 - Playwright Firefox 153.0;
@@ -70,7 +71,7 @@ passed and 27 capability-specific paths were explicitly skipped. It verified:
   notifications, service-side recording, and rejection of a wrong token.
 
 The same build passed 12/12 Node unit tests, including malformed-Wasm
-fail-closed behavior. Emscripten 6.0.5 now passes 42/42 LTO MinSizeRel tests;
+fail-closed behavior. Emscripten 6.0.5 now passes 46/46 LTO MinSizeRel tests;
 the earlier Debug candidate passed 31/31. These include AudioWorklet, event,
 sequence, all-preset metric, and fail-closed Web wiring conformance. The
 dependency license audit passed after a clean `npm ci` and reports no npm
