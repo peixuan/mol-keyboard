@@ -68,6 +68,12 @@ jobs:
           cmake --build --preset wasm-release
           npm --prefix apps/web ci
           npm --prefix apps/web run build
+      - name: Exercise current Safari Web application
+        if: matrix.runner == 'macos-15'
+        shell: bash
+        run: |
+          sudo safaridriver --enable
+          npm --prefix apps/web run test:safari
       - name: Build both macOS desktop GUI applications
         shell: bash
         run: |

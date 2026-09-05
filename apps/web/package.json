@@ -10,6 +10,7 @@
     "test": "node --check public/sw.js && node --experimental-strip-types --test tests/*.test.ts",
     "test:browser": "npm run build && node scripts/run-browser-tests.mjs test",
     "test:browser:install": "node scripts/run-browser-tests.mjs install chromium firefox webkit",
+    "test:safari": "node scripts/safari-smoke.mjs",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

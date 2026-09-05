@@ -6,9 +6,10 @@ endif()
 
 set(_service_spec "${MOL_SOURCE_DIR}/apps/web/e2e/service-controller.spec.ts")
 set(_package "${MOL_SOURCE_DIR}/apps/web/package.json")
+set(_safari_smoke "${MOL_SOURCE_DIR}/apps/web/scripts/safari-smoke.mjs")
 set(_workflow "${MOL_SOURCE_DIR}/.github/workflows/ci.yml")
 
-foreach(_required "${_service_spec}" "${_package}" "${_workflow}")
+foreach(_required "${_service_spec}" "${_package}" "${_safari_smoke}" "${_workflow}")
   if(NOT EXISTS "${_required}")
     message(FATAL_ERROR "Web acceptance input is missing: ${_required}")
   endif()
@@ -31,10 +32,23 @@ if(NOT _optional_daemon EQUAL -1)
 endif()
 
 file(READ "${_package}" _package_text)
-foreach(_token [["test":]] [["build":]] [["test:browser":]])
+foreach(_token [["test":]] [["build":]] [["test:browser":]] [["test:safari":]])
   string(FIND "${_package_text}" "${_token}" _offset)
   if(_offset EQUAL -1)
     message(FATAL_ERROR "Web package script is missing ${_token}")
+  endif()
+endforeach()
+
+file(READ "${_safari_smoke}" _safari_smoke_text)
+foreach(_token
+        [[browserName: "safari"]]
+        "[data-action='start']"
+        "AudioWorklet/Wasm startup"
+        "MessagePort baseline"
+        "MOL_SAFARI_SMOKE_PASS")
+  string(FIND "${_safari_smoke_text}" "${_token}" _offset)
+  if(_offset EQUAL -1)
+    message(FATAL_ERROR "Safari acceptance is missing ${_token}")
   endif()
 endforeach()
 
@@ -43,7 +57,9 @@ foreach(_token
         "Build native daemon for browser acceptance"
         "node apps/web/scripts/run-browser-tests.mjs install --with-deps chromium firefox webkit"
         [[MOL_DAEMON="$PWD/build/ci-linux-gcc/apps/mol-keyboardd/mol-keyboardd"]]
-        "npm --prefix apps/web run test:browser")
+        "npm --prefix apps/web run test:browser"
+        "sudo safaridriver --enable"
+        "npm --prefix apps/web run test:safari")
   string(FIND "${_workflow_text}" "${_token}" _offset)
   if(_offset EQUAL -1)
     message(FATAL_ERROR "CI Web acceptance wiring is missing ${_token}")
