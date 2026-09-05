@@ -4,14 +4,19 @@ The M0-M4 gates, M5 desktop implementation, and M6 Web/PWA implementation are
 complete. The current Windows host has Visual Studio 2026, MSVC 19.51.36248,
 CMake 4.4.0, Ninja 1.13.2, Emscripten 6.0.5, and ESP-IDF 6.1. Linux/Clang service
 validation runs under WSL with null audio. The production desktop Web UI now
-controls real Windows and Linux service processes in browser automation. The
+runs inside a real wxWidgets/WebView2 window on Windows and a
+wxWidgets/WebKitGTK window under Linux Xvfb; an additional fully native
+wxWidgets debugger controls real Windows and Linux service processes over local
+IPC. The standalone browser UI also controls those services in automation. The
 shipped Linux service policy also passes real systemd 259 user-manager startup,
 sandboxed execution, clean shutdown, socket cleanup, and runtime-unit removal.
 The Windows installer/uninstaller and an actual WScript shortcut pass an
 isolated Startup-directory product lifecycle; this does not alter the real user
 Startup folder or substitute for a sign-out/sign-in launch observation.
-macOS compilation and physical Bluetooth audio/keyboard verification remain
-unavailable here.
+Native macOS GUI/service compilation and physical Bluetooth audio/keyboard
+verification remain unavailable here. The macOS wxWidgets/WKWebView build gate
+and application-bundle resource layout are checked in, but no Apple result is
+inferred from the Windows or Linux runs.
 
 The exact macOS IOHID adapter and CoreAudio-selected desktop runtime compile and
 execute against controlled API models under MSVC and Linux Clang. These tests

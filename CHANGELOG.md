@@ -47,6 +47,9 @@ All notable changes to this project will be documented in this file.
   P50/P95/maximum statistics, acceptance thresholds, and malformed-input fuzzing.
 - Added explicit Release+LTO Tiny, Standard, and Full resource-profile presets
   and CI coverage, including Full-profile host storage and recording capacity.
+- Added a cross-platform wxWidgets desktop shell that embeds the production Web
+  instrument through the operating system WebView, plus an optional fully native
+  wxWidgets debugger for exercising the independent headless service over IPC.
 
 ### Fixed
 

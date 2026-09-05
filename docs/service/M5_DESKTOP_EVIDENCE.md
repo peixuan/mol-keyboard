@@ -1,8 +1,11 @@
-# M5 Desktop Headless Evidence
+# M5 Desktop Application and Headless Evidence
 
-Verified on 2026-09-04 through code candidate `23ff832`. The current Windows
-LTO Release suite passes 93/93, Linux GCC passes 95/95 with native Linux Node
-22.16.0, and Emscripten MinSizeRel passes 42/42. The desktop-first regression
+Refreshed on 2026-09-05 through code candidate `cc33552`. The wxWidgets
+GUI-enabled suites pass 97/97 on Windows MSVC and 99/99 on Linux GCC with Node
+22.22.1; extracted Release+LTO packages launch the production GUI and complete
+the independent no-UI service lifecycle. Earlier headless evidence was verified
+through candidate `23ff832`: Windows LTO Release passed 93/93, Linux GCC passed
+95/95 with native Linux Node 22.16.0, and Emscripten MinSizeRel passed 42/42. The desktop-first regression
 was repeated from an exact `23ff832` clean clone: Windows compiled 176 targets,
 Linux compiled 180 targets, Wasm compiled 108 targets, and all three suites
 passed with the same 93/93, 95/95, and 42/42 totals.
@@ -22,6 +25,14 @@ two capability-specific skips and zero npm vulnerabilities.
 
 ## Implemented surface
 
+- `mol-keyboard` is a native wxWidgets frame embedding the shared production Web
+  instrument through WebView2 on Windows, WebKit2GTK on Linux, and WKWebView on
+  macOS. It exposes no privileged script bridge, blocks popups and off-origin
+  navigation, and retains the existing AudioWorklet/Wasm synthesis path.
+- `mol-keyboard-debug` is an optional fully native wxWidgets service client. Its
+  controls exercise presets, tempo, velocity, notes, sustain, recording, device
+  enumeration, diagnostics, state/capability refresh, and all-sound-off over the
+  same bounded local IPC as `molctl`.
 - `mol-keyboardd` is a foreground-by-default ordinary-user service. Its fixed
   realtime command queue and caller-owned engine arena keep allocation,
   blocking, logging, and cross-language calls outside the audio callback.
@@ -74,6 +85,8 @@ two capability-specific skips and zero npm vulnerabilities.
 
 | Configuration | Result | Relevant evidence |
 |---|---:|---|
+| Windows MSVC Debug with both GUIs | 97/97 | Real WebView2 production bundle and SharedArrayBuffer capability acceptance; native debugger-to-daemon IPC; full core, tool, package-consumer, service, and platform-simulation regression |
+| Linux x86_64 GCC with both GUIs (WSL/Xvfb) | 99/99 | Real GTK/WebKitGTK production bundle and MessagePort fallback acceptance under a simulated display; native debugger-to-daemon IPC; systemd and controlled launchd service lifecycles |
 | Windows MSVC Debug | 78/78 | local IPC recovery, all 41 RPC methods, runtime callback, independent daemon process, CLI, recording/playback, rendering, macOS interface simulations |
 | Windows MSVC LTO Release | 93/93 | current optimized suite, WinMM enumeration and MIDI stream tests, fail-closed Web acceptance audit, real temporary Startup-shortcut product lifecycle, portable service-asset audits, and mobile policy/native-boundary simulations |
 | Linux x86_64 GCC (WSL) | 95/95 | current Unix socket/null-audio product suite, production raw-MIDI adapter on a kernel FIFO, fail-closed Web acceptance audit, real systemd user-service lifecycle, executable macOS LaunchAgent orchestration simulation, portable Windows service audit, and mobile policy/native-boundary simulations |
@@ -82,6 +95,14 @@ two capability-specific skips and zero npm vulnerabilities.
 | Windows Clang ASan/UBSan | 57/57 | all sanitizer-enabled portable/control tests and twelve 20-second parser fuzz sessions, including MIDI-file import and realtime MIDI-stream decoding; current Harmony policy audit/source cases pass targeted validation |
 | Emscripten MinSizeRel | 42/42 | current core/worklet regression plus fail-closed Web/platform acceptance-project audits and mobile policy/native-boundary simulations |
 | ESP32 / ESP32-S3 | build passed | firmware regression; application binaries remain 153,440 and 179,328 bytes |
+
+The current extracted-package audit reports schema 3. The 2,940,518-byte
+Windows ZIP contains 152 required files and its WebView2 shell reports
+`PASS-SharedArrayBuffer`; the 4,747,997-byte Linux TGZ contains 151 files and
+its WebKitGTK shell reports `PASS-MessagePort` under Xvfb. Both packages then
+run the daemon and CLI with no UI through 48 kHz stereo null audio, recording,
+playback, diagnostics, a 4,096-frame finite benchmark, clean shutdown, and IPC
+cleanup.
 
 The production Web/PWA application was also run against the current desktop
 service rather than only as a standalone synthesizer. System Chrome on Windows

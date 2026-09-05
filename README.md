@@ -133,8 +133,8 @@ Sustain: Space
 
 ## Headless and Web use / 无界面与 Web 使用
 
-On Windows, build or extract the portable package and start the desktop
-instrument directly:
+On Windows, Linux, or macOS, build or extract the portable package and start the
+desktop instrument directly:
 
 ```powershell
 build/dev-release/apps/mol-keyboard/mol-keyboard.exe
@@ -142,18 +142,18 @@ build/dev-release/apps/mol-keyboard/mol-keyboard.exe
 bin/mol-keyboard.exe
 ```
 
-The executable opens the packaged production UI in a dedicated Microsoft Edge
-application window. Its bounded HTTP server listens only on a random
-`127.0.0.1` port, serves only the local UI directory, and exits when the window
-closes. Standalone synthesis uses the bundled AudioWorklet/Wasm engine and does
-not require the daemon. Edge can be selected explicitly with `--browser PATH`,
-and a development UI directory can be selected with `--web-root PATH`.
+The executable opens the packaged production UI inside a native wxWidgets
+window backed by WebView2 on Windows, WebKit2GTK on Linux, and WKWebView on
+macOS. Its bounded HTTP server listens only on a random `127.0.0.1` port, serves
+only the local UI directory, and exits when the window closes. Standalone
+synthesis uses the bundled AudioWorklet/Wasm engine and does not require the
+daemon. A development UI directory can be selected with `--web-root PATH`.
 
-Windows 用户可以直接双击构建产物或便携包中的 `mol-keyboard.exe`。它会用 Microsoft
-Edge 的独立应用窗口打开随包分发的完整界面；本地资源服务器只监听随机的
-`127.0.0.1` 端口，并随窗口关闭。默认独立演奏使用包内 AudioWorklet/Wasm，不要求
-先启动后台服务。`--browser PATH` 可明确选择 Edge 路径，`--web-root PATH` 可用于开发
-目录。
+Windows 用户可以直接双击构建产物或便携包中的 `mol-keyboard.exe`。它会在 wxWidgets
+原生窗口中通过系统 WebView2 打开随包分发的完整界面；Linux 使用 WebKit2GTK，macOS
+使用 WKWebView。本地资源服务器只监听随机的 `127.0.0.1` 端口，并随窗口关闭。默认
+独立演奏使用包内 AudioWorklet/Wasm，不要求先启动后台服务。`--web-root PATH` 可用于
+开发目录。
 
 Start the foreground desktop service and control it from another terminal:
 
@@ -163,6 +163,19 @@ build/dev-release/apps/molctl/molctl status
 build/dev-release/apps/molctl/molctl preset set violin
 build/dev-release/apps/molctl/molctl doctor
 ```
+
+An additional fully native wxWidgets debugger is available for service work:
+
+```powershell
+cmake --preset dev-debug -DMOL_BUILD_NATIVE_DEBUG_GUI=ON
+cmake --build --preset dev-debug --target mol-keyboard-debug
+build/dev-debug/apps/mol-keyboard/mol-keyboard-debug.exe
+```
+
+It controls the independent daemon over local IPC and provides native preset,
+tempo, velocity, note, sustain, recording, device, and diagnostic controls. See
+[`docs/platform/DESKTOP_GUI.md`](docs/platform/DESKTOP_GUI.md) for cross-platform
+dependencies, security boundaries, and simulated-display acceptance.
 
 `mol-keyboardd` uses local-only IPC and the operating system's audio devices;
 use `--null-backend` on machines without audio hardware. The same C core also
@@ -205,9 +218,9 @@ HarmonyOS 共享应用源码也已用官方 OpenHarmony API 12 公共 SDK 完成
 
 | Target / 目标 | Implementation / 实现 | Current evidence / 当前证据 |
 | --- | --- | --- |
-| Windows | desktop Web UI launcher, daemon, CLI, WASAPI, Raw Input, WinMM MIDI | x64 GUI launcher and package, real temporary Startup shortcut/service lifecycle, and ARM64 cross-build passed; MIDI byte-stream simulation passed; ARM64 and physical MIDI runtime pending / x64 GUI 启动器与安装包、真实临时启动快捷方式/服务生命周期及 ARM64 交叉构建通过，MIDI 字节流仿真通过，ARM64 与物理 MIDI 运行待验 |
-| Linux | daemon, CLI, native audio/evdev/raw-MIDI host | x86_64 runtime and real systemd user service plus AArch64 QEMU product and 71-test suite passed; kernel-FIFO MIDI simulation passed; native ARM64 and physical devices pending / x86_64 运行、真实 systemd 用户服务及 AArch64 QEMU 产品与 71 项测试通过，内核 FIFO MIDI 仿真通过，原生 ARM64 与物理设备待验 |
-| macOS | daemon, CoreAudio, IOHIDManager, CoreMIDI | production-source API simulations and LaunchAgent orchestration simulation pass; native Apple gate pending / 生产源码 API 与 LaunchAgent 编排仿真通过，原生 Apple 门禁待验 |
+| Windows | wxWidgets/WebView2 instrument, native debugger, daemon, CLI, WASAPI, Raw Input, WinMM MIDI | real x64 windows, 97-test GUI suite, extracted GUI/headless package, Startup lifecycle, and ARM64 cross-build passed; ARM64 and physical MIDI runtime pending / x64 实际窗口、97 项 GUI 套件、解压后 GUI/无界面包、启动服务生命周期及 ARM64 交叉构建通过，ARM64 与物理 MIDI 运行待验 |
+| Linux | wxWidgets/WebKitGTK instrument, native debugger, daemon, CLI, native audio/evdev/raw-MIDI host | 99-test x86_64 suite and extracted GUI/headless package pass under WSL/Xvfb; real systemd service and AArch64 QEMU product pass; native display/audio hardware pending / WSL/Xvfb 下 99 项 x86_64 套件与解压后 GUI/无界面包通过，真实 systemd 服务及 AArch64 QEMU 产品通过，原生显示与音频硬件待验 |
+| macOS | wxWidgets/WKWebView instrument, native debugger, daemon, CoreAudio, IOHIDManager, CoreMIDI | GUI build/runtime gate and app-bundle resource layout are checked in; production-source and LaunchAgent simulations pass; native Apple run pending / 已纳入 GUI 构建运行门禁与应用包资源布局，生产源码及 LaunchAgent 仿真通过，Apple 原生运行待验 |
 | Web/PWA | Wasm AudioWorklet, offline shell | supported-browser automation passed; Safari pending / 已支持浏览器自动化通过，Safari 待验 |
 | Android | Oboe/AAudio foreground service | dual-ABI builds plus Android 15 audio-focus/lifecycle simulation passed; device pending / 双 ABI 及 Android 15 音频焦点与生命周期仿真通过，真机待验 |
 | iOS | AudioUnit, AVAudioSession, offline WKWebView | production background policy and hardware-key ownership simulations pass; fail-closed Simulator UI/bridge gate checked in; Apple run/device pending / 生产后台策略及硬件键所有权仿真通过，已纳入失败关闭的模拟器 UI/桥接门禁，Apple 运行与真机待验 |

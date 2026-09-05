@@ -3,13 +3,15 @@
 ## Current milestone
 
 The desktop application and headless-service matrix remains the first priority,
-followed by mobile and ESP32. The production Web UI controls real Windows and
-Linux daemon processes, and both platforms pass their complete native suites.
-Windows now also ships a user-launchable `mol-keyboard.exe` that serves the
-packaged production UI from a bounded loopback-only HTTP server and opens it in
-a dedicated Edge application window. The real window reached the expected
-document title and its close request stopped the launcher cleanly; the daemon
-and CLI remain independent and continue to pass without any UI process.
+followed by mobile and ESP32. The production Web UI now runs inside a native
+wxWidgets frame backed by WebView2 on Windows, WebKit2GTK on Linux, and WKWebView
+on macOS. Real Windows and Linux system-WebView acceptance verifies
+AudioContext, AudioWorklet, cross-origin isolation, IndexedDB, and the supported
+SharedArrayBuffer or MessagePort transport without exposing a native script
+bridge. An additional fully native wxWidgets debugger drives the independent
+daemon over bounded local IPC. The GUI-enabled suites pass 97/97 on Windows and
+99/99 on Linux; the daemon and CLI remain independently buildable and usable
+with both GUI options disabled.
 Windows now also creates, validates, launches, and uninstalls a real WScript
 Startup shortcut in an isolated directory while exercising the real daemon and
 CLI; the actual user Startup folder is untouched.
@@ -58,16 +60,19 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`9f6f455` (`feat(desktop): launch Windows instrument UI`) is the latest locally
-validated code candidate. Together with server foundation `2bccc1e`, it adds a
-Windows GUI-subsystem executable, bounded loopback static server, installed and
-development Web-root discovery, dedicated Edge app-window startup, exact
-browser-process/window lifetime tracking, and package enforcement. The two
-targeted MSVC tests pass; a real Edge window reached
-`MoL Keyboard · Play the browser`, remained owned by the launcher, and closed
-with launcher exit code zero. The fresh LTO package contains 147 required files
-and preserves the complete no-UI daemon/CLI smoke. The preceding `23ff832`
-candidate includes a bounded streaming MIDI 1.0 decoder,
+`cc33552` (`build(desktop): gate portable GUI packages`) is the latest locally
+validated code candidate. It follows the wxWidgets dependency audit, portable
+loopback server, native system-WebView shell, fully native service debugger, and
+fail-closed GUI acceptance commits. A real Windows WebView2 window reports the
+SharedArrayBuffer fast path; Linux WebKitGTK under Xvfb reports the supported
+MessagePort fallback. Both GUI-enabled native suites pass in full. Fresh
+Release+LTO packages were safely extracted and launched: the 2,940,518-byte
+Windows ZIP has 152 files and SHA-256
+`63a815f72bbcaa56635a51675b0e08ead1595a66b46205de573f61d4a4c216a7`;
+the 4,747,997-byte Linux TGZ has 151 files and SHA-256
+`56607378c6e1affe08eca609a044776fe471a1be4ae90115af2b322f067e6360`.
+Their packaged GUI and complete no-UI daemon/CLI lifecycles both pass. The
+preceding `23ff832` candidate includes a bounded streaming MIDI 1.0 decoder,
 public CC1 modulation, native WinMM/Linux raw-MIDI/CoreMIDI adapters, explicit
 Omni or Channel 1--16 filtering, truthful service capability/device reporting,
 and feature-off support. The realtime decoder has a dedicated ASan/UBSan
@@ -280,12 +285,18 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   adapters, bounded local IPC, all 41 specified JSON-RPC methods, strict atomic
   configuration, recording/playback, actionable doctor/self-test/benchmark,
   and user startup assets for Windows, systemd, and launchd.
-- The Windows desktop product also includes `mol-keyboard.exe`. It hosts only
-  the packaged production UI on a random `127.0.0.1` port, rejects traversal
-  and oversized requests, supplies the isolation/CSP headers required by the
-  AudioWorklet/Wasm path, opens a dedicated Edge application window, and stops
-  the server when that exact browser window closes. Standalone GUI synthesis
-  does not require or weaken the independently tested headless service.
+- The desktop product includes `mol-keyboard`, a native wxWidgets frame that
+  embeds the packaged production UI through WebView2, WebKit2GTK, or WKWebView.
+  Its random `127.0.0.1` server rejects traversal and oversized requests,
+  supplies the isolation/CSP headers required by AudioWorklet/Wasm, blocks
+  popups and off-origin navigation, and stops with the window. Standalone GUI
+  synthesis does not require or weaken the independently tested headless
+  service.
+- The optional `mol-keyboard-debug` is a fully native wxWidgets diagnostic
+  client. Native controls cover service connection, preset/tempo/velocity,
+  note and sustain input, recording, audio devices, self-test, doctor,
+  benchmark, state/capability refresh, all-sound-off, and raw response logging.
+  Its acceptance starts the real null-audio daemon and exercises IPC end to end.
 - The shipped Linux systemd policy passes native user-manager acceptance under
   WSL: the runtime-only unit preserves restart and sandbox directives, starts
   the real daemon/CLI, exits successfully, removes its socket, and is unlinked.
@@ -442,28 +453,28 @@ cmake --build --preset dev-release
 ctest --preset dev-release --output-on-failure
 ```
 
-The Windows desktop launcher and its package were validated separately:
+The two desktop GUIs and the portable package were validated separately:
 
 ```powershell
-cmake --preset dev-debug -DMOL_BUILD_WEB_SERVER=ON
-cmake --build --preset dev-debug --target mol-keyboard `
-  mol_desktop_web_server_tests mol_desktop_fake_browser
-ctest --test-dir build/dev-debug `
-  -R "mol_desktop_(web_server|launcher)_tests" --output-on-failure
-cmake --preset package-release -DMOL_BUILD_WEB_SERVER=ON
+cmake -S . -B build/desktop-gui -G Ninja -DCMAKE_BUILD_TYPE=Debug `
+  -DMOL_BUILD_DESKTOP_GUI=ON -DMOL_BUILD_NATIVE_DEBUG_GUI=ON `
+  -DMOL_BUILD_TESTS=ON
+cmake --build build/desktop-gui
+ctest --test-dir build/desktop-gui --output-on-failure
+cmake --preset package-release
 cmake --build --preset package-release
-cpack --config build/package-release/CPackConfig.cmake -B build/packages-gui
+cpack --config build/package-release/CPackConfig.cmake -B build/packages
 python tools/package_audit.py `
-  --archive build/packages-gui/mol-keyboard-0.1.0-Windows-AMD64.zip `
-  --report-dir build/package-gui-audit --expected-version 0.1.0
+  --archive build/packages/mol-keyboard-0.1.0-Windows-AMD64.zip `
+  --report-dir build/package-audit --expected-version 0.1.0
 ```
 
-The server and launcher tests pass 2/2 under MSVC. The real system Edge app
-window reported the expected MoL Keyboard title and a window close produced
-launcher exit code zero. The 1,376,640-byte archive has SHA-256
-`2d9af266fd2eab9a7b7b8a4f50f7508696b37575258bc03c98d7354c514bf356`;
-its audit passes all 147 required files and the full packaged headless runtime
-lifecycle.
+The GUI-enabled Windows MSVC suite passes 97/97. The real system WebView2
+reports `PASS-SharedArrayBuffer`; the native debugger connects to the real
+daemon and completes state/capability/self-test/note/shutdown RPC. Linux GCC
+passes 99/99 with both GUI tests under Xvfb; WebKitGTK reports
+`PASS-MessagePort`. Package audit launches the extracted production GUI before
+running the complete extracted headless runtime lifecycle.
 
 MSVC 19.51.36248 passes 95/95 tests in the current LTO Release build; the prior
 Debug build passed 78/78. These runs include the iOS production lifecycle
@@ -698,19 +709,20 @@ The refreshed release size gate passed at 505,956 bytes for the stripped core,
 976,136 bytes for daemon plus CLI, 23,018 bytes for gzip-compressed Wasm, and
 157,610 bytes for deployable Web resources. Dependency locks, notices,
 licenses, npm audit, and SPDX SBOM validation passed. Current CPack package
-audits found 147 required files on Windows and 146 on Linux, including
-`mol-keyboard.exe` on Windows, `mol-latency-probe`, and every
-desktop service definition, then ran the extracted daemon and CLI through the
-complete no-UI null-audio lifecycle and required native MIDI capability. The
-Windows AMD64 ZIP is 1,376,640 bytes
-with SHA-256
-`2d9af266fd2eab9a7b7b8a4f50f7508696b37575258bc03c98d7354c514bf356`;
-its recording is 327 bytes. The Linux x86_64 TGZ is 1,714,599 bytes with SHA-256
-`648105f02ce5765859c7e209a50e6718458f34b6c347624403a76d45af9fd6fc`;
-its recording is 326 bytes. Both report schema 2, 48 kHz stereo, 4,096 finite
-benchmark frames, no non-finite samples, exit code zero, and successful IPC
-cleanup. They are unsigned 0.1.0 candidate archives built from the `a52bc00`
-tree, not releases.
+audits found 152 required files on Windows and 151 on Linux, including the
+native wxWidgets production executable, WebView2 loader where required,
+`mol-latency-probe`, and every desktop service definition. Each extracted GUI
+loads the packaged Web bundle and passes real system-WebView capability checks;
+the extracted daemon and CLI then complete the no-UI null-audio lifecycle with
+native MIDI capability. The Windows AMD64 ZIP is 2,940,518 bytes with SHA-256
+`63a815f72bbcaa56635a51675b0e08ead1595a66b46205de573f61d4a4c216a7`;
+its WebView2 reports SharedArrayBuffer and its recording is 327 bytes. The Linux
+x86_64 TGZ is 4,747,997 bytes with SHA-256
+`56607378c6e1affe08eca609a044776fe471a1be4ae90115af2b322f067e6360`;
+its WebKitGTK reports MessagePort and its recording is 326 bytes. Both report
+schema 3, 48 kHz stereo, 4,096 finite benchmark frames, no non-finite samples,
+exit code zero, and successful IPC cleanup. They are unsigned 0.1.0 candidate
+archives, not releases.
 
 ```sh
 python3 tools/release_size_gate.py \
@@ -801,8 +813,9 @@ tests.
 
 The HarmonyOS application descriptors, project audit, executable production
 policy/bridge/host simulations, and native source-check boundary pass locally.
-Windows MSVC Release passes 95/95 tests, Linux GCC passes 95/95, Emscripten
-passes 42/42, and Linux AArch64 QEMU passes 71/71.
+The previously verified headless Windows MSVC and Linux GCC Release suites pass
+95/95; the current GUI-enabled Debug suites pass 97/97 on Windows and 99/99 on
+Linux. Emscripten passes 42/42, and Linux AArch64 QEMU passes 71/71.
 The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
 5.8.9 build and audit
 both Debug and Release compatibility HAPs; the Release artifact is an unsigned
