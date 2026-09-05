@@ -28,6 +28,10 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Activate MSVC toolchain
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: platforms/windows/export-msvc-env.ps1 -EnvironmentFile $env:GITHUB_ENV
       - name: Configure
         run: cmake --preset ${{ matrix.preset }}
       - name: Build
@@ -123,6 +127,10 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Activate MSVC toolchain
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: platforms/windows/export-msvc-env.ps1 -EnvironmentFile $env:GITHUB_ENV
       - name: Configure shared core
         run: cmake --preset ci-shared
       - name: Build shared core and consumers
@@ -284,6 +292,9 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Activate MSVC toolchain
+        shell: pwsh
+        run: platforms/windows/export-msvc-env.ps1 -EnvironmentFile $env:GITHUB_ENV
       - name: Install pinned Emscripten SDK
         shell: pwsh
         run: |
@@ -329,9 +340,16 @@ jobs:
           cmake --build --preset coverage-clang
       - name: Enforce core coverage thresholds
         run: |
+          clang_major="$(clang -dumpversion | cut -d. -f1)"
+          llvm_profdata="$(command -v llvm-profdata || command -v "llvm-profdata-$clang_major")"
+          llvm_cov="$(command -v llvm-cov || command -v "llvm-cov-$clang_major")"
+          test -x "$llvm_profdata"
+          test -x "$llvm_cov"
           python3 tools/coverage_gate.py \
             --build-dir build/coverage-clang \
-            --source-dir .
+            --source-dir . \
+            --llvm-profdata "$llvm_profdata" \
+            --llvm-cov "$llvm_cov"
 
   static-analysis:
     runs-on: ubuntu-24.04
@@ -377,8 +395,10 @@ jobs:
       - name: Install exact Android SDK packages
         shell: bash
         run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager \
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$sdkmanager"
+          yes | "$sdkmanager" --licenses >/dev/null || true
+          "$sdkmanager" \
             "platform-tools" \
             "emulator" \
             "platforms;android-36" \
