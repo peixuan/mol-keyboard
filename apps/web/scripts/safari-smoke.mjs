@@ -53,12 +53,12 @@ async function waitForUrl(url, name) {
   throw new Error(`${name} did not become ready at ${url}`);
 }
 
-async function webdriver(method, endpoint, payload) {
+async function webdriver(method, endpoint, payload, timeout = 20_000) {
   const response = await fetch(`${DRIVER_URL}${endpoint}`, {
     method,
     headers: payload === undefined ? undefined : { "Content-Type": "application/json" },
     body: payload === undefined ? undefined : JSON.stringify(payload),
-    signal: AbortSignal.timeout(20_000),
+    signal: AbortSignal.timeout(timeout),
   });
   const body = await response.text();
   const decoded = body.length === 0 ? { value: null } : JSON.parse(body);
@@ -114,9 +114,12 @@ async function main() {
     waitForUrl(`${DRIVER_URL}/status`, "SafariDriver"),
   ]);
 
-  const session = await webdriver("POST", "/session", {
-    capabilities: { alwaysMatch: { browserName: "safari" } },
-  });
+  const session = await webdriver(
+    "POST",
+    "/session",
+    { capabilities: { alwaysMatch: { browserName: "safari" } } },
+    60_000,
+  );
   sessionId = session.sessionId;
   if (typeof sessionId !== "string" || sessionId.length === 0) {
     throw new Error("SafariDriver returned no session identifier");
