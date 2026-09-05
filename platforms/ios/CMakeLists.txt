@@ -66,17 +66,17 @@ add_custom_command(
   POST_BUILD
   COMMAND
     ${CMAKE_COMMAND} -E copy_directory "${_mol_web_dist}"
-    "$<TARGET_BUNDLE_CONTENT_DIR:mol_ios_app>/web"
+    "$<TARGET_BUNDLE_DIR:mol_ios_app>/web"
   COMMAND
     ${CMAKE_COMMAND} -E copy_if_different
     "${CMAKE_CURRENT_SOURCE_DIR}/PrivacyInfo.xcprivacy"
-    "$<TARGET_BUNDLE_CONTENT_DIR:mol_ios_app>/PrivacyInfo.xcprivacy"
+    "$<TARGET_BUNDLE_DIR:mol_ios_app>/PrivacyInfo.xcprivacy"
   COMMAND
     ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/en.lproj"
-    "$<TARGET_BUNDLE_CONTENT_DIR:mol_ios_app>/en.lproj"
+    "$<TARGET_BUNDLE_DIR:mol_ios_app>/en.lproj"
   COMMAND
     ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/zh-Hans.lproj"
-    "$<TARGET_BUNDLE_CONTENT_DIR:mol_ios_app>/zh-Hans.lproj"
+    "$<TARGET_BUNDLE_DIR:mol_ios_app>/zh-Hans.lproj"
   VERBATIM)
 
 set_source_files_properties(
