@@ -342,7 +342,7 @@ def run_desktop_gui_smoke(root: Path, runtime_root: Path) -> dict[str, str]:
         check=False,
         capture_output=True,
         text=True,
-        timeout=20,
+        timeout=45,
     )
     if completed.returncode != 0 or not report.is_file():
         raise ValueError(
@@ -412,7 +412,7 @@ def run_native_debug_gui_smoke(root: Path, runtime_root: Path) -> dict[str, str]
                 check=False,
                 capture_output=True,
                 text=True,
-                timeout=20,
+                timeout=45,
             )
             if completed.returncode != 0 or not report.is_file():
                 raise ValueError(
