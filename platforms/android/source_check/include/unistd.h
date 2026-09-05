@@ -4,6 +4,7 @@
 
 #if defined(__APPLE__)
 #include <sys/unistd.h>
+int usleep(unsigned int microseconds);
 #else
 typedef int clockid_t;
 int usleep(unsigned int microseconds);
