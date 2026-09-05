@@ -66,22 +66,23 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`ed1839f` (`ci(desktop): gate macOS GUI package`) is the latest locally
-validated code candidate. It adds a reproducible Release+LTO Apple desktop
-preset and a fail-closed CI path covering the optimized Web/Wasm build, both
-GUI acceptance modes, exact package selection, `.app` resources, and extracted
-headless lifecycle. A portable audit enforces that wiring. The full GUI-enabled
-regressions pass 98/98 on Windows and 100/100 on Linux. It follows the
-wxWidgets dependency audit, portable loopback server, native system-WebView
+`3e63c2e` (`docs(desktop): record macOS package gate`) is the latest exact
+candidate reproduced from a clean local clone. Its code parent adds a
+reproducible Release+LTO Apple desktop preset and a fail-closed CI path covering
+the optimized Web/Wasm build, both GUI acceptance modes, exact package
+selection, `.app` resources, and extracted headless lifecycle. A portable audit
+enforces that wiring. The clean GUI-enabled Release+LTO regressions pass 98/98
+on Windows and 100/100 on Linux; Emscripten MinSizeRel passes 43/43. It follows
+the wxWidgets dependency audit, portable loopback server, native system-WebView
 shell, fully native service debugger, and fail-closed GUI acceptance commits.
 A real Windows WebView2 window reports the
 SharedArrayBuffer fast path; Linux WebKitGTK under Xvfb reports the supported
 MessagePort fallback. Both GUI-enabled native suites pass in full. Fresh
-Release+LTO packages were safely extracted and launched: the 2,940,518-byte
-Windows ZIP has 152 files and SHA-256
-`63a815f72bbcaa56635a51675b0e08ead1595a66b46205de573f61d4a4c216a7`;
-the 4,747,997-byte Linux TGZ has 151 files and SHA-256
-`56607378c6e1affe08eca609a044776fe471a1be4ae90115af2b322f067e6360`.
+Release+LTO packages were safely extracted and launched: the 4,462,868-byte
+Windows ZIP has 153 files and SHA-256
+`fe3ae39b81d87889cbeefbca757798a236238cd295b171fef4f64d3b2ca1203f`;
+the 7,739,921-byte Linux TGZ has 152 files and SHA-256
+`0d82bd67329bfc909740758355e714535a8f9649cccc5bc1c8e2b56ba5821af6`.
 Their packaged GUI and complete no-UI daemon/CLI lifecycles both pass. The
 preceding `23ff832` candidate includes a bounded streaming MIDI 1.0 decoder,
 public CC1 modulation, native WinMM/Linux raw-MIDI/CoreMIDI adapters, explicit
@@ -544,7 +545,7 @@ cmake --build --preset wasm-release
 ctest --preset wasm-release --output-on-failure
 ```
 
-Emscripten 6.0.5 and Node.js 22.16.0 pass 42/42 tests in the current LTO
+Emscripten 6.0.5 and Node.js 22.16.0 pass 43/43 tests in the current LTO
 MinSizeRel build; the prior Debug candidate passed 31/31. Both configurations
 match the Native event, sequence-fixture, and 18-preset audio-metric goldens.
 
@@ -719,17 +720,18 @@ recovery completed 30 rebuild cycles in 1.42 seconds.
 The refreshed release size gate passed at 505,956 bytes for the stripped core,
 976,136 bytes for daemon plus CLI, 23,018 bytes for gzip-compressed Wasm, and
 157,610 bytes for deployable Web resources. Dependency locks, notices,
-licenses, npm audit, and SPDX SBOM validation passed. Current CPack package
-audits found 152 required files on Windows and 151 on Linux, including the
-native wxWidgets production executable, WebView2 loader where required,
-`mol-latency-probe`, and every desktop service definition. Each extracted GUI
+licenses, npm audit, and SPDX SBOM validation passed. Current exact-candidate
+CPack package audits found 153 files on Windows and 152 on Linux, including the
+native wxWidgets production executable, optional native debugger, WebView2
+loader where required, `mol-latency-probe`, and every desktop service
+definition. Each extracted GUI
 loads the packaged Web bundle and passes real system-WebView capability checks;
 the extracted daemon and CLI then complete the no-UI null-audio lifecycle with
-native MIDI capability. The Windows AMD64 ZIP is 2,940,518 bytes with SHA-256
-`63a815f72bbcaa56635a51675b0e08ead1595a66b46205de573f61d4a4c216a7`;
+native MIDI capability. The Windows AMD64 ZIP is 4,462,868 bytes with SHA-256
+`fe3ae39b81d87889cbeefbca757798a236238cd295b171fef4f64d3b2ca1203f`;
 its WebView2 reports SharedArrayBuffer and its recording is 327 bytes. The Linux
-x86_64 TGZ is 4,747,997 bytes with SHA-256
-`56607378c6e1affe08eca609a044776fe471a1be4ae90115af2b322f067e6360`;
+x86_64 TGZ is 7,739,921 bytes with SHA-256
+`0d82bd67329bfc909740758355e714535a8f9649cccc5bc1c8e2b56ba5821af6`;
 its WebKitGTK reports MessagePort and its recording is 326 bytes. Both report
 schema 3, 48 kHz stereo, 4,096 finite benchmark frames, no non-finite samples,
 exit code zero, and successful IPC cleanup. They are unsigned 0.1.0 candidate
@@ -748,18 +750,22 @@ python3 tools/package_audit.py --archive <archive> \
 ```
 
 A clean local clone of exact candidate
-`23ff8320fba67fa4814b792de6f9101d974b62a4`, created without hardlinks or copied
-build output, compiled all 176 MSVC targets and passed 93/93 LTO Release tests.
-The same clone compiled all 180 Linux GCC targets and passed 95/95 tests, then compiled all 108
-Emscripten targets and passed 42/42 MinSizeRel tests. The two native runs each
-installed the SDK into a fresh nested prefix, built all 28 independent public
+`3e63c2e7f3a6436baf49be5c123765ee85a9b404`, created without hardlinks or copied
+build output, compiled 680 Windows MSVC build actions and passed 98/98
+Release+LTO tests with both GUI applications. The same clone compiled 652 Linux
+GCC build actions and passed 100/100 Release+LTO tests with both GUIs under
+Xvfb, then compiled all 108 Emscripten targets and passed 43/43 MinSizeRel tests.
+The two native runs each installed the SDK into a fresh nested prefix, built
+all 28 independent public
 header translation units plus C11 and C++17 consumers, and passed both installed
 consumer tests. The Windows suite created a real temporary hidden Startup
 shortcut and drove the real headless daemon through the CLI before clean
 shutdown and uninstall. The Linux suite ran the real daemon/CLI through the
 actual systemd 259 user manager. Its macOS service case used the same production
 daemon and CLI against a controlled launchd model, so it remains simulation and
-not native Apple evidence.
+not native Apple evidence. Both clean native builds produced fresh packages;
+their extracted production GUI and complete null-audio service lifecycle pass
+with the hashes recorded above.
 
 An earlier clean local clone of `75609b6f32c25f430cb618e9e56a04e9391406f6` with no
 copied repository build output compiled all 167 Linux GCC targets. Its first
@@ -825,8 +831,9 @@ tests.
 The HarmonyOS application descriptors, project audit, executable production
 policy/bridge/host simulations, and native source-check boundary pass locally.
 The previously verified headless Windows MSVC and Linux GCC Release suites pass
-95/95; the current GUI-enabled Debug suites pass 98/98 on Windows and 100/100 on
-Linux. Emscripten passes 42/42, and Linux AArch64 QEMU passes 71/71.
+95/95; the exact-candidate GUI-enabled Release+LTO suites pass 98/98 on Windows
+and 100/100 on Linux. Emscripten passes 43/43, and Linux AArch64 QEMU passes
+71/71.
 The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
 5.8.9 build and audit
 both Debug and Release compatibility HAPs; the Release artifact is an unsigned
