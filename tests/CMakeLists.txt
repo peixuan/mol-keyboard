@@ -119,6 +119,8 @@ mol_enable_warnings(mol_esp32_sequence_store_tests)
 mol_enable_optional_instrumentation(mol_esp32_sequence_store_tests)
 if(WIN32)
   target_compile_definitions(mol_esp32_sequence_store_tests PRIVATE _CRT_SECURE_NO_WARNINGS)
+else()
+  target_compile_definitions(mol_esp32_sequence_store_tests PRIVATE _POSIX_C_SOURCE=200809L)
 endif()
 add_test(NAME mol_esp32_sequence_store_tests COMMAND mol_esp32_sequence_store_tests)
 

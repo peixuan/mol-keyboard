@@ -34,7 +34,9 @@ namespace {
 
 constexpr UInt32 kChannelCount = 2U;
 constexpr Float64 kFallbackSampleRate = 48000.0;
+#if MOL_APPLE_HAS_AUDIO_SESSION
 constexpr NSTimeInterval kPreferredBufferDuration = 128.0 / kFallbackSampleRate;
+#endif
 constexpr std::size_t kMaximumSequenceBytes = 2U * 1024U * 1024U;
 
 struct AppleAudioState {

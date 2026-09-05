@@ -34,6 +34,7 @@ idf_component_register(
                     "${CMAKE_CURRENT_BINARY_DIR}/generated"
   REQUIRES mol_core bt esp_hid esp_driver_gpio esp_driver_i2s esp_system esp_timer fatfs nvs_flash
            wear_levelling ${MOL_USB_HID_REQUIRES})
+target_compile_definitions(${COMPONENT_LIB} PRIVATE _POSIX_C_SOURCE=200809L)
 if(CONFIG_MOL_DEVICE_WEB_UI_ENABLE)
   if(NOT MOL_DEVICE_WEB_COMPONENTS)
     message(FATAL_ERROR
