@@ -86,10 +86,12 @@ class DebugFrame final : public wxFrame {
     Bind(wxEVT_TIMER, &DebugFrame::OnAcceptanceTimer, this, acceptance_timer_.GetId());
     SetMinSize(wxSize(820, 620));
     Centre();
-    if (!acceptance_output_.empty()) acceptance_timer_.Start(20);
+    if (!acceptance_output_.empty()) acceptance_timer_.Start(kAcceptancePollIntervalMs);
   }
 
  private:
+  static constexpr int kAcceptancePollIntervalMs = 20;
+  static constexpr int kAcceptanceConnectionAttempts = 500;
   static constexpr int kFirstNote = 60;
   static constexpr int kNoteCount = 18;
 
@@ -264,7 +266,7 @@ class DebugFrame final : public wxFrame {
     if (acceptance_finished_) return;
     ++acceptance_attempts_;
     const moldesktop::RpcResult state = Call("engine.getState", Json::object_value({}), false);
-    if (!state.ok && acceptance_attempts_ < 200) return;
+    if (!state.ok && acceptance_attempts_ < kAcceptanceConnectionAttempts) return;
     bool passed = state.ok;
     std::string detail = state.ok ? "engine.getState=" + state.response : state.error;
     if (passed) passed = Call("system.getCapabilities", Json::object_value({}), false).ok;
