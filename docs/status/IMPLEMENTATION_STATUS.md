@@ -9,7 +9,10 @@ on macOS. Real Windows and Linux system-WebView acceptance verifies
 AudioContext, AudioWorklet, cross-origin isolation, IndexedDB, and the supported
 SharedArrayBuffer or MessagePort transport without exposing a native script
 bridge. An additional fully native wxWidgets debugger drives the independent
-daemon over bounded local IPC. The GUI-enabled suites pass 98/98 on Windows and
+daemon over bounded local IPC. The portable release preset now includes both
+GUI applications, and package audit must launch the native debugger against an
+independent packaged daemon before it runs the separate no-UI daemon/CLI
+lifecycle. The GUI-enabled suites pass 98/98 on Windows and
 100/100 on Linux; the daemon and CLI remain independently buildable and usable
 with both GUI options disabled. A fresh Windows build with both GUI options and
 the local Web server disabled compiles 172 targets and passes 93/93 tests,
@@ -37,9 +40,10 @@ input/control, shared-core, and FreeRTOS audio paths in Espressif QEMU. Other lo
 gates are complete. Native and Wasm
 regression, Release+LTO Tiny/Standard/Full profiles, static/shared ABI
 verification, coverage, static analysis, ASan/UBSan with all twelve fuzzers,
-Linux ThreadSanitizer, optimized endurance, release-size budgets, dependency/license
-and SBOM audits, extracted Windows/Linux package headless lifecycles, Android packaging, and clean
-checkout reproduction pass. Complete Windows ARM64 and Linux AArch64 desktop
+Linux ThreadSanitizer, optimized endurance, release-size budgets,
+dependency/license and SBOM audits, extracted Windows/Linux package WebView,
+native-debugger, and independent headless lifecycles, Android packaging, and
+clean checkout reproduction pass. Complete Windows ARM64 and Linux AArch64 desktop
 products now cross-build through checked-in presets, closing their local build
 gap. Linux AArch64 also passes an end-to-end QEMU product gate and 71/71 target
 tests, while execution on native ARM64 hosts remains unclaimed. Android
@@ -66,24 +70,29 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`3e63c2e` (`docs(desktop): record macOS package gate`) is the latest exact
-candidate reproduced from a clean local clone. Its code parent adds a
-reproducible Release+LTO Apple desktop preset and a fail-closed CI path covering
-the optimized Web/Wasm build, both GUI acceptance modes, exact package
-selection, `.app` resources, and extracted headless lifecycle. A portable audit
-enforces that wiring. The clean GUI-enabled Release+LTO regressions pass 98/98
-on Windows and 100/100 on Linux; Emscripten MinSizeRel passes 43/43. It follows
-the wxWidgets dependency audit, portable loopback server, native system-WebView
-shell, fully native service debugger, and fail-closed GUI acceptance commits.
-A real Windows WebView2 window reports the
-SharedArrayBuffer fast path; Linux WebKitGTK under Xvfb reports the supported
-MessagePort fallback. Both GUI-enabled native suites pass in full. Fresh
-Release+LTO packages were safely extracted and launched: the 4,462,868-byte
-Windows ZIP has 153 files and SHA-256
-`fe3ae39b81d87889cbeefbca757798a236238cd295b171fef4f64d3b2ca1203f`;
-the 7,739,921-byte Linux TGZ has 152 files and SHA-256
-`0d82bd67329bfc909740758355e714535a8f9649cccc5bc1c8e2b56ba5821af6`.
-Their packaged GUI and complete no-UI daemon/CLI lifecycles both pass. The
+`6897843` (`build(desktop): package native debugger`) is the latest exact
+candidate reproduced from a clean local clone. The release preset now enables
+both wxWidgets applications, and a portable CMake audit prevents that contract
+from silently regressing. Package audit requires and launches the extracted
+system-WebView instrument and native service debugger on Windows, Linux, and
+macOS layouts. The debugger must control and shut down an independent packaged
+null-audio daemon over local IPC; audit then starts a fresh daemon for the
+complete no-UI CLI lifecycle. The exact clean Windows clone compiled 108
+Emscripten targets, passed 44/44 MinSizeRel tests, rebuilt the production Web
+bundle from 20 locked packages with zero vulnerabilities, compiled 575 native
+Release+LTO actions, and produced a 4,463,145-byte, 153-file ZIP with SHA-256
+`5c4cfff1a1272f42828d7b911f72f54d1dee009c3da78589145800e4558efd34`.
+Its WebView2 instrument reports `PASS-SharedArrayBuffer`, its packaged native
+debugger passes state/capability/self-test/note/release/shutdown RPC, and the
+subsequent headless lifecycle reports 48 kHz stereo, native MIDI, 4,096 finite
+benchmark frames, and exit code zero. A fresh Linux build compiled 543 actions
+and produced a 7,732,484-byte, 152-file TGZ with SHA-256
+`10521374f9ebc222d507eb99138191190b371d879bc7138f849d6b9050b6f0ae`.
+Its WebKitGTK instrument reports `PASS-MessagePort`, and the same native-debug
+and no-UI lifecycle gates pass under Xvfb. Package audit schema 4 records all
+three independent runtime paths. The preceding `3e63c2e` candidate adds the
+macOS Release+LTO desktop CI and retains the full GUI-enabled regressions:
+98/98 on Windows and 100/100 on Linux. The
 preceding `23ff832` candidate includes a bounded streaming MIDI 1.0 decoder,
 public CC1 modulation, native WinMM/Linux raw-MIDI/CoreMIDI adapters, explicit
 Omni or Channel 1--16 filtering, truthful service capability/device reporting,
@@ -481,12 +490,15 @@ python tools/package_audit.py `
   --report-dir build/package-audit --expected-version 0.1.0
 ```
 
-The GUI-enabled Windows MSVC suite passes 98/98. The real system WebView2
+The GUI-enabled Windows MSVC suite passes 98/98. The current ordinary Debug
+suite passes 97/97 after adding the portable release-package contract audit.
+The real system WebView2
 reports `PASS-SharedArrayBuffer`; the native debugger connects to the real
 daemon and completes state/capability/self-test/note/shutdown RPC. Linux GCC
 passes 100/100 with both GUI tests under Xvfb; WebKitGTK reports
-`PASS-MessagePort`. Package audit launches the extracted production GUI before
-running the complete extracted headless runtime lifecycle.
+`PASS-MessagePort`. Package audit launches the extracted production GUI and
+native service debugger before running the independent extracted headless
+runtime lifecycle.
 
 MSVC 19.51.36248 passes 95/95 tests in the current LTO Release build; the prior
 Debug build passed 78/78. These runs include the iOS production lifecycle
@@ -545,7 +557,7 @@ cmake --build --preset wasm-release
 ctest --preset wasm-release --output-on-failure
 ```
 
-Emscripten 6.0.5 and Node.js 22.16.0 pass 43/43 tests in the current LTO
+Emscripten 6.0.5 and Node.js 22.16.0 pass 44/44 tests in the current LTO
 MinSizeRel build; the prior Debug candidate passed 31/31. Both configurations
 match the Native event, sequence-fixture, and 18-preset audio-metric goldens.
 
@@ -724,16 +736,17 @@ licenses, npm audit, and SPDX SBOM validation passed. Current exact-candidate
 CPack package audits found 153 files on Windows and 152 on Linux, including the
 native wxWidgets production executable, optional native debugger, WebView2
 loader where required, `mol-latency-probe`, and every desktop service
-definition. Each extracted GUI
-loads the packaged Web bundle and passes real system-WebView capability checks;
-the extracted daemon and CLI then complete the no-UI null-audio lifecycle with
-native MIDI capability. The Windows AMD64 ZIP is 4,462,868 bytes with SHA-256
-`fe3ae39b81d87889cbeefbca757798a236238cd295b171fef4f64d3b2ca1203f`;
+definition. Each extracted production GUI loads the packaged Web bundle and
+passes real system-WebView capability checks. Each native debugger then drives
+and shuts down its own packaged daemon before a separate daemon and CLI complete
+the no-UI null-audio lifecycle with native MIDI capability. The Windows AMD64
+ZIP is 4,463,145 bytes with SHA-256
+`5c4cfff1a1272f42828d7b911f72f54d1dee009c3da78589145800e4558efd34`;
 its WebView2 reports SharedArrayBuffer and its recording is 327 bytes. The Linux
-x86_64 TGZ is 7,739,921 bytes with SHA-256
-`0d82bd67329bfc909740758355e714535a8f9649cccc5bc1c8e2b56ba5821af6`;
+x86_64 TGZ is 7,732,484 bytes with SHA-256
+`10521374f9ebc222d507eb99138191190b371d879bc7138f849d6b9050b6f0ae`;
 its WebKitGTK reports MessagePort and its recording is 326 bytes. Both report
-schema 3, 48 kHz stereo, 4,096 finite benchmark frames, no non-finite samples,
+schema 4, 48 kHz stereo, 4,096 finite benchmark frames, no non-finite samples,
 exit code zero, and successful IPC cleanup. They are unsigned 0.1.0 candidate
 archives, not releases.
 
@@ -750,6 +763,15 @@ python3 tools/package_audit.py --archive <archive> \
 ```
 
 A clean local clone of exact candidate
+`68978434f077cc9170e29f17fe5829ab7d11da97`, created without hardlinks or copied
+build output, rebuilt the production Web/Wasm assets, passed 44/44 Emscripten
+MinSizeRel tests, compiled all 575 Windows package actions, and passed all three
+extracted runtime paths with the Windows hash recorded above. A fresh Linux
+Release+LTO build of the identical committed source compiled 543 actions and
+passed the same three-path package audit with the Linux hash recorded above.
+The clean clone remained clean after verification.
+
+The preceding clean clone of
 `3e63c2e7f3a6436baf49be5c123765ee85a9b404`, created without hardlinks or copied
 build output, compiled 680 Windows MSVC build actions and passed 98/98
 Release+LTO tests with both GUI applications. The same clone compiled 652 Linux
@@ -831,9 +853,9 @@ tests.
 The HarmonyOS application descriptors, project audit, executable production
 policy/bridge/host simulations, and native source-check boundary pass locally.
 The previously verified headless Windows MSVC and Linux GCC Release suites pass
-95/95; the exact-candidate GUI-enabled Release+LTO suites pass 98/98 on Windows
-and 100/100 on Linux. Emscripten passes 43/43, and Linux AArch64 QEMU passes
-71/71.
+95/95; the GUI-enabled Release+LTO suites pass 98/98 on Windows and 100/100 on
+Linux. The latest exact-candidate Emscripten suite passes 44/44, and Linux
+AArch64 QEMU passes 71/71.
 The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
 5.8.9 build and audit
 both Debug and Release compatibility HAPs; the Release artifact is an unsigned

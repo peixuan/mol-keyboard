@@ -69,12 +69,15 @@ Run `tools/release_size_gate.py` against the optimized core, daemon, CLI, Wasm,
 and Web distribution. Run `tools/package_audit.py` against each CPack archive.
 The audit requires its CPack `.sha256`, all product/legal/SDK files, every
 desktop service definition, exported `mol::core`, the expected daemon version,
-and a working CLI help path. It also launches the extracted daemon with no UI
-and drives the extracted CLI through control, recording/playback, diagnostics,
-finite rendering, all-notes-off, zero-exit shutdown, and IPC cleanup. The
-desktop package must report native MIDI support. Run the
-audit on the package's target operating system; native executables are not
-cross-host smoke tested.
+and a working CLI help path. The preset and audit require both wxWidgets
+applications: the production system-WebView instrument and the fully native
+service debugger. The audit launches each extracted GUI, drives the debugger
+against an independent null-audio daemon through local IPC, then starts a fresh
+daemon with no UI and drives the extracted CLI through control,
+recording/playback, diagnostics, finite rendering, all-notes-off, zero-exit
+shutdown, and IPC cleanup. The desktop package must report native MIDI support.
+Run the audit on the package's target operating system; native executables are
+not cross-host smoke tested.
 
 The ZIP/TGZ files are unsigned portable distributions. Do not call them signed
 installers. Signing certificates, store credentials, and notarization profiles

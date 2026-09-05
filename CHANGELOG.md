@@ -53,6 +53,9 @@ All notable changes to this project will be documented in this file.
 - Added a dedicated fail-closed macOS desktop CI lane that builds the optimized
   Web/Wasm payload, exercises WKWebView and the native debugger, and audits the
   extracted application bundle plus the complete headless service lifecycle.
+- Made the portable release preset include both wxWidgets applications and made
+  package audit launch the native debugger against a real packaged daemon before
+  independently exercising the complete no-UI daemon/CLI lifecycle.
 
 ### Fixed
 

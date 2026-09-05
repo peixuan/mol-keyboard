@@ -34,5 +34,7 @@ normal installs and explicitly enabled for release packages. Browser lifecycle,
 autoplay, isolation, and offline behavior require their own acceptance matrix.
 The desktop GUI adds a checksum-locked wxWidgets build dependency and a system
 WebView runtime dependency. Linux builders need GTK3 and WebKit2GTK development
-packages. The native debugger is excluded from release packages unless
-`MOL_BUILD_NATIVE_DEBUG_GUI` is explicitly enabled.
+packages. The native debugger remains optional for ordinary builds. Portable
+release presets explicitly enable and package it so extracted-package
+acceptance can verify service control independently of both the production
+WebView instrument and the no-UI CLI path.

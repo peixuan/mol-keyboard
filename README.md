@@ -260,7 +260,8 @@ npm.cmd --prefix apps\web run build
 ```
 
 激活仓库固定的 Emscripten SDK 后，可用上述命令构建并测试 Wasm 与生产 Web 包。
-构建完成 Web 资源后，可生成含本地程序、C SDK、文档、示例、许可证与 SBOM 的便携包：
+构建完成 Web 资源后，可生成含 WebView 乐器、原生服务调试器、无界面程序、C SDK、
+文档、示例、许可证与 SBOM 的便携包：
 
 ```powershell
 cmake --preset package-release

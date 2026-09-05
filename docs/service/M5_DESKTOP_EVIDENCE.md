@@ -1,6 +1,9 @@
 # M5 Desktop Application and Headless Evidence
 
-Refreshed on 2026-09-05 through exact candidate `3e63c2e`. The wxWidgets
+Refreshed on 2026-09-05 through exact candidate `6897843`. The portable release
+preset now includes both wxWidgets applications, and extracted-package audit
+launches the native debugger against its own packaged daemon before exercising
+an independent no-UI daemon/CLI lifecycle. The wxWidgets
 GUI-enabled suites pass 98/98 on Windows MSVC with Emscripten Node 22.16.0 and
 100/100 on Linux GCC with native Node 22.22.1; extracted Release+LTO packages
 launch the production GUI and complete the independent no-UI service lifecycle.
@@ -104,19 +107,20 @@ two capability-specific skips and zero npm vulnerabilities.
 | Linux x86_64 Clang (WSL) | 78/78 | Unix socket mode/cleanup, null-audio service process, CLI lifecycle, Linux adapter compilation, macOS interface simulations |
 | Linux AArch64 QEMU 10.2.1 | 71/71 | target core/DSP/music tests, 18-preset metrics, mobile policy/native-boundary simulations, null playback, nested daemon process, CLI/render lifecycle |
 | Windows Clang ASan/UBSan | 57/57 | all sanitizer-enabled portable/control tests and twelve 20-second parser fuzz sessions, including MIDI-file import and realtime MIDI-stream decoding; current Harmony policy audit/source cases pass targeted validation |
-| Emscripten MinSizeRel (clean clone) | 43/43 | current core/worklet regression plus fail-closed Web/platform acceptance-project audits and mobile policy/native-boundary simulations |
+| Emscripten MinSizeRel (clean `6897843` clone) | 44/44 | current core/worklet regression plus fail-closed Web/platform and desktop-package acceptance-project audits and mobile policy/native-boundary simulations |
 | ESP32 / ESP32-S3 | build passed | firmware regression; application binaries remain 153,440 and 179,328 bytes |
 
-The exact-candidate extracted-package audit reports schema 3. The 4,462,868-byte
+The exact-candidate extracted-package audit reports schema 4. The 4,463,145-byte
 Windows ZIP contains 153 files and its WebView2 shell reports
-`PASS-SharedArrayBuffer`; the 7,739,921-byte Linux TGZ contains 152 files and
-its WebKitGTK shell reports `PASS-MessagePort` under Xvfb. These packages also
-contain the optional native debugger. Both packages then
-run the daemon and CLI with no UI through 48 kHz stereo null audio, recording,
-playback, diagnostics, a 4,096-frame finite benchmark, clean shutdown, and IPC
-cleanup. Their SHA-256 digests are
-`fe3ae39b81d87889cbeefbca757798a236238cd295b171fef4f64d3b2ca1203f`
-and `0d82bd67329bfc909740758355e714535a8f9649cccc5bc1c8e2b56ba5821af6`
+`PASS-SharedArrayBuffer`; the 7,732,484-byte Linux TGZ contains 152 files and
+its WebKitGTK shell reports `PASS-MessagePort` under Xvfb. Each package's native
+debugger connects to a real packaged null-audio daemon and passes
+state/capability/self-test/note/release/shutdown RPC. A fresh packaged daemon and
+CLI then run with no UI through 48 kHz stereo null audio, recording, playback,
+diagnostics, a 4,096-frame finite benchmark, clean shutdown, and IPC cleanup.
+Their SHA-256 digests are
+`5c4cfff1a1272f42828d7b911f72f54d1dee009c3da78589145800e4558efd34`
+and `10521374f9ebc222d507eb99138191190b371d879bc7138f849d6b9050b6f0ae`
 respectively.
 
 The production Web/PWA application was also run against the current desktop
