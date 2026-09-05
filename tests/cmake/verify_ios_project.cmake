@@ -28,6 +28,7 @@ foreach(_required
 endforeach()
 
 file(READ "${_ios}/CMakeLists.txt" _ios_cmake_text)
+file(READ "${_ios}/build-app.sh" _build_script_text)
 file(READ "${_tests}" _tests_text)
 string(FIND "${_ios_cmake_text}" "TARGET_BUNDLE_DIR:mol_ios_app" _bundle_dir_offset)
 if(_bundle_dir_offset EQUAL -1)
@@ -37,6 +38,17 @@ string(FIND "${_ios_cmake_text}" "TARGET_BUNDLE_CONTENT_DIR:mol_ios_app" _conten
 if(NOT _content_dir_offset EQUAL -1)
   message(FATAL_ERROR "iOS resources use the macOS Contents directory")
 endif()
+foreach(_token
+        "cmake -E copy_directory"
+        "PrivacyInfo.xcprivacy"
+        "web/index.html"
+        "en.lproj"
+        "zh-Hans.lproj")
+  string(FIND "${_build_script_text}" "${_token}" _token_offset)
+  if(_token_offset EQUAL -1)
+    message(FATAL_ERROR "iOS application packaging is missing ${_token}")
+  endif()
+endforeach()
 foreach(_text IN ITEMS _ios_cmake_text _tests_text)
   string(FIND "${${_text}}" "mol_ios_hardware_keys.c" _token_offset)
   if(_token_offset EQUAL -1)

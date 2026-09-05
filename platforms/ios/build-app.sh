@@ -64,6 +64,11 @@ if [[ ! -d "$app_path" ]]; then
   echo "The expected $variant application bundle is missing: $app_path" >&2
   exit 1
 fi
+cmake -E copy_directory "$repository_root/apps/web/dist" "$app_path/web"
+cmake -E copy_if_different \
+  "$script_dir/PrivacyInfo.xcprivacy" "$app_path/PrivacyInfo.xcprivacy"
+cmake -E copy_directory "$script_dir/en.lproj" "$app_path/en.lproj"
+cmake -E copy_directory "$script_dir/zh-Hans.lproj" "$app_path/zh-Hans.lproj"
 if [[ ! -x "$app_path/MoLKeyboard" ]]; then
   echo "The $variant application executable is missing or not executable." >&2
   exit 1
