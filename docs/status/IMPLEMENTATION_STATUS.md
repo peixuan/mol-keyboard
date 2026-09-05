@@ -470,8 +470,9 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   machines, the HarmonyOS production native bridge/host simulations, and
   strongest reachable device-free ESP32 firmware execution gate also pass;
   mobile and ESP32 external acceptance follows the desktop gate.
-  Documentation remains a draft and `v1.0.0` remains forbidden until all
-  results pass.
+  The 24-item [`DEFINITION_OF_DONE.md`](DEFINITION_OF_DONE.md) audit maps each
+  requirement to direct evidence and its remaining boundary. Documentation
+  remains a draft and `v1.0.0` remains forbidden until all results pass.
 
 ## Blocked platform checks
 

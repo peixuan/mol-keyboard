@@ -218,8 +218,8 @@ HarmonyOS 共享应用源码也已用官方 OpenHarmony API 12 公共 SDK 完成
 
 | Target / 目标 | Implementation / 实现 | Current evidence / 当前证据 |
 | --- | --- | --- |
-| Windows | wxWidgets/WebView2 instrument, native debugger, daemon, CLI, WASAPI, Raw Input, WinMM MIDI | real x64 windows, 98-test GUI suite, extracted GUI/headless package, Startup lifecycle, and ARM64 cross-build passed; ARM64 and physical MIDI runtime pending / x64 实际窗口、98 项 GUI 套件、解压后 GUI/无界面包、启动服务生命周期及 ARM64 交叉构建通过，ARM64 与物理 MIDI 运行待验 |
-| Linux | wxWidgets/WebKitGTK instrument, native debugger, daemon, CLI, native audio/evdev/raw-MIDI host | 100-test x86_64 suite and extracted GUI/headless package pass under WSL/Xvfb; real systemd service and AArch64 QEMU product pass; native display/audio hardware pending / WSL/Xvfb 下 100 项 x86_64 套件与解压后 GUI/无界面包通过，真实 systemd 服务及 AArch64 QEMU 产品通过，原生显示与音频硬件待验 |
+| Windows | wxWidgets/WebView2 instrument, native debugger, daemon, CLI, WASAPI, Raw Input, WinMM MIDI | exact-candidate 101-test x64 GUI suite, extracted GUI/headless package, Startup lifecycle, and ARM64 cross-build passed; ARM64 and physical MIDI runtime pending / 精确候选的 101 项 x64 GUI 套件、解压后 GUI/无界面包、启动服务生命周期及 ARM64 交叉构建通过，ARM64 与物理 MIDI 运行待验 |
+| Linux | wxWidgets/WebKitGTK instrument, native debugger, daemon, CLI, native audio/evdev/raw-MIDI host | exact-candidate 103-test x86_64 suite and extracted GUI/headless package pass under WSL/Xvfb; real systemd service and AArch64 QEMU product pass; native display/audio hardware pending / 精确候选的 103 项 x86_64 套件与解压后 GUI/无界面包在 WSL/Xvfb 下通过，真实 systemd 服务及 AArch64 QEMU 产品通过，原生显示与音频硬件待验 |
 | macOS | wxWidgets/WKWebView instrument, native debugger, daemon, CoreAudio, IOHIDManager, CoreMIDI | fail-closed GUI runtime and extracted-package audit lane plus app-bundle resource layout are checked in; production-source and LaunchAgent simulations pass; native Apple run pending / 已纳入失败关闭的 GUI 运行、解压包审计门禁与应用包资源布局，生产源码及 LaunchAgent 仿真通过，Apple 原生运行待验 |
 | Web/PWA | Wasm AudioWorklet, offline shell | supported-browser automation passed; Safari pending / 已支持浏览器自动化通过，Safari 待验 |
 | Android | Oboe/AAudio foreground service | dual-ABI builds plus Android 15 headless AAudio, all 30 native key mappings, audio-focus, and lifecycle gates passed; device pending / 双 ABI 及 Android 15 无头 AAudio、全部 30 个原生键、音频焦点与生命周期门禁通过，真机待验 |
@@ -231,6 +231,9 @@ HarmonyOS 共享应用源码也已用官方 OpenHarmony API 12 公共 SDK 完成
 See the evidence-linked
 [`PLATFORM_MATRIX.md`](docs/status/PLATFORM_MATRIX.md) for exact qualification
 levels. 详细资格等级与证据链接见该文档。
+The requirement-by-requirement release decision is maintained in
+[`DEFINITION_OF_DONE.md`](docs/status/DEFINITION_OF_DONE.md). Definition of Done
+逐项发布判定见该文档。
 
 Desktop MIDI is enabled by default and can be removed with
 `-DMOL_ENABLE_MIDI=OFF`. `molctl devices input` reports every accessible native
