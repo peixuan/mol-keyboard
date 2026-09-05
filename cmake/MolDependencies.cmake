@@ -13,6 +13,75 @@ set(MOL_OBOE_COMMIT "a81bb9f87d4105b84b682685d3bfbb5beca371d1")
 set(MOL_OBOE_ARCHIVE_SHA256
     "0e4245f8860c4287040a5d76501c588490bcc9cb57614c486c0c201a5dde3e9f")
 
+set(MOL_WXWIDGETS_VERSION "3.2.11")
+set(MOL_WXWIDGETS_ARCHIVE_SHA256
+    "02c4fdc8ec104a10efd809238f800b632c4d5cc6a2d54582bff775240007f01a")
+
+function(mol_add_wxwidgets with_webview)
+  if(TARGET wx::core)
+    return()
+  endif()
+
+  set(wxBUILD_SHARED OFF CACHE BOOL "" FORCE)
+  set(wxBUILD_MONOLITHIC OFF CACHE BOOL "" FORCE)
+  set(wxBUILD_SAMPLES OFF CACHE STRING "" FORCE)
+  set(wxBUILD_TESTS OFF CACHE STRING "" FORCE)
+  set(wxBUILD_DEMOS OFF CACHE BOOL "" FORCE)
+  set(wxBUILD_BENCHMARKS OFF CACHE BOOL "" FORCE)
+  set(wxBUILD_INSTALL OFF CACHE BOOL "" FORCE)
+  set(wxBUILD_PRECOMP OFF CACHE STRING "" FORCE)
+  set(wxBUILD_VENDOR "molkeyboard" CACHE STRING "" FORCE)
+
+  foreach(_wx_disabled_option
+          wxUSE_AUI
+          wxUSE_ARTPROVIDER_TANGO
+          wxUSE_ARCHIVE_STREAMS
+          wxUSE_EXPAT
+          wxUSE_FS_ARCHIVE
+          wxUSE_FS_ZIP
+          wxUSE_HELP
+          wxUSE_HTML
+          wxUSE_LIBJPEG
+          wxUSE_LIBLZMA
+          wxUSE_LIBPNG
+          wxUSE_LIBTIFF
+          wxUSE_MEDIACTRL
+          wxUSE_MS_HTML_HELP
+          wxUSE_NANOSVG
+          wxUSE_OPENGL
+          wxUSE_PRINTING_ARCHITECTURE
+          wxUSE_PROPGRID
+          wxUSE_REGEX
+          wxUSE_RIBBON
+          wxUSE_RICHTEXT
+          wxUSE_STC
+          wxUSE_SVG
+          wxUSE_TARSTREAM
+          wxUSE_WEBREQUEST
+          wxUSE_WXHTML_HELP
+          wxUSE_XML
+          wxUSE_XRC
+          wxUSE_ZIPSTREAM
+          wxUSE_ZLIB)
+    set(${_wx_disabled_option} OFF CACHE STRING "" FORCE)
+  endforeach()
+
+  set(wxUSE_WEBVIEW ${with_webview} CACHE BOOL "" FORCE)
+  if(WIN32)
+    set(wxUSE_WEBVIEW_EDGE ${with_webview} CACHE BOOL "" FORCE)
+    set(wxUSE_WEBVIEW_EDGE_STATIC OFF CACHE BOOL "" FORCE)
+    set(wxUSE_WEBVIEW_IE OFF CACHE BOOL "" FORCE)
+  endif()
+
+  FetchContent_Declare(
+    wxwidgets
+    URL
+      "https://github.com/wxWidgets/wxWidgets/releases/download/v${MOL_WXWIDGETS_VERSION}/wxWidgets-${MOL_WXWIDGETS_VERSION}.zip"
+    URL_HASH "SHA256=${MOL_WXWIDGETS_ARCHIVE_SHA256}"
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+  FetchContent_MakeAvailable(wxwidgets)
+endfunction()
+
 function(mol_add_miniaudio)
   if(TARGET mol_miniaudio)
     return()

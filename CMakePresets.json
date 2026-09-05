@@ -222,6 +222,7 @@
         "MOL_VALIDATE_MOBILE_SOURCES": "OFF",
         "MOL_ENABLE_ASSERTIONS": "OFF",
         "MOL_ENABLE_LTO": "ON",
+        "MOL_BUILD_DESKTOP_GUI": "ON",
         "MOL_PACKAGE_WEB_ASSETS": "ON"
       }
     },

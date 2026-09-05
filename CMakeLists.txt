@@ -292,7 +292,12 @@ if(MOL_BUILD_TOOLS)
   add_subdirectory(tools/latency-probe)
 endif()
 
-if(MOL_BUILD_WEB_SERVER AND
+if(MOL_BUILD_DESKTOP_GUI)
+  include(cmake/MolDependencies.cmake)
+  mol_add_wxwidgets(${MOL_BUILD_DESKTOP_GUI})
+endif()
+
+if((MOL_BUILD_WEB_SERVER OR MOL_BUILD_DESKTOP_GUI) AND
    (WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux" OR
     (APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")))
   add_subdirectory(apps/mol-keyboard)
