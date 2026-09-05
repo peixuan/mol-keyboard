@@ -3,7 +3,9 @@
 Refreshed on 2026-09-05 through code candidate `cc33552`. The wxWidgets
 GUI-enabled suites pass 97/97 on Windows MSVC and 99/99 on Linux GCC with Node
 22.22.1; extracted Release+LTO packages launch the production GUI and complete
-the independent no-UI service lifecycle. Earlier headless evidence was verified
+the independent no-UI service lifecycle. A separate fresh Windows tree disables
+both GUI options and the Web server, compiles 172 targets without wxWidgets, and
+passes 93/93 including the real daemon process lifecycle. Earlier headless evidence was verified
 through candidate `23ff832`: Windows LTO Release passed 93/93, Linux GCC passed
 95/95 with native Linux Node 22.16.0, and Emscripten MinSizeRel passed 42/42. The desktop-first regression
 was repeated from an exact `23ff832` clean clone: Windows compiled 176 targets,
@@ -87,6 +89,7 @@ two capability-specific skips and zero npm vulnerabilities.
 |---|---:|---|
 | Windows MSVC Debug with both GUIs | 97/97 | Real WebView2 production bundle and SharedArrayBuffer capability acceptance; native debugger-to-daemon IPC; full core, tool, package-consumer, service, and platform-simulation regression |
 | Linux x86_64 GCC with both GUIs (WSL/Xvfb) | 99/99 | Real GTK/WebKitGTK production bundle and MessagePort fallback acceptance under a simulated display; native debugger-to-daemon IPC; systemd and controlled launchd service lifecycles |
+| Windows MSVC Debug without GUI/Web server | 93/93 | Fresh 172-target build with `MOL_BUILD_DESKTOP_GUI=OFF`, `MOL_BUILD_NATIVE_DEBUG_GUI=OFF`, and `MOL_BUILD_WEB_SERVER=OFF`; daemon process, CLI, installed consumers, service, core, tools, and platform simulations pass |
 | Windows MSVC Debug | 78/78 | local IPC recovery, all 41 RPC methods, runtime callback, independent daemon process, CLI, recording/playback, rendering, macOS interface simulations |
 | Windows MSVC LTO Release | 93/93 | current optimized suite, WinMM enumeration and MIDI stream tests, fail-closed Web acceptance audit, real temporary Startup-shortcut product lifecycle, portable service-asset audits, and mobile policy/native-boundary simulations |
 | Linux x86_64 GCC (WSL) | 95/95 | current Unix socket/null-audio product suite, production raw-MIDI adapter on a kernel FIFO, fail-closed Web acceptance audit, real systemd user-service lifecycle, executable macOS LaunchAgent orchestration simulation, portable Windows service audit, and mobile policy/native-boundary simulations |

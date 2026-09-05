@@ -11,7 +11,9 @@ SharedArrayBuffer or MessagePort transport without exposing a native script
 bridge. An additional fully native wxWidgets debugger drives the independent
 daemon over bounded local IPC. The GUI-enabled suites pass 97/97 on Windows and
 99/99 on Linux; the daemon and CLI remain independently buildable and usable
-with both GUI options disabled.
+with both GUI options disabled. A fresh Windows build with both GUI options and
+the local Web server disabled compiles 172 targets and passes 93/93 tests,
+including the independent daemon process lifecycle.
 Windows now also creates, validates, launches, and uninstalls a real WScript
 Startup shortcut in an isolated directory while exercising the real daemon and
 CLI; the actual user Startup folder is untouched.
