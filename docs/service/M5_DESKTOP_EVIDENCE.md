@@ -1,13 +1,14 @@
 # M5 Desktop Application and Headless Evidence
 
-Refreshed on 2026-09-05 through exact candidate `19735a9`. The portable release
-preset now includes both wxWidgets applications, and extracted-package audit
-launches the native debugger against its own packaged daemon before exercising
-an independent no-UI daemon/CLI lifecycle. The latest wxWidgets GUI-enabled
-suite passes 101/101 on Windows MSVC with Emscripten Node 22.16.0, and the same
-clean candidate passes 103/103 on Linux GCC with native Node 22.22.1. Extracted
-Release+LTO packages launch the production GUI and complete the independent
-no-UI service lifecycle.
+Refreshed on 2026-09-06 through exact candidate `95c6cee`. Fresh hosted macOS
+15 arm64 and Intel x86_64 machines each pass 96/96 native tests, including the
+real LaunchAgent lifecycle, then build the locked production Web/Wasm payload
+and both wxWidgets applications. Each architecture passes 4/4 focused
+WKWebView/native-debugger tests and an extracted-package audit covering the
+production GUI, an independent debugger-controlled daemon, and a separate
+no-UI daemon/CLI lifecycle. Matching native Windows and Linux ARM64 runners
+pass 99/99 and 101/101 tests. Existing Windows x64 and Linux x86_64 GUI,
+package, and service evidence remains current.
 A separate fresh Windows tree disables
 both GUI options and the Web server, compiles 172 targets without wxWidgets, and
 passes 93/93 including the real daemon process lifecycle. Earlier headless
@@ -87,8 +88,8 @@ two capability-specific skips and zero npm vulnerabilities.
   payload, then builds both wxWidgets applications, exercises the real WKWebView
   capability and native-debugger IPC acceptance modes, and audits the extracted
   `.app` bundle plus complete null-audio daemon/CLI lifecycle. A portable CMake
-  audit fails if any part of that chain is removed. The wiring audit passes on
-  Windows and Linux; the Apple lane itself is not claimed as executed.
+  audit fails if any part of that chain is removed. The complete lane passes on
+  both hosted macOS architectures.
 - Linux CI runs that same production acceptance script unchanged against a
   controlled `launchctl`, `plutil`, and Darwin-host model. The model starts the
   real Linux daemon and CLI as a supervised process group, enforces the shipped
@@ -99,9 +100,12 @@ two capability-specific skips and zero npm vulnerabilities.
 
 | Configuration | Result | Relevant evidence |
 |---|---:|---|
-| Windows MSVC Release+LTO with both GUIs (clean `19735a9` clone) | 101/101 | Real WebView2 production bundle and SharedArrayBuffer capability acceptance; native debugger-to-daemon IPC; full core, tool, package-consumer, service, platform-simulation, Android-emulator wiring, and macOS desktop CI wiring regression |
-| Linux x86_64 GCC Release+LTO with both GUIs (clean `19735a9` clone, WSL/Xvfb) | 103/103 | Real GTK/WebKitGTK production bundle and MessagePort fallback acceptance under a simulated display; native debugger-to-daemon IPC; systemd and controlled launchd service lifecycles; Android-emulator and macOS desktop CI wiring audits |
-| macOS 15 desktop CI | configured; execution pending | Reproducible Release+LTO preset requires optimized Web/Wasm assets, both GUI acceptance modes, exactly one TGZ, extracted `.app` resources, system WebView capability, and the complete no-UI daemon/CLI lifecycle |
+| Windows MSVC Release+LTO with both GUIs (hosted `95c6cee`) | 101/101; package audit passed | Real WebView2 production bundle and SharedArrayBuffer capability acceptance; native debugger-to-daemon IPC; full core, tool, package-consumer, service, platform-simulation, Android-emulator wiring, and macOS desktop CI wiring regression |
+| Linux x86_64 GCC Release+LTO with both GUIs (hosted `95c6cee`, Xvfb) | 103/103; package audit passed | Real GTK/WebKitGTK production bundle and MessagePort fallback acceptance under a simulated display; native debugger-to-daemon IPC; systemd and controlled launchd service lifecycles; Android-emulator and macOS desktop CI wiring audits |
+| macOS 15 arm64 AppleClang 17 | 96/96 native; 4/4 desktop; package audit passed | Real temporary LaunchAgent product lifecycle, optimized Web/Wasm payload, WKWebView capability, native debugger IPC, extracted `.app` resources, and independent no-UI lifecycle; 167-file 3,937,186-byte archive, SHA-256 `55a973bfc2d2cacd9f74d39d0388c48474d43f8fd01113286eac7b1ed9f6799b` |
+| macOS 15 Intel x86_64 AppleClang 17 | 96/96 native; 4/4 desktop; package audit passed | Same real native and packaged acceptance chain on Intel, including a cold extracted debugger start; 167-file 4,062,987-byte archive, SHA-256 `21c5a6b8d7cd8dde48e40cfedca76e1081c32fdb2c07ee7c53f35e8be9c8495b` |
+| Windows 11 ARM64, VS 2026 | 99/99 | Native target execution of core, tools, daemon process, CLI, Startup-service model, and platform contracts |
+| Ubuntu 24.04 ARM64, GNU 13.3.0 | 101/101 | Native target execution of core, tools, daemon/CLI process lifecycle, and platform contracts |
 | Windows MSVC Debug without GUI/Web server | 93/93 | Fresh 172-target build with `MOL_BUILD_DESKTOP_GUI=OFF`, `MOL_BUILD_NATIVE_DEBUG_GUI=OFF`, and `MOL_BUILD_WEB_SERVER=OFF`; daemon process, CLI, installed consumers, service, core, tools, and platform simulations pass |
 | Windows MSVC Debug | 78/78 | local IPC recovery, all 41 RPC methods, runtime callback, independent daemon process, CLI, recording/playback, rendering, macOS interface simulations |
 | Windows MSVC LTO Release | 93/93 | current optimized suite, WinMM enumeration and MIDI stream tests, fail-closed Web acceptance audit, real temporary Startup-shortcut product lifecycle, portable service-asset audits, and mobile policy/native-boundary simulations |
@@ -112,18 +116,24 @@ two capability-specific skips and zero npm vulnerabilities.
 | Emscripten MinSizeRel (clean `19735a9` clone) | 46/46 | current core/worklet regression plus fail-closed Web/platform, Android-emulator, and desktop-package acceptance-project audits and mobile policy/native-boundary simulations |
 | ESP32 / ESP32-S3 | build passed | firmware regression; application binaries remain 153,440 and 179,328 bytes |
 
-The exact-candidate extracted-package audit reports schema 4. The 4,465,446-byte
-Windows ZIP contains 153 files and its WebView2 shell reports
-`PASS-SharedArrayBuffer`; the 7,742,374-byte Linux TGZ contains 152 files and
+The exact-candidate extracted-package audit reports schema 4. The current
+4,468,339-byte Windows ZIP contains 154 files and its WebView2 shell reports
+`PASS-SharedArrayBuffer`; the 7,577,027-byte Linux TGZ contains 153 files and
 its WebKitGTK shell reports `PASS-MessagePort` under Xvfb. Each package's native
 debugger connects to a real packaged null-audio daemon and passes
 state/capability/self-test/note/release/shutdown RPC. A fresh packaged daemon and
 CLI then run with no UI through 48 kHz stereo null audio, recording, playback,
 diagnostics, a 4,096-frame finite benchmark, clean shutdown, and IPC cleanup.
 Their SHA-256 digests are
-`9ef71076c1a39512b8ab3c50b3088cdefcacc615986fd983b584e1896572b3b0`
-and `6f013ea0107363200aaf33a4fe1f17d7460639fc5f990002e7b33454c8af22df`
+`09439f529367ac639e747d16a44561473149c92f9b1ed70f1fd500c3a56da49b`
+and `1a1807ecf98660aaabacc8cee665c4278fb50c8e50acdaf2ea776831a40f12fe`
 respectively.
+
+The package harness gives GUI processes a bounded 45-second outer timeout.
+Within that bound, native-debug acceptance allows up to 10 seconds for cold
+local-IPC connection before it runs the complete RPC sequence. This closed an
+Intel hosted-run race without skipping, retrying, or weakening any RPC or
+cleanup assertion; run 15 passes the extracted Intel package on the first run.
 
 The production Web/PWA application was also run against the current desktop
 service rather than only as a standalone synthesizer. System Chrome on Windows
@@ -149,11 +159,11 @@ and Linux GCC. Those MIDI byte streams are simulation, not a physical keyboard
 or native Apple result. A separate `MOL_ENABLE_MIDI=OFF` build compiled the
 daemon and parser and passed its three applicable runtime/backend/MIDI tests.
 
-The host exposed no Bluetooth output during this run, so `doctor` correctly
-reported that fact and directed the user to system pairing. No Bluetooth
-speaker playback claim is made. The Linux run used WSL and a null sink, so it
-does not claim physical evdev or Linux audio hardware. An Apple SDK and macOS
-host were unavailable. The exact production `physical_input_macos.cpp` now
+The Windows host exposed no Bluetooth output during the physical-I/O run, so
+`doctor` correctly reported that fact and directed the user to system pairing.
+No Bluetooth speaker playback claim is made. The Linux run used WSL and a null sink, so it
+does not claim physical evdev or Linux audio hardware. The exact production
+`physical_input_macos.cpp`
 compiles and executes against a controlled IOHID model under both MSVC and Linux
 Clang, covering enumeration, press/repeat/release, gesture ownership, and detach
 cleanup. The exact production `audio_runtime.cpp` also executes with a
@@ -164,16 +174,20 @@ macOS CI lane a real LaunchAgent daemon/CLI process acceptance path without
 requiring audio hardware. The unchanged runner additionally passes on Linux
 against a controlled launchd process model while starting the real daemon and
 CLI, which validates orchestration, product behavior, zero-exit shutdown, and
-cleanup without claiming Apple implementation behavior. These are still
-explicitly unexecuted Apple results on this host: native launchd, Apple
-framework ABI, CoreAudio devices, IOHID permissions, and the native macOS
-daemon process require a real macOS run before promotion.
+cleanup without claiming Apple implementation behavior. Native AppleClang
+compilation, WKWebView, the daemon process, and real launchd orchestration now
+pass on hosted macOS arm64 and x86_64. Those virtual machines do not expose
+physical CoreAudio devices, IOHID/CoreMIDI permissions and peripherals,
+Bluetooth routes, hotplug, suspend/resume, scheduling, or latency evidence.
 
 The later `d45383b` release audit also cross-built the complete desktop product
 with checked-in presets. GNU 15.2.0 produced AArch64 ELF daemon, CLI, playback,
 sequence, render, patch, analyzer, and core outputs. LLVM-MinGW 20260826/Clang
 23.1.0 produced the equivalent COFF-ARM64 outputs. These results promote both
-architectures to `build-verified`; they are not native ARM64 runtime evidence.
+architectures to `build-verified`; candidate `95c6cee` additionally executes
+the corresponding Windows and Linux products on native hosted ARM64 machines.
+The hosted machines are runtime evidence, but not physical audio/input,
+peripheral, or latency evidence.
 
 At candidate `b3b7e14`, QEMU user-mode emulation additionally executed the
 Release AArch64 daemon and CLI over a private Unix socket. Record/playback,
@@ -189,8 +203,8 @@ an Apple-only CTest with a 30-second fail-closed timeout. A portable project
 audit proves that the shipped LaunchAgent template, Apple-only registration,
 macOS CI runner, null-audio process launch, complete CLI lifecycle, diagnostic
 assertions, zero-exit check, and success marker remain connected. That audit
-passes under MSVC, Linux GCC, and Emscripten; the actual LaunchAgent CTest has
-not run on this Windows host and is not recorded as macOS runtime evidence.
+passes under MSVC, Linux GCC, and Emscripten; the actual LaunchAgent CTest now
+passes in both macOS 15 native suites.
 
 At candidate `a9b8e98`, Linux GCC executes that production runner through a
 fail-closed launchd model. The model accepted only the expected built daemon,

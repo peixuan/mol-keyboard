@@ -130,7 +130,9 @@ Node tests cover UI/controller logic. Playwright runs the production bundle and
 real AudioWorklet/Wasm path for supported desktop browsers, mobile layouts,
 autoplay, keyboard/touch ownership, MessagePort and SharedArrayBuffer paths,
 suspend/resume, blur/visibility release, recording, service control, install,
-and offline reload. Current Safari acceptance requires Safari on Apple hardware.
+and offline reload. A separate macOS gate drives the actual current Safari with
+SafariDriver and requires production AudioWorklet/Wasm startup plus a keyboard
+event through the MessagePort path.
 
 Android builds both required ABIs, Debug, unsigned Release, instrumentation,
 R8/lintVital, and full lint. Device acceptance additionally covers a physical

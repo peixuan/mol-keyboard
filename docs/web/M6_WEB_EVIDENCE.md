@@ -1,8 +1,8 @@
 # M6 Web/PWA evidence
 
-Verified on 2026-09-03 and refreshed from an exact clean clone of candidate
-`19735a9`. The checked product is the production Vite bundle, not a test-only
-page.
+Verified through 2026-09-06. Candidate `f8081ca` adds direct system-Safari
+runtime acceptance on a fresh hosted macOS 15 arm64 machine. The checked
+product is the production Vite bundle, not a test-only page.
 
 ## Implemented product paths
 
@@ -42,6 +42,26 @@ On POSIX hosts, export `MOL_DAEMON` with the corresponding built daemon path.
 The Chrome desktop service-controller case fails if that executable is missing;
 it is no longer reported as a capability skip.
 
+On macOS, after the production build:
+
+```sh
+sudo safaridriver --enable
+npm --prefix apps/web run test:safari
+```
+
+This starts the system SafariDriver and a loopback static server, creates an
+actual Safari session, and uses a native WebDriver click for the audio gesture.
+It requires the complete 30-key UI and manifest, IndexedDB and service-worker
+capabilities, realtime Wasm/AudioWorklet readiness, the non-isolated
+MessagePort path, a keyboard event reaching the engine, zero dropped events,
+and clean note release. The runner fails instead of substituting Playwright
+WebKit or skipping a missing browser capability.
+
+Candidate `f8081ca` reports
+`MOL_SAFARI_SMOKE_PASS 26.6.1 events=3 transport=MessagePort baseline` on the
+fresh `macos-15-arm64` runner. Unified candidate `95c6cee` repeats the same
+marker in fully green GitHub Actions run 15.
+
 The production build type-checks and bundles successfully. Its complete output
 is 329,232 bytes including the source map. The application entry is 68,388
 bytes; the worklet JavaScript is 26,408 bytes and its Wasm is 44,778 bytes. The
@@ -75,7 +95,8 @@ fail-closed behavior. Emscripten 6.0.5 now passes 46/46 LTO MinSizeRel tests;
 the earlier Debug candidate passed 31/31. These include AudioWorklet, event,
 sequence, all-preset metric, and fail-closed Web wiring conformance. The
 dependency license audit passed after a clean `npm ci` and reports no npm
-vulnerability.
+vulnerability. Actual current Safari passes the separate production runtime
+smoke described above.
 
 The current desktop-first refresh reinstalled the exact lockfile independently
 on Windows and in a clean Linux checkout, reporting zero vulnerabilities in
@@ -93,10 +114,9 @@ A negative Windows run with an intentionally absent path failed with the
 required diagnostic, while real Windows and Linux daemon runs each passed the
 service-controller case. A portable CMake audit passes under Windows, Linux,
 and Emscripten and rejects restoration of the missing-daemon skip. The Linux CI
-job now builds the native daemon, installs the three Playwright browsers, and
-runs the full production browser matrix with `MOL_DAEMON` set. That workflow is
-checked and YAML-validated locally but remains unexecuted for this unpushed
-commit.
+job builds the native daemon, installs the three Playwright browsers, and runs
+the full production browser matrix with `MOL_DAEMON` set. That workflow passes
+on a fresh hosted Linux runner.
 
 The Linux refresh ran the production bundle and the real Linux x86_64 daemon
 together under WSL. Playwright's pinned Chromium was selected explicitly so
@@ -111,15 +131,14 @@ node apps/web/scripts/run-browser-tests.mjs test --project=chrome-desktop
 
 Five applicable cases passed and two browser-specific cases were skipped. This
 is Linux application/service process evidence with a null audio sink; it is not
-physical Linux audio, evdev, or macOS Safari evidence.
+physical Linux audio or evdev evidence.
 
 ## Explicit acceptance boundary
 
 Playwright's Windows WebKit port renders the shared UI but does not expose
 `AudioWorklet` in this environment. It is not Safari and is not counted as the
-required current-stable Safari runtime verification. The headless Firefox
-process also exposes no realtime output device, so its actual worklet/Wasm DSP
-is proven through offline rendering rather than a live `AudioContext` output.
-Actual macOS/iOS Safari, real mobile audio output, and physical-device lifecycle
-testing remain open device gates. No Safari or physical-mobile verification is
-claimed here.
+Safari result; the separate macOS SafariDriver gate provides that evidence.
+The headless Firefox process exposes no realtime output device, so its actual
+worklet/Wasm DSP is proven through offline rendering rather than a live
+`AudioContext` output. Physical Safari audio routes, real mobile audio output,
+latency, and physical-device lifecycle testing remain open device gates.

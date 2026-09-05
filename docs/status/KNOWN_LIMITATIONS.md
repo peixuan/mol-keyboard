@@ -13,12 +13,11 @@ sandboxed execution, clean shutdown, socket cleanup, and runtime-unit removal.
 The Windows installer/uninstaller and an actual WScript shortcut pass an
 isolated Startup-directory product lifecycle; this does not alter the real user
 Startup folder or substitute for a sign-out/sign-in launch observation.
-Native macOS GUI/service compilation and physical Bluetooth audio/keyboard
-verification remain unavailable here. The dedicated macOS lane now builds the
-locked Web/Wasm payload, both wxWidgets applications, real WKWebView and native
-debugger acceptance, and an extracted GUI/headless package audit. Its portable
-wiring audit passes on Windows and Linux, but the Apple job itself has not run;
-no Apple result is inferred from those non-Apple runs.
+Native macOS GUI/service compilation and runtime now pass on hosted macOS 15
+arm64 and Intel x86_64. The dedicated lanes build the locked Web/Wasm payload,
+both wxWidgets applications, real WKWebView and native debugger acceptance, and
+an extracted GUI/headless package audit. Physical Bluetooth audio, keyboards,
+MIDI, CoreAudio routes, and latency remain unavailable.
 
 The exact macOS IOHID adapter and CoreAudio-selected desktop runtime compile and
 execute against controlled API models under MSVC and Linux Clang. These tests
@@ -29,10 +28,11 @@ real daemon/CLI lifecycle with null audio, including zero-exit and socket-cleanu
 checks. Linux also executes the unchanged runner against a controlled launchd
 model and the real product binaries, validating the service contract,
 bootstrap/bootout, full control flow, clean exit, and cleanup. Its cross-platform
-project audit passes, but the Apple CTest itself has not run here. These checks
-do not provide Apple framework headers or ABI, native launchd behavior, system
-permissions, hardware routes, or native macOS
-scheduling, so macOS remains below `build-verified` and `runtime-verified`.
+project audit passes, and the Apple CTest itself now passes on both hosted macOS
+architectures. Apple framework compilation, native launchd, WKWebView, and the
+null-audio service are runtime-verified; hosted virtual machines still do not
+provide system permissions, physical hardware routes/peripherals, or latency
+and scheduling evidence representative of a user's Mac.
 
 Desktop realtime MIDI is implemented with WinMM, Linux raw-MIDI, and CoreMIDI.
 The bounded decoder, channel filters, controllers, panic behavior, and detach
@@ -43,26 +43,27 @@ results do not prove USB/Bluetooth transport, driver behavior, hot-unplug,
 instrument compatibility, physical latency, or native CoreMIDI execution.
 
 The complete Windows ARM64 and Linux AArch64 products cross-build and their
-object formats were inspected as COFF-ARM64 and AArch64 ELF respectively. They
-have not executed on a native ARM64 host. QEMU 10.2.1 now passes 71/71 Linux
-AArch64 target tests and an end-to-end null-audio daemon/CLI/render gate, which
-checks ISA execution and process behavior but not native scheduling, audio,
-input, latency, or hardware lifecycle. Native ARM64
-GitHub runner jobs are checked in, but no result is claimed before the commits
-are present on a remote workflow run.
+object formats were inspected as COFF-ARM64 and AArch64 ELF respectively.
+Native hosted ARM64 machines now pass 99/99 Windows and 101/101 Linux tests.
+QEMU 10.2.1 independently passes 71/71 Linux AArch64 target tests and an
+end-to-end null-audio daemon/CLI/render gate. These results check ISA execution
+and process behavior but not physical scheduling, audio, input, latency, or
+hardware lifecycle.
 
 The production PWA is runtime-verified with current system Chrome and Edge.
 The pinned Firefox engine executes the real AudioWorklet and Wasm DSP through
 offline rendering, but its headless Windows process exposes no realtime output
 device; Firefox realtime audio output is therefore not claimed from this run.
 Playwright WebKit verifies shared rendering and mobile layout, but its Windows
-port does not expose AudioWorklet and is not actual Safari. Current-stable
-Safari and physical mobile audio/lifecycle claims remain an Apple-device gate.
+port does not expose AudioWorklet and is not actual Safari. A separate hosted
+macOS gate now drives the system Safari through SafariDriver and verifies the
+production UI, realtime AudioWorklet/Wasm startup, MessagePort transport, and a
+keyboard event. Physical mobile audio/lifecycle remains an Apple-device gate.
 
-All locally actionable M10 automated gates, including clean-checkout
-reproduction and audited portable packages, pass. The remaining release gates
-all require unavailable official platform toolchains, physical devices/routes,
-or loopback measurement equipment. This is why the repository truthfully
+All actionable M10 automated gates, including clean-checkout reproduction and
+audited portable packages, pass. The remaining release gates require an
+authenticated formal HarmonyOS toolchain, physical devices/routes, or loopback
+measurement equipment. This is why the repository truthfully
 remains at 0.1.0 and has no `v1.0.0` tag.
 
 The `mol-latency-probe` executable, deterministic analyzer tests, malformed
@@ -98,7 +99,7 @@ Android device was available, so arm64 playback, hardware keyboard, actual
 Bluetooth or wired route changes, external focus arbitration, latency, and sustained
 playback remain unverified.
 
-The iOS application implementation is complete, including the packaged shared
+The iOS application is build-verified, including the packaged shared
 UI, Promise-based WKWebView bridge, AudioUnit lifecycle restoration, hardware
 key interception, private sequence persistence, offline content policy, privacy
 manifest, and Xcode simulator/device pipeline. The exact background-policy
@@ -111,12 +112,12 @@ ASan/UBSan. This does not simulate UIKit event delivery. CI also contains a
 fail-closed `simctl` runner which installs and launches the real Simulator app,
 verifies the packaged production UI, calls the reply-capable bridge, checks
 invalid-version rejection, and captures logs plus a screenshot. This validates application
-state transitions and acceptance wiring, not Apple APIs or scheduling. This
-Windows host has no Xcode, iOS Simulator, signing identity, or physical Apple
-device, so compilation, installation, Simulator execution, audible output,
-background/lock-screen continuation,
-route/interruption behavior, hardware keyboard input, latency, and sustained
-playback are not claimed.
+state transitions and acceptance wiring. Xcode 16.4 warnings-as-errors builds
+pass for x86_64/arm64 Simulator and unsigned arm64 Device, and the runner
+installs and launches the app in an iPhone Simulator. Physical audible output,
+background/lock-screen continuation, route/interruption behavior, hardware
+keyboard input, signing/installation, latency, and sustained playback are not
+claimed.
 
 The HarmonyOS Stage application implementation is also complete, including the
 full native ArkUI surface, strict Node-API/OHAudio runtime, fast-to-normal

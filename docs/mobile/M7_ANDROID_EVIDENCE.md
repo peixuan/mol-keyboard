@@ -6,7 +6,7 @@ the combined Android/iOS milestone.
 
 ## Reproducible build
 
-The verified toolchain on 2026-09-05 was:
+The verified toolchain through 2026-09-06 was:
 
 - Eclipse Temurin JDK 21.0.12.1;
 - Gradle 8.11.1 with its distribution and wrapper JAR checksum locked;
@@ -49,6 +49,16 @@ The exact clean-clone artifacts were:
 | `app-release-unsigned.apk` | 2,590,764 | `6010ee48225b3b050b307b3b5ab4dac07ab5e681dabf91d6632a4bba05a2e96e` |
 | `app-debug-androidTest.apk` | 26,136 | `8fa70db11310716ef762d60cc41743077c5b0739a554c8bbe2d9261e16b16908` |
 
+Hosted candidate `95c6cee` rebuilt the same dual-ABI application and reran the
+complete emulator gate. Its updated instrumentation pauses WebView timers,
+allows an already-dispatched event poll to finish, and drains the queue before
+injecting hardware keys. This closes a race where that in-flight poll could
+consume the first Note Started event without weakening the 30-key assertion.
+The resulting Debug APK is 3,644,539 bytes with SHA-256
+`8c9efd454ab7998b71fc83061c7844fc6f2720be545fa6c31d93c91c95583891`;
+the 26,160-byte instrumentation APK has SHA-256
+`725a05b023939f145efc98165f6175a7291597a8ef929e8b73af9fd75369e13f`.
+
 The unsigned Release APK targets API 36 with minimum API 26. Archive
 inspection found both native ABIs, the packaged local `index.html`,
 `PRIVACY.md`, `THIRD_PARTY_NOTICES.md`, and exactly one each of the paired
@@ -74,7 +84,7 @@ python tools/android_emulator_gate.py `
   --report build/android-emulator-gate.json
 ```
 
-The final result was:
+The exact clean-clone local result was:
 
 ```text
 INSTRUMENTATION_RESULT: audioApi=2
@@ -116,8 +126,10 @@ state stop instead of abusing background execution.
 The checked-in Android CI job installs the official API 35 Google APIs x86_64
 system image, creates and boots an AVD without a window, runs this same parser,
 and kills the emulator in a bounded cleanup step. A portable source audit and
-the runner's parser self-tests pass locally. The workflow itself has not run on
-this unpushed commit, so only the local Windows emulator result is claimed.
+the runner's parser self-tests pass locally. GitHub Actions run 15 passes this
+hosted gate for candidate `95c6cee`: AAudio API 2 at 48 kHz, all 30 hardware
+keys, repeat suppression, focus interruption/reopen, 119 background callbacks,
+349 locked callbacks, idle shutdown, and clean service removal all pass.
 
 ## Architecture and boundaries
 

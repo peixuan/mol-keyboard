@@ -2,15 +2,15 @@
 
 ## Status
 
-The iOS application implementation is complete and source-reviewed. Its exact
-production background-policy and hardware-key ownership state machines are
-executable under non-Apple toolchains. A fail-closed Simulator runner now
-builds, installs, launches, and checks the packaged production UI and real
-reply-capable bridge when executed on macOS. It is checked into CI but has not
-executed on this host, so the application is not marked `build-verified`,
-`runtime-verified`, or
-`device-verified`: this Windows host has no Xcode, iOS SDK, Simulator, Apple
-signing identity, or physical Apple device.
+The iOS application is `build-verified` and its production UI/reply bridge is
+`runtime-verified` on an iPhone Simulator. Candidate `95c6cee` passes
+warnings-as-errors x86_64/arm64 Simulator and unsigned arm64 Device builds with
+Xcode 16.4 and the iOS 18.5 SDK. The fail-closed runner installs and launches
+the packaged application, reaches the production WKWebView UI, accepts a valid
+reply-capable bridge request, rejects an invalid protocol version, and emits
+`MOL_IOS_SIMULATOR_SMOKE_PASS`. This is not `device-verified`: no physical
+Apple device, routes, keyboard, signing identity, latency setup, or endurance
+time was available.
 
 ## Implemented product path
 
@@ -62,7 +62,7 @@ logging, file access, or lifecycle work. It accepts variable slice sizes,
 silences invalid buffers, sanitizes non-finite output, and reports counters
 through atomics.
 
-## Local validation on 2026-09-03
+## Automated validation through 2026-09-06
 
 The Objective-C++ controller directly consumes
 `mol_ios_audio_lifecycle.c`; this is not a separate test model. Its executable
@@ -86,6 +86,14 @@ audio-submit rollback, bounded partial and complete release-all, and invalid or
 null calls. `MOLViewController` directly uses that state for foreground UIKit
 presses and deactivation cleanup, while compile-time assertions bind every
 numeric usage to Apple's UIKit constants when the real iOS target builds.
+
+The Apple CI run built the actual Objective-C++ controller, UIKit shell,
+WKWebView scheme/bridge, AudioUnit host, and C11 core for both Simulator
+architectures and arm64 Device with warnings as errors. Bundle validation
+requires the executable, compiled assets, Info.plist, privacy manifest,
+localization, production Web entry, and exact flat app-bundle layout; both
+property lists pass `plutil`. The runner then boots an available iPhone,
+installs and launches the application, and observes the UI/bridge marker above.
 
 The source was formatted with Visual Studio ClangFormat 22 and passed
 `git diff --check`. The property lists parsed as XML, the asset catalogs parsed
@@ -122,20 +130,15 @@ configurations on `macos-15` and then runs this smoke gate. Supply
 
 ## Pending real Apple acceptance
 
-The following remain mandatory before status promotion:
+The following remain mandatory before `device-verified` promotion:
 
-1. Xcode warnings-as-errors Simulator and arm64 device builds on the exact
-   release candidate.
-2. A passing `run-simulator-smoke.sh` result and retained logs/screenshot from
-   that same candidate; the runner is implemented but no Apple execution is
-   claimed here.
-3. Physical audible note/record/playback with finite callback counters.
-4. Background and lock-screen callback advance only for active playback or
+1. Physical audible note/record/playback with finite callback counters.
+2. Background and lock-screen callback advance only for active playback or
    metronome transport, followed by idle shutdown.
-5. Interruption, media-services reset, wired/Bluetooth/AirPlay route changes,
+3. Interruption, media-services reset, wired/Bluetooth/AirPlay route changes,
    and state restoration.
-6. Foreground physical hardware keyboard note/sustain/repeat/release behavior.
-7. Wired latency, Bluetooth informational latency, sustained playback,
+4. Foreground physical hardware keyboard note/sustain/repeat/release behavior.
+5. Wired latency, Bluetooth informational latency, sustained playback,
    signing, installation, and privacy archive inspection.
 
 Ordinary hardware keyboard input is intentionally not promised while iOS has

@@ -23,17 +23,16 @@ CLI; the actual user Startup folder is untouched.
 The Linux suite now also validates the shipped hardened unit with
 `systemd-analyze` and runs the real daemon/CLI lifecycle under the actual
 systemd 259 user manager, removing its runtime-only unit afterward.
-The exact macOS IOHID and CoreAudio-selected production sources also pass
-controlled lifecycle simulations under two non-Apple compilers; this does not
-replace an Apple SDK or macOS runtime result. The Apple-only CTest bootstraps
-the shipped LaunchAgent and exercises the real daemon/CLI lifecycle with null
-audio. Linux now executes that exact runner unchanged against a controlled
-launchd process model and the real product binaries, while the portable audit
-keeps both paths fail-closed. Native Apple execution remains pending. A
-dedicated macOS desktop job now builds the production
-Web/Wasm payload and both GUI applications, exercises WKWebView and native IPC,
-and audits the extracted GUI plus no-UI service lifecycle. Its portable wiring
-audit passes on Windows and Linux; the Apple job itself remains unexecuted.
+The exact macOS product now passes on fresh GitHub-hosted macOS 15 arm64 and
+Intel x86_64 machines with AppleClang 17.0.0.17000013. Both native jobs pass
+96/96 tests, including the real LaunchAgent null-audio daemon/CLI lifecycle.
+Both desktop jobs build the locked production Web/Wasm payload and the two
+wxWidgets applications, then pass 4/4 focused WKWebView/native-debugger tests
+and extracted-package WebView, debugger, and independent no-UI service audits.
+The arm64 and x86_64 archives contain 167 files and are respectively 3,937,186
+and 4,062,987 bytes. Controlled IOHID/CoreAudio/CoreMIDI models remain useful
+for deterministic fault coverage, while physical permissions, devices, and
+routes remain separate acceptance work.
 With those locally reachable desktop/service gates exhausted, both real ESP-IDF
 firmware images now also execute through their production storage,
 input/control, shared-core, and FreeRTOS audio paths in Espressif QEMU. Other locally actionable M10 release
@@ -46,7 +45,8 @@ native-debugger, and independent headless lifecycles, Android packaging, and
 clean checkout reproduction pass. Complete Windows ARM64 and Linux AArch64 desktop
 products now cross-build through checked-in presets, closing their local build
 gap. Linux AArch64 also passes an end-to-end QEMU product gate and 71/71 target
-tests, while execution on native ARM64 hosts remains unclaimed. Android
+tests; the matching hosted Windows and Linux ARM64 suites now pass natively.
+Android
 emulator coverage now also dispatches all 30 production hardware-key mappings
 before WebView handling, rejects repeat retriggers, and stops and reopens AAudio
 across injected transient focus loss/gain. A fail-closed runner now owns APK
@@ -57,9 +57,12 @@ controller now also executes under MSVC, Linux GCC, and Emscripten. Its exact
 hardware-key mapping and ownership state machine does too, including repeat,
 rollback, and deactivation release behavior. A checked-in
 iPhone Simulator gate now installs and launches the packaged application and
-requires both production-UI readiness and valid/rejected reply-bridge behavior;
-it still requires a real Apple CI execution. The unchanged production
-HarmonyOS Node-API bridge and OHAudio host now execute against controlled API
+requires both production-UI readiness and valid/rejected reply-bridge behavior.
+That gate now passes on macOS 15 after warnings-as-errors x86_64/arm64 Simulator
+and unsigned arm64 Device builds, including flat-bundle Web, localization,
+privacy-manifest, and asset validation. Physical iOS lifecycle, audio-route,
+input, latency, signing, and endurance checks remain open. The unchanged
+production HarmonyOS Node-API bridge and OHAudio host execute against controlled API
 models across MSVC, Linux GCC, Emscripten, Clang sanitizers, and AArch64 QEMU.
 The exact production HarmonyOS background-policy `.ets` source also executes
 without transformation under Node.js, is consumed directly by `AudioService`,
@@ -67,50 +70,56 @@ and passes strict ArkTS compilation in Debug and Release compatibility HAPs.
 The compatibility wrappers now clean Hvigor output before every assembly and
 report the packaged ArkTS bytecode digest, preventing stale incremental
 `modules.abc` output from being mistaken for a current package. M0 through M9 are
-implementation-complete, but the Definition of Done is not complete: native
-ARM64 runtime, Apple and Harmony toolchains, current Safari, physical mobile
-devices, ESP32 hardware, physical audio routes, and instrumented end-to-end
-latency remain external acceptance gates. No `v1.0.0` tag exists.
+implementation-complete, but the Definition of Done is not complete: the formal
+HarmonyOS toolchain, physical mobile devices, ESP32 hardware, physical
+audio/input routes, and instrumented end-to-end latency remain external
+acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`19735a9` (`docs(android): record native keyboard gate`) is the latest unified
-exact candidate reproduced from a clean local clone. It compiled all 108
-Emscripten actions, passed 46/46 MinSizeRel tests, rebuilt and tested the
-production Web bundle from 20 locked packages with zero vulnerabilities and
-12/12 tests, compiled all 575 Windows Release+LTO package actions with both
-wxWidgets applications, and passed 101/101 GUI-enabled tests. Its
-4,465,446-byte, 153-file Windows ZIP has SHA-256
-`9ef71076c1a39512b8ab3c50b3088cdefcacc615986fd983b584e1896572b3b0`.
+`95c6cee` (`fix(desktop): allow slow packaged debugger startup`) is the latest
+unified executable-source candidate. [GitHub Actions run 15](https://github.com/peixuan/mol-keyboard/actions/runs/33985159864)
+checked it out into fresh hosted workspaces and passed all 25 jobs across
+Windows, Linux, macOS arm64/x86_64, Wasm, Android, and iOS. Native macOS passed
+96/96 tests on each architecture; both desktop jobs passed 4/4 focused tests
+and package audit. The 167-file arm64 archive is 3,937,186 bytes with SHA-256
+`55a973bfc2d2cacd9f74d39d0388c48474d43f8fd01113286eac7b1ed9f6799b`;
+the 167-file x86_64 archive is 4,062,987 bytes with SHA-256
+`21c5a6b8d7cd8dde48e40cfedca76e1081c32fdb2c07ee7c53f35e8be9c8495b`.
+The same run's iOS job passed 46/46 Web/Wasm tests, warnings-as-errors Simulator
+and Device builds, both packaged property-list checks, and the Simulator UI and
+reply-bridge runtime marker. Native Linux arm64 passed 101/101 tests, and native
+Windows arm64 passed 99/99. Core coverage passed at 93.94%, with every critical
+scope at or above 95%; static analysis covered 46 production translation units
+and ThreadSanitizer passed 64/64. Actual Safari 26.6.1 passed the production
+Wasm/AudioWorklet/MessagePort/keyboard gate. The exact Windows package contains
+154 files, is 4,468,339 bytes, and has SHA-256
+`09439f529367ac639e747d16a44561473149c92f9b1ed70f1fd500c3a56da49b`.
 Package audit schema 4 records WebView2 `PASS-SharedArrayBuffer`, native-debugger
 RPC against an independent packaged daemon, and a separate 48 kHz stereo
-headless daemon/CLI lifecycle with 4,096 finite benchmark frames, a 327-byte
-recording, native MIDI support, and exit code zero. The exact-source Windows
-size gate passes at 293,548 bytes for a stripped MSVC Release core, 644,608
-bytes for daemon plus CLI, 23,044 bytes for gzip-compressed Wasm, and 158,288
-bytes for deployable Web resources.
+headless daemon/CLI lifecycle with 4,096 finite benchmark frames, native MIDI
+support, and exit code zero.
 
-The same clean clone compiled all 543 Linux Release+LTO package actions and
+The same hosted candidate compiled the Linux Release+LTO package and
 passed 103/103 GUI-enabled tests under Xvfb, including the real systemd user
-service and controlled launchd lifecycle. Its 7,742,374-byte, 152-file TGZ has
-SHA-256 `6f013ea0107363200aaf33a4fe1f17d7460639fc5f990002e7b33454c8af22df`.
+service and controlled launchd lifecycle. Its 7,577,027-byte, 153-file TGZ has
+SHA-256 `1a1807ecf98660aaabacc8cee665c4278fb50c8e50acdaf2ea776831a40f12fe`.
 Package audit schema 4 records WebKitGTK `PASS-MessagePort`, native-debugger RPC
 against an independent packaged daemon, and the separate headless lifecycle at
 48 kHz stereo with 4,096 finite frames, a 326-byte recording, native MIDI, and
-exit code zero. The Linux size gate passes at 513,436 bytes for the stripped
-Release+LTO core, 976,136 bytes for daemon plus CLI, 23,018 bytes for
-gzip-compressed Wasm, and 158,288 bytes for deployable Web resources.
+exit code zero. The Linux size gate passes at 502,132 bytes for the stripped
+Release+LTO core, 956,168 bytes for daemon plus CLI, 23,010 bytes for
+gzip-compressed Wasm, and 157,818 bytes for deployable Web resources.
 
-The inherited exact Android implementation candidate `0dbce9e` also passed
-clean dual-ABI Android Debug, instrumentation, unsigned Release, and lint
-builds. Its API 35 headless-emulator gate reported AAudio API
+The same candidate passed dual-ABI Android Debug, instrumentation, unsigned
+Release, and lint builds. Its API 35 headless-emulator gate reported AAudio API
 2 at 48 kHz, 30/30 production hardware-key mappings, repeat suppression,
-focus-loss/reopen recovery, 101 background callbacks, 224 screen-off callbacks,
+focus-loss/reopen recovery, 119 background callbacks, 349 screen-off callbacks,
 idle shutdown, no residual foreground service, and instrumentation code `-1`.
-The exact Debug APK is 3,644,823 bytes with SHA-256
-`26a188c57268b4ccaa4d117bfd869befe7ecd8fb274e5278a4b799dea84dc64f`;
-the 2,590,764-byte unsigned Release APK has SHA-256
-`6010ee48225b3b050b307b3b5ab4dac07ab5e681dabf91d6632a4bba05a2e96e`.
+The exact Debug APK is 3,644,539 bytes with SHA-256
+`8c9efd454ab7998b71fc83061c7844fc6f2720be545fa6c31d93c91c95583891`;
+the 26,160-byte instrumentation APK has SHA-256
+`725a05b023939f145efc98165f6175a7291597a8ef929e8b73af9fd75369e13f`.
 
 The portable CMake audit prevents the two-GUI package contract from silently
 regressing. Package audit requires and launches the extracted system-WebView
@@ -138,9 +147,8 @@ recording persistence, playback, latency status, self-test, doctor, a finite
 4,096-frame benchmark, all-notes-off, zero-exit shutdown, and endpoint cleanup.
 Fresh optimized Windows and Linux archives both pass this lifecycle locally
 and must report native MIDI support;
-the checked-in Linux release job and new Windows package job enforce it when
-published. The new workflow path is YAML-validated but remains unexecuted for
-this unpushed commit.
+the checked-in Linux release job and Windows package job enforce it. Both
+workflow paths pass in the current hosted run.
 The preceding `e64e8f0` candidate adds the installed SDK consumer gate. Its exact
 tree at documentation commit `cc3af78` was also reproduced from a new clone with
 empty build trees on Windows, Linux, and Emscripten. Every ordinary native test configuration now installs
@@ -164,8 +172,8 @@ The preceding `5e84b49` candidate makes browser acceptance fail when the real
 desktop daemon is absent, and the checked-in Linux CI path builds that daemon
 before running the locked production Web bundle across Chromium, Firefox, and
 WebKit. The missing-daemon rejection and real Windows/Linux daemon paths
-execute locally with the new portable wiring audit. The CI workflow itself
-remains unexecuted for this unpushed commit. The preceding `00a0e50` candidate
+execute locally with the new portable wiring audit. The complete CI browser
+workflow also passes in the current hosted run. The preceding `00a0e50` candidate
 makes native test configuration fail closed when Node.js is unavailable instead
 of silently omitting the exact HarmonyOS production-policy test. The production
 Web controller was rebuilt from locked dependencies and passed all five applicable
@@ -231,8 +239,8 @@ the emulator option disabled. Windows MSVC Release passes 91/91 tests, Linux
 x86_64 GCC passes 92/92, and Emscripten MinSizeRel passes 42/42. System Chrome
 on Windows and bundled Chromium on Linux each pass the five applicable desktop
 application cases, including a real platform daemon process and authenticated
-service controller. Current core coverage remains 94.10%, Clang static analysis passes
-44 production translation units, and ASan/UBSan passes 57/57 with all twelve
+service controller. Current core coverage is 93.94%, Clang static analysis passes
+46 production translation units, and ASan/UBSan passes with all twelve
 fuzzers. The earlier `61b3342` candidate adds the
 exact-production-source CoreAudio lifecycle simulation, and `18e6e7d` adds the
 corresponding IOHID lifecycle simulation. The earlier `240b207` candidate's
@@ -356,7 +364,8 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
 - Checked-in cross toolchains build that complete desktop product, including
   `mol-keyboardd`, `molctl`, `mol-play`, `mol-render`, `mol-seq`,
   `mol-patchc`, `mol-audio-analyze`, and `mol_core`, as Windows ARM64 COFF and
-  Linux AArch64 ELF. CI also includes native Windows and Ubuntu ARM64 runners.
+  Linux AArch64 ELF. Native hosted Windows and Ubuntu ARM64 runners pass the
+  complete applicable suites at 99/99 and 101/101.
 - QEMU 10.2.1 executes the Linux AArch64 Release daemon, CLI, and renderer as a
   fail-closed product gate. A separate Debug target build passes 71/71 tests,
   including the 18-preset audio golden, local IPC, nested daemon/renderer
@@ -367,8 +376,9 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   recorded a sequence, rejected a wrong token, and shut the daemon down cleanly.
 - The exact macOS IOHID and CoreAudio-selected production sources compile and
   execute against controlled API models under MSVC and Linux Clang. Input
-  enumeration/gesture cleanup and audio callbacks/device recovery pass, without
-  claiming Apple SDK or native macOS evidence.
+  enumeration/gesture cleanup and audio callbacks/device recovery pass.
+  AppleClang 17 additionally compiles the production sources on native macOS
+  arm64 and x86_64; physical device and permission behavior remains separate.
 - The iOS controller directly consumes portable C11 background-policy and
   hardware-key ownership state. All 30 note usages plus Space sustain, repeat
   suppression, rejected-submit rollback, individual release, and bounded
@@ -378,7 +388,7 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   checks diagnostics, recording/playback, zero-exit shutdown, and socket
   cleanup. Linux executes the same runner against a controlled launchd process
   model and real product binaries; its portable integration audit also passes.
-  Actual Apple launchd execution still requires an Apple runner.
+  The actual LaunchAgent path passes on hosted macOS arm64 and x86_64.
 - An independent Windows Release process used the active 48 kHz stereo WASAPI
   device, exposed the physical Raw Input adapter, passed doctor and a 96,000
   frame benchmark at 80.68 times realtime with no non-finite samples, and shut
@@ -393,9 +403,10 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   42 project/test combinations. Chrome, Edge, and Chromium mobile exercised
   realtime AudioWorklet output; Firefox exercised the same worklet/Wasm DSP in
   an `OfflineAudioContext` because its headless Windows process exposes no
-  realtime audio output device. Detailed evidence and the unclaimed Safari
-  boundary are in
-  `docs/web/M6_WEB_EVIDENCE.md`.
+  realtime audio output device. A separate hosted macOS SafariDriver gate
+  starts the production Wasm/AudioWorklet in actual current Safari and delivers
+  a keyboard event through MessagePort with zero drops. Detailed evidence and
+  the remaining physical-route boundary are in `docs/web/M6_WEB_EVIDENCE.md`.
 - The Android application packages that same complete local UI without network
   permission, uses a bounded allow-listed JS bridge, and runs the shared core
   through JNI and Oboe in a legal `mediaPlayback` foreground service. Debug,
@@ -407,7 +418,7 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
 - The Android 15 x86_64 emulator exercised the real packaged UI-to-AAudio path
   at 48 kHz with zero render/non-finite failures, then exercised all 30 native
   key mappings and repeat suppression through production dispatch. Callback
-  count advanced from 101 in background to 224 with the screen off, then the
+  count advanced through 119 background and 349 screen-off callbacks, then the
   idle background stream and foreground state stopped. Injected transient
   focus loss stopped AAudio; focus gain reopened it and resumed finite
   callbacks. Detailed evidence and physical-device boundaries are in
@@ -418,10 +429,10 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   private atomic `.molseq` persistence, privacy manifest, localized metadata,
   and app icon. Its Objective-C++ controller restores persistent engine state
   after route/interruption/media-service rebuilds and keeps background audio
-  only for playback or a running metronome transport. Xcode simulator/device
-  pipelines are checked in. The controller-consumed policy state machine passes
-  executable MSVC, Linux GCC, and Emscripten tests, but no Apple build, API
-  execution, or device result is claimed on this host.
+  only for playback or a running metronome transport. Xcode 16.4 builds the
+  warnings-as-errors x86_64/arm64 Simulator and unsigned arm64 Device targets.
+  The iPhone Simulator installs and launches the packaged app and verifies the
+  production UI/reply bridge. Physical device/API behavior remains unclaimed.
 - The HarmonyOS Stage application provides the complete ArkUI surface and exact
   30-key foreground mapping, strict Node-API controls, OHAudio fast request with
   normal fallback and effective latency reporting, AudioSession focus,
@@ -462,36 +473,36 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
 
 ## In-progress work
 
-- The desktop-first local audit is complete: Windows/Linux application and
-  service process paths pass, while macOS platform-specific source paths have
-  executable simulations and a CI-bound LaunchAgent product smoke. Native
-  macOS application/service acceptance is the highest-priority external gate.
-  The iOS production background-policy and hardware-key ownership state
-  machines, the HarmonyOS production native bridge/host simulations, and
-  strongest reachable device-free ESP32 firmware execution gate also pass;
-  mobile and ESP32 external acceptance follows the desktop gate.
+- The desktop-first automated audit is complete: Windows and Linux application
+  and service paths pass, and fresh native macOS 15 arm64/x86_64 jobs now pass
+  LaunchAgent, WKWebView, native-debugger, extracted-package, and independent
+  headless daemon/CLI acceptance. Native Windows and Linux arm64 suites also
+  pass on their matching hosted architectures. The iOS Simulator UI/bridge and
+  unsigned device build, actual Safari 26.6.1, Android emulator, HarmonyOS
+  production native bridge/host simulations, and strongest reachable device-free ESP32 firmware
+  execution gate pass. Remaining work requires formal HarmonyOS tooling,
+  physical devices/routes/peripherals, or latency equipment.
   The 24-item [`DEFINITION_OF_DONE.md`](DEFINITION_OF_DONE.md) audit maps each
   requirement to direct evidence and its remaining boundary. Documentation
   remains a draft and `v1.0.0` remains forbidden until all results pass.
 
 ## Blocked platform checks
 
-- Apple SDKs are not available on this Windows host. Huawei's current Windows
-  Command Line Tools include the HarmonyOS SDK, Hvigor, and emulator, but the
+- Apple SDKs are not installed on this Windows workstation, but exact-candidate
+  macOS and iOS gates now execute on fresh GitHub-hosted Apple machines. Huawei's
+  current Windows Command Line Tools include the HarmonyOS SDK, Hvigor, and emulator, but the
   official download redirects this host to Huawei Account authentication and no
   authenticated SDK/license session is available. The public OpenHarmony SDK
-  compatibility build and macOS simulations do not change those formal platform
-  constraints or runtime status.
+  compatibility build does not change that formal HarmonyOS constraint.
 - Playwright's Windows WebKit port does not expose AudioWorklet and is not actual
-  Safari. Current-stable Safari remains unverified until run on an Apple host.
+  Safari. A separate hosted macOS SafariDriver gate now exercises Safari 26.6.1,
+  the production UI, realtime Wasm/AudioWorklet, and keyboard-event path.
 - No Bluetooth output was exposed for the Windows run. WSL exposes neither a
-  physical evdev keyboard nor native Linux audio hardware. Those M5 acceptance
-  paths and macOS compilation/runtime remain unverified.
-- Windows ARM64 and Linux AArch64 binaries are build-verified, but no native
-  ARM64 host was available locally. Linux AArch64 QEMU execution covers target
-  instructions, service IPC, rendering, and tests, but cannot verify native
-  scheduling, input, audio, latency, or hardware lifecycle. Native ARM64 CI jobs
-  are configured but an unpushed local commit is not reported as a CI result.
+  physical evdev keyboard nor native Linux audio hardware. Physical macOS audio,
+  IOHID, MIDI, Bluetooth, suspend/resume, and latency also remain unverified.
+- Native hosted Windows arm64 passes 99/99 tests and Linux arm64 passes 101/101.
+  Those virtual machines verify target instructions and process/runtime behavior,
+  but expose no physical audio, input, Bluetooth, latency, or hardware lifecycle.
 - Physical Android/Apple/Harmony/ESP32 devices, I2S capture equipment, signing
   credentials, and long-run device time are not available. The Android emulator
   result, ESP-IDF builds, and Espressif QEMU firmware runs are not promoted to
@@ -536,6 +547,17 @@ passes 103/103 with both GUI tests under Xvfb; WebKitGTK reports
 `PASS-MessagePort`. Package audit launches the extracted production GUI and
 native service debugger before running the independent extracted headless
 runtime lifecycle.
+
+GitHub Actions run 15 also executes the exact candidate on both macOS 15
+architectures. AppleClang 17.0.0.17000013 passes 96/96 native tests on arm64 and
+x86_64, including the real LaunchAgent product smoke. Each Release+LTO desktop
+build passes the four WKWebView/native-debugger tests and package audit; the
+arm64 and x86_64 archives contain 167 files and use the hashes recorded above.
+The iOS job builds x86_64/arm64 Simulator and arm64 Device applications with
+Xcode 16.4 and the iOS 18.5 SDK, then installs and launches the Simulator app
+and receives `MOL_IOS_SIMULATOR_SMOKE_PASS` from its production UI/bridge path.
+The arm64 macOS job also drives system Safari 26.6.1 directly and receives
+`MOL_SAFARI_SMOKE_PASS 26.6.1 events=3 transport=MessagePort baseline`.
 
 MSVC 19.51.36248 passes 95/95 tests in the current LTO Release build; the prior
 Debug build passed 78/78. These runs include the iOS production lifecycle
@@ -607,7 +629,10 @@ WebKit 26.5 desktop/mobile rendering were covered. Chrome and Edge exercised
 the realtime AudioWorklet; Firefox executed the real worklet and Wasm DSP in
 an offline audio graph because the headless runner exposes no realtime output
 device. Chrome also reloaded offline, started audio, played a note, and observed
-the core event. Actual Safari is not claimed.
+the core event. Candidate `f8081ca` additionally passes the actual Safari 26.6.1
+gate on hosted macOS 15 arm64: a native WebDriver click starts the production
+Wasm/AudioWorklet, the app reports MessagePort, and a keyboard event reaches the
+engine with zero drops and no retained voice.
 
 The preceding Linux targeted refresh used bundled Chrome for Testing
 151.0.7922.34 and passed five applicable desktop cases with two
@@ -759,38 +784,39 @@ object tools after the build. The LLVM-MinGW archive used locally was
 190,721,391 bytes with SHA-256
 `ae601f4e0f72bbdf441ad2df8bb16f037e2e9251559ea6b37b4057aef39c06c3`.
 
-Coverage passed at 94.10% overall, including 95.95% queue/memory, 97.78%
-music-state, 97.49% Patch, and 95.57% Sequence coverage. Clang static analysis
-passed all 44 first-party production translation units. Linux Clang
-ThreadSanitizer passed 40/40 tests in 15.62 seconds. The refreshed GCC 15
+Coverage passed at 93.94% overall, including 95.76% queue/memory, 97.78%
+music-state, 97.30% Patch, and 95.60% Sequence coverage. Clang static analysis
+passed all 46 first-party production translation units. Linux Clang
+ThreadSanitizer passed 64/64 tests. The refreshed GCC 15
 optimized endurance suite passed 2/2 in 270.38 seconds: the engine simulated
 1,800 seconds in 268.567 seconds (6.70x realtime, approximately 14.92% of one
 core), emitted 230,136 events, and produced no non-finite samples. Runtime
 recovery completed 30 rebuild cycles in 1.42 seconds.
 
-The latest exact-source Windows release size gate passed at 293,548 bytes for a
+The latest measured Windows release size gate passed at 293,548 bytes for a
 stripped MSVC Release core, 644,608 bytes for daemon plus CLI, 23,044 bytes for
 gzip-compressed Wasm, and 158,288 bytes for deployable Web resources. The core
 was built without MSVC LTCG for this measurement because LLVM strip cannot
 rewrite MSVC `/GL` archive members; the packaged Release+LTO core is 536,464
-bytes before stripping. The exact-source Linux gate passes at 513,436 bytes for
-the stripped Release+LTO core, 976,136 bytes for daemon plus CLI, 23,018 bytes
-for gzip-compressed Wasm, and 158,288 bytes for deployable Web resources.
+bytes before stripping. The current exact-source Linux gate passes at 502,132
+bytes for the stripped Release+LTO core, 956,168 bytes for daemon plus CLI,
+23,010 bytes for gzip-compressed Wasm, and 157,818 bytes for deployable Web
+resources.
 Dependency locks, notices,
 licenses, npm audit, and SPDX SBOM validation passed. Current exact-candidate
-CPack package audits found 153 files on Windows and 152 on Linux, including the
+CPack package audits found 154 files on Windows and 153 on Linux, including the
 native wxWidgets production executable, optional native debugger, WebView2
 loader where required, `mol-latency-probe`, and every desktop service
 definition. Each extracted production GUI loads the packaged Web bundle and
 passes real system-WebView capability checks. Each native debugger then drives
 and shuts down its own packaged daemon before a separate daemon and CLI complete
 the no-UI null-audio lifecycle with native MIDI capability. The current Windows
-AMD64 ZIP is 4,465,446 bytes with SHA-256
-`9ef71076c1a39512b8ab3c50b3088cdefcacc615986fd983b584e1896572b3b0`;
-its WebView2 reports SharedArrayBuffer and its recording is 327 bytes. The
-current Linux x86_64 TGZ is 7,742,374 bytes with SHA-256
-`6f013ea0107363200aaf33a4fe1f17d7460639fc5f990002e7b33454c8af22df`;
-its WebKitGTK reports MessagePort and its recording is 326 bytes. Both report
+AMD64 ZIP is 4,468,339 bytes with SHA-256
+`09439f529367ac639e747d16a44561473149c92f9b1ed70f1fd500c3a56da49b`;
+its WebView2 reports SharedArrayBuffer. The current Linux x86_64 TGZ is
+7,577,027 bytes with SHA-256
+`1a1807ecf98660aaabacc8cee665c4278fb50c8e50acdaf2ea776831a40f12fe`;
+its WebKitGTK reports MessagePort. Both report
 schema 4, 48 kHz stereo, 4,096 finite benchmark frames, no non-finite samples,
 exit code zero, and successful IPC cleanup. They are unsigned 0.1.0 candidate
 archives, not releases.
@@ -883,9 +909,9 @@ non-silent output, and zero render or write failures.
 ## Known failures
 
 No locally reproducible implementation, build, test, sanitizer, analysis,
-package, or documentation failure is currently known. The unavailable external
-acceptance runs listed above remain open gates rather than skipped or passing
-tests.
+package, or documentation failure is currently known. GitHub Actions run 15
+passed all 25 jobs. The unavailable external acceptance runs listed above
+remain open gates rather than skipped or passing tests.
 
 ## Known environment constraints
 
@@ -917,12 +943,9 @@ lane. Detailed evidence and pending formal/device acceptance are in
 
 ## Next highest-priority task
 
-Run the checked-in `native` and `macos-desktop` jobs on a real macOS 15 host
-first. The latter uses `cmake --preset ci-macos-desktop`, real WKWebView and
-native-debugger acceptance, and the extracted GUI/headless package audit. Then
-exercise current Safari plus CoreAudio, IOHID permission, launchd, route loss,
-and clean shutdown. After the desktop gate, run native Windows/Linux ARM64
-execution, official iOS and Harmony builds, physical Android/iOS/Harmony lifecycle and
-route checks, ESP32/ESP32-S3 30-minute HIL with I2S/A2DP/USB/GPIO evidence, and
+Run the formal HarmonyOS build in an authenticated current DevEco/Harmony SDK
+environment. Then execute physical macOS, Android, iOS, and Harmony audio/input,
+background, interruption, route-loss, recovery, Bluetooth, and endurance checks;
+run ESP32/ESP32-S3 30-minute HIL with I2S/A2DP/USB/GPIO evidence; and capture
 instrumented P50/P95/maximum latency on every required route. Keep `v1.0.0`
 blocked until all results pass and the exact final candidate is reviewed.
