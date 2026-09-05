@@ -29,6 +29,10 @@ All notable changes to this project will be documented in this file.
   application hosts with strict native bridges, legal background lifecycles,
   private recording storage, platform packaging, and truthful capability
   boundaries.
+- Added a fail-closed Android 15 headless-emulator gate covering the packaged
+  AAudio path, all 30 production hardware-key mappings, repeat suppression,
+  injected focus recovery, foreground/background/screen-off lifecycle, idle
+  shutdown, artifact hashes, and foreground-service cleanup.
 - Added build-verified ESP32 and ESP32-S3 firmware with I2S, GPIO matrix, HID,
   persistent settings/sequences, physical recovery, optional local Web
   configuration, target-specific A2DP/USB support, and fail-closed HIL tooling.

@@ -56,21 +56,26 @@ platforms/android/gradlew.bat -p platforms/android :app:assembleRelease `
 
 The no-dependency instrumentation APK exercises the packaged UI, product start
 button, strict JavaScript bridge, JNI, Oboe stream, shared core, note commands,
-callback counters, foreground-service notification state, background playback,
-screen-off continuation, and idle-background shutdown:
+all 30 production hardware-key mappings, repeat suppression, callback counters,
+injected audio-focus recovery, foreground-service notification state,
+background playback, screen-off continuation, and idle-background shutdown.
+Use the fail-closed runner so installation, result parsing, service-leak checks,
+and cleanup cannot be skipped:
 
 ```powershell
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-adb shell am instrument -w \
-  cn.zhangpeixuan.molkeyboard.test/cn.zhangpeixuan.molkeyboard.AndroidSmokeInstrumentation
+python tools/android_emulator_gate.py `
+  --adb "$env:ANDROID_HOME/platform-tools/adb.exe" `
+  --debug-apk platforms/android/app/build/outputs/apk/debug/app-debug.apk `
+  --test-apk platforms/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk `
+  --report build/android-emulator-gate.json
 ```
 
-Long-duration playback, wired/Bluetooth route changes, audio focus
-interruptions, and physical-keyboard input remain physical-device checks.
-Ordinary hardware keyboard input is supported only while the activity is
-foregrounded. Bluetooth audio pairing and routing belong to Android; the
-application responds to the resulting system route changes.
+The Android CI job creates an API 35 Google APIs x86_64 AVD and invokes the same
+runner headlessly. Long-duration playback, wired/Bluetooth route changes, focus
+arbitration by another application, and physical-keyboard delivery remain
+physical-device checks. Ordinary hardware keyboard input is supported only
+while the activity is foregrounded. Bluetooth audio pairing and routing belong
+to Android; the application responds to the resulting system route changes.
 
 ## Privacy and permissions
 

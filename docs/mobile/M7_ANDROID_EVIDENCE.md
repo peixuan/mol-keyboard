@@ -6,7 +6,7 @@ the combined Android/iOS milestone.
 
 ## Reproducible build
 
-The verified toolchain on 2026-09-03 was:
+The verified toolchain on 2026-09-05 was:
 
 - Eclipse Temurin JDK 21.0.12.1;
 - Gradle 8.11.1 with its distribution and wrapper JAR checksum locked;
@@ -30,22 +30,24 @@ Push-Location platforms/android
 Pop-Location
 ```
 
-The first command reconfigured the Release Wasm target, passed 31/31 CTest
-tests, installed the exact npm lock, passed 12/12 Web tests, type-checked and
-built the production UI, and assembled the Android Debug APK. The other two
-variants and the full Android lint gate also passed. Debug and Release both
+An exact clean clone of `0dbce9e869458f0a7fba6e7c249c1586d6911b0a`, made
+without hardlinks or copied build output, compiled all 108 Emscripten actions,
+passed 46/46 MinSizeRel CTest tests, installed 20 packages from the exact npm
+lock with zero vulnerabilities, passed 12/12 Web tests, type-checked and built
+the production UI, and assembled the Android Debug APK. A subsequent clean
+Gradle invocation assembled the instrumentation and unsigned Release APKs and
+passed `lintDebug`; 114 tasks completed successfully. Debug and Release both
 contain `arm64-v8a` and `x86_64` native libraries. A separate Debug build with
 `-PmolApplicationId=org.example.molkeyboard` produced that exact package ID,
 confirming the release identifier is configurable.
 
-The Debug, unsigned Release, and instrumentation artifacts were refreshed at
-`240b207`:
+The exact clean-clone artifacts were:
 
 | Artifact | Bytes | SHA-256 |
 |---|---:|---|
-| `app-debug.apk` | 5,004,335 | `3e699a544d57f2cb0e8aba5b2cdf1cc8087dbc67bcfc2ef7beac3ee93930c6f1` |
-| `app-release-unsigned.apk` | 2,589,500 | `c6e47e541edf4e839dcc2eee3ef700605172375285e06c38c3856cfa0757ad7e` |
-| `app-debug-androidTest.apk` | 24,844 | `9a9c8fca1218a0255ade2a5376fb120747789bce64abb495d1832813fdfa3518` |
+| `app-debug.apk` | 3,644,823 | `26a188c57268b4ccaa4d117bfd869befe7ecd8fb274e5278a4b799dea84dc64f` |
+| `app-release-unsigned.apk` | 2,590,764 | `6010ee48225b3b050b307b3b5ab4dac07ab5e681dabf91d6632a4bba05a2e96e` |
+| `app-debug-androidTest.apk` | 26,136 | `8fa70db11310716ef762d60cc41743077c5b0739a554c8bbe2d9261e16b16908` |
 
 The unsigned Release APK targets API 36 with minimum API 26. Archive
 inspection found both native ABIs, the packaged local `index.html`,
@@ -61,25 +63,30 @@ the official Android 15/API 35 Google APIs x86_64 emulator image, using emulator
 37.1.11. The reported device was `sdk_gphone64_x86_64`; its audio mixer ran at
 48 kHz.
 
+The fail-closed runner performs installation, notification permission, bounded
+instrumentation, result parsing, foreground-service leak detection, and cleanup:
+
 ```powershell
-adb install -r platforms/android/app/build/outputs/apk/debug/app-debug.apk
-adb install -r platforms/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-adb shell pm grant cn.zhangpeixuan.molkeyboard android.permission.POST_NOTIFICATIONS
-adb shell am instrument -w `
-  cn.zhangpeixuan.molkeyboard.test/cn.zhangpeixuan.molkeyboard.AndroidSmokeInstrumentation
+python tools/android_emulator_gate.py `
+  --adb "$env:ANDROID_HOME/platform-tools/adb.exe" `
+  --debug-apk platforms/android/app/build/outputs/apk/debug/app-debug.apk `
+  --test-apk platforms/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk `
+  --report build/android-emulator-gate.json
 ```
 
 The final result was:
 
 ```text
 INSTRUMENTATION_RESULT: audioApi=2
-INSTRUMENTATION_RESULT: backgroundCallbacks=98
-INSTRUMENTATION_RESULT: callbacks=57
+INSTRUMENTATION_RESULT: backgroundCallbacks=101
+INSTRUMENTATION_RESULT: callbacks=50
 INSTRUMENTATION_RESULT: focusInterrupted=true
-INSTRUMENTATION_RESULT: focusResumedCallbacks=2
-INSTRUMENTATION_RESULT: frames=32640
+INSTRUMENTATION_RESULT: focusResumedCallbacks=4
+INSTRUMENTATION_RESULT: frames=28800
+INSTRUMENTATION_RESULT: hardwareKeys=30
+INSTRUMENTATION_RESULT: hardwareRepeatSuppressed=true
 INSTRUMENTATION_RESULT: idleBackgroundStopped=true
-INSTRUMENTATION_RESULT: lockedCallbacks=203
+INSTRUMENTATION_RESULT: lockedCallbacks=224
 INSTRUMENTATION_RESULT: sampleRate=48000
 INSTRUMENTATION_CODE: -1
 ```
@@ -87,7 +94,13 @@ INSTRUMENTATION_CODE: -1
 `audioApi=2` is the Oboe AAudio backend. The test drives the real packaged
 start button and then crosses the Web UI, strict JavaScript bridge, bound
 foreground service, JNI, Oboe, and shared C engine. It sends Note On/Off and
-asserts finite rendering with zero render failures. The instrumentation then
+asserts finite rendering with zero render failures. It also dispatches every
+one of the 30 production Android hardware-key mappings through the real
+`MainActivity.dispatchKeyEvent` path, requires the exact Note Started/Released
+events from the service, and verifies that a repeated KeyDown neither retriggers
+the note nor leaks ownership. Mapped keys are handled before WebView dispatch,
+so WebView focus cannot consume a promised native instrument key. The
+instrumentation then
 injects transient focus loss into the production service listener, observes
 the AAudio runtime stop, injects focus gain, and requires a newly opened stream
 to resume finite callbacks. This found and fixed foreground resume eligibility;
@@ -95,10 +108,16 @@ the injection validates service recovery but does not claim Android focus
 arbitration from a competing application. It then starts the core
 metronome/transport, backgrounds the activity, confirms the service is a
 `mediaPlayback` foreground service with its notification, and observes the
-callback count advance. After turning the screen off it advances from 98 to
-203 callbacks. The test wakes the emulator, disables active content,
+callback count advance. After turning the screen off it advances from 101 to
+224 callbacks. The test wakes the emulator, disables active content,
 backgrounds the app again, and verifies both the native stream and foreground
 state stop instead of abusing background execution.
+
+The checked-in Android CI job installs the official API 35 Google APIs x86_64
+system image, creates and boots an AVD without a window, runs this same parser,
+and kills the emulator in a bounded cleanup step. A portable source audit and
+the runner's parser self-tests pass locally. The workflow itself has not run on
+this unpushed commit, so only the local Windows emulator result is claimed.
 
 ## Architecture and boundaries
 
@@ -121,7 +140,8 @@ state stop instead of abusing background execution.
 ## Unclaimed acceptance
 
 No physical Android device was available. Arm64 packaging is build-verified,
-but actual arm64 playback, hardware-key input, wired/Bluetooth route changes,
+and all 30 mappings are runtime-verified with injected Android key events, but
+actual arm64 playback, physical-key delivery, wired/Bluetooth route changes,
 audio-focus arbitration by another application, measured end-to-end latency,
 and long-duration underrun behavior remain device checks. Production signing
 credentials are also intentionally absent. Android therefore has emulator

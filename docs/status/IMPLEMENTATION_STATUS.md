@@ -47,8 +47,12 @@ clean checkout reproduction pass. Complete Windows ARM64 and Linux AArch64 deskt
 products now cross-build through checked-in presets, closing their local build
 gap. Linux AArch64 also passes an end-to-end QEMU product gate and 71/71 target
 tests, while execution on native ARM64 hosts remains unclaimed. Android
-emulator coverage now also stops and reopens AAudio across injected transient
-focus loss/gain. The exact background-policy state machine consumed by the iOS
+emulator coverage now also dispatches all 30 production hardware-key mappings
+before WebView handling, rejects repeat retriggers, and stops and reopens AAudio
+across injected transient focus loss/gain. A fail-closed runner now owns APK
+installation, result parsing, service-leak detection, and cleanup on both the
+local API 35 headless emulator and the checked-in CI lane. The exact
+background-policy state machine consumed by the iOS
 controller now also executes under MSVC, Linux GCC, and Emscripten. Its exact
 hardware-key mapping and ownership state machine does too, including repeat,
 rollback, and deactivation release behavior. A checked-in
@@ -70,17 +74,30 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`6897843` (`build(desktop): package native debugger`) is the latest exact
-candidate reproduced from a clean local clone. The release preset now enables
-both wxWidgets applications, and a portable CMake audit prevents that contract
-from silently regressing. Package audit requires and launches the extracted
-system-WebView instrument and native service debugger on Windows, Linux, and
-macOS layouts. The debugger must control and shut down an independent packaged
-null-audio daemon over local IPC; audit then starts a fresh daemon for the
-complete no-UI CLI lifecycle. The exact clean Windows clone compiled 108
-Emscripten targets, passed 44/44 MinSizeRel tests, rebuilt the production Web
-bundle from 20 locked packages with zero vulnerabilities, compiled 575 native
-Release+LTO actions, and produced a 4,463,145-byte, 153-file ZIP with SHA-256
+`0dbce9e` (`test(android): gate native keyboard in emulator`) is the latest
+exact candidate reproduced from a clean local clone. It compiled all 108
+Emscripten actions, passed 46/46 MinSizeRel tests, rebuilt and tested the
+production Web bundle from 20 locked packages with zero vulnerabilities and
+12/12 tests, and passed clean dual-ABI Android Debug, instrumentation, unsigned
+Release, and lint builds. Its API 35 headless-emulator gate reported AAudio API
+2 at 48 kHz, 30/30 production hardware-key mappings, repeat suppression,
+focus-loss/reopen recovery, 101 background callbacks, 224 screen-off callbacks,
+idle shutdown, no residual foreground service, and instrumentation code `-1`.
+The exact Debug APK is 3,644,823 bytes with SHA-256
+`26a188c57268b4ccaa4d117bfd869befe7ecd8fb274e5278a4b799dea84dc64f`;
+the 2,590,764-byte unsigned Release APK has SHA-256
+`6010ee48225b3b050b307b3b5ab4dac07ab5e681dabf91d6632a4bba05a2e96e`.
+
+The preceding exact desktop-package candidate `6897843` enables both wxWidgets
+applications, and a portable CMake audit prevents that contract from silently
+regressing. Package audit requires and launches the extracted system-WebView
+instrument and native service debugger on Windows, Linux, and macOS layouts.
+The debugger must control and shut down an independent packaged null-audio
+daemon over local IPC; audit then starts a fresh daemon for the complete no-UI
+CLI lifecycle. Its exact clean Windows clone compiled 108 Emscripten targets,
+passed 44/44 MinSizeRel tests, rebuilt the production Web bundle from 20 locked
+packages with zero vulnerabilities, compiled 575 native Release+LTO actions,
+and produced a 4,463,145-byte, 153-file ZIP with SHA-256
 `5c4cfff1a1272f42828d7b911f72f54d1dee009c3da78589145800e4558efd34`.
 Its WebView2 instrument reports `PASS-SharedArrayBuffer`, its packaged native
 debugger passes state/capability/self-test/note/release/shutdown RPC, and the
@@ -373,13 +390,17 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   through JNI and Oboe in a legal `mediaPlayback` foreground service. Debug,
   unsigned Release, instrumentation, lint, both required ABIs, configurable
   application ID, privacy/notices packaging, route/focus handlers, foreground
-  hardware keys, and private recording persistence are implemented.
+  hardware keys, and private recording persistence are implemented. Mapped
+  note keys are intercepted before WebView dispatch so UI focus cannot consume
+  them; enqueue failures fall back instead of falsely claiming the event.
 - The Android 15 x86_64 emulator exercised the real packaged UI-to-AAudio path
-  at 48 kHz with zero render/non-finite failures. Callback count advanced from
-  98 in background to 203 with the screen off, then the idle background stream
-  and foreground state stopped. Injected transient focus loss stopped AAudio;
-  focus gain reopened it and resumed finite callbacks. Detailed evidence and
-  physical-device boundaries are in `docs/mobile/M7_ANDROID_EVIDENCE.md`.
+  at 48 kHz with zero render/non-finite failures, then exercised all 30 native
+  key mappings and repeat suppression through production dispatch. Callback
+  count advanced from 101 in background to 224 with the screen off, then the
+  idle background stream and foreground state stopped. Injected transient
+  focus loss stopped AAudio; focus gain reopened it and resumed finite
+  callbacks. Detailed evidence and physical-device boundaries are in
+  `docs/mobile/M7_ANDROID_EVIDENCE.md`.
 - The iOS source now packages the same production UI with an offline-only
   WKURLSchemeHandler, Promise reply bridge, exact request schema, allow-listed
   commands, bounded event/recording transfer, foreground UIKit HID mapping,
@@ -491,7 +512,7 @@ python tools/package_audit.py `
 ```
 
 The GUI-enabled Windows MSVC suite passes 98/98. The current ordinary Debug
-suite passes 97/97 after adding the portable release-package contract audit.
+suite passes 99/99 after adding the Android emulator runner and project audits.
 The real system WebView2
 reports `PASS-SharedArrayBuffer`; the native debugger connects to the real
 daemon and completes state/capability/self-test/note/shutdown RPC. Linux GCC
@@ -557,7 +578,7 @@ cmake --build --preset wasm-release
 ctest --preset wasm-release --output-on-failure
 ```
 
-Emscripten 6.0.5 and Node.js 22.16.0 pass 44/44 tests in the current LTO
+Emscripten 6.0.5 and Node.js 22.16.0 pass 46/46 tests in the current LTO
 MinSizeRel build; the prior Debug candidate passed 31/31. Both configurations
 match the Native event, sequence-fixture, and 18-preset audio-metric goldens.
 
@@ -595,17 +616,19 @@ Push-Location platforms/android
 Pop-Location
 ```
 
-The reproducible Debug pipeline passed 31/31 Wasm tests, 12/12 Web tests,
-TypeScript strict checking, the production UI build, and the dual-ABI Android
-build. Debug, unsigned Release, device-test APKs, R8/lintVital, and full Debug
-lint all passed. Archive inspection confirmed the paired
-`mol_audio_worklet_core.js` and `.wasm` assets in both final APK variants. The
-official Android 15/API 35 x86_64 emulator returned AAudio
-API 2, 48 kHz, 32,640 rendered frames at the foreground checkpoint, a stopped
-runtime after injected transient focus loss, 2 callbacks after focus-gain
-reopen, 98 background callbacks, 203 screen-off callbacks, no
-render/non-finite failure, successful idle shutdown, and instrumentation code
-`-1`.
+The exact clean `0dbce9e` pipeline compiled all 108 Wasm actions, passed 46/46
+Wasm tests and 12/12 Web tests, completed TypeScript strict checking and the
+production UI build, and built the dual-ABI Android application. Debug,
+unsigned Release, device-test APKs, R8/lintVital, and full Debug lint all
+passed. Archive inspection confirmed the paired `mol_audio_worklet_core.js`
+and `.wasm` assets and both `lib/arm64-v8a/libmol_android_audio.so` and
+`lib/x86_64/libmol_android_audio.so`. The official Android 15/API 35 x86_64
+headless emulator returned AAudio API 2, 48 kHz, 28,800 rendered frames at the
+foreground checkpoint, all 30 hardware keys, repeat suppression, a stopped
+runtime after injected transient focus loss, 4 callbacks after focus-gain
+reopen, 101 background callbacks, 224 screen-off callbacks, no
+render/non-finite failure, successful idle shutdown and service cleanup, and
+instrumentation code `-1`.
 
 For sanitizer and parser fuzz validation, activate the Visual Studio environment
 and place Clang 22 on `PATH`:
@@ -854,7 +877,7 @@ The HarmonyOS application descriptors, project audit, executable production
 policy/bridge/host simulations, and native source-check boundary pass locally.
 The previously verified headless Windows MSVC and Linux GCC Release suites pass
 95/95; the GUI-enabled Release+LTO suites pass 98/98 on Windows and 100/100 on
-Linux. The latest exact-candidate Emscripten suite passes 44/44, and Linux
+Linux. The latest exact-candidate Emscripten suite passes 46/46, and Linux
 AArch64 QEMU passes 71/71.
 The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
 5.8.9 build and audit

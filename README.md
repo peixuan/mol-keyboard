@@ -205,8 +205,8 @@ variables are supplied.
 `mol-keyboardd` 与 `molctl` 已可在无界面模式下通过仅限本机的 IPC 完成演奏、音色切换、
 录音、回放和诊断；无音频设备的机器可使用 `--null-backend`。同一份 C 核心也已在
 完整的离线 Web/PWA 乐器中通过验证，并构建为带可配置 I2S 宿主的 ESP32/ESP32-S3
-固件。Android 双 ABI 应用已完成构建，并在 Android 15 模拟器上通过
-UI→JNI→Oboe/AAudio→C 核心及后台/锁屏生命周期验证。iOS 完整应用源码也已实现，
+固件。Android 双 ABI 应用已完成构建，并在 Android 15 无头模拟器上通过
+UI→JNI→Oboe/AAudio→C 核心、30 个原生硬件键、音频焦点及后台/锁屏生命周期验证。iOS 完整应用源码也已实现，
 通过本地 WKWebView 界面连接 AudioUnit/AVAudioSession 与同一 C 核心；其 Xcode
 构建和真机验收仍须在 Apple 环境中完成；`run-simulator-smoke.sh` 会在该环境中安装并
 启动模拟器 App，且仅在生产 UI 与双向原生桥接验证通过后成功退出。
@@ -222,7 +222,7 @@ HarmonyOS 共享应用源码也已用官方 OpenHarmony API 12 公共 SDK 完成
 | Linux | wxWidgets/WebKitGTK instrument, native debugger, daemon, CLI, native audio/evdev/raw-MIDI host | 100-test x86_64 suite and extracted GUI/headless package pass under WSL/Xvfb; real systemd service and AArch64 QEMU product pass; native display/audio hardware pending / WSL/Xvfb 下 100 项 x86_64 套件与解压后 GUI/无界面包通过，真实 systemd 服务及 AArch64 QEMU 产品通过，原生显示与音频硬件待验 |
 | macOS | wxWidgets/WKWebView instrument, native debugger, daemon, CoreAudio, IOHIDManager, CoreMIDI | fail-closed GUI runtime and extracted-package audit lane plus app-bundle resource layout are checked in; production-source and LaunchAgent simulations pass; native Apple run pending / 已纳入失败关闭的 GUI 运行、解压包审计门禁与应用包资源布局，生产源码及 LaunchAgent 仿真通过，Apple 原生运行待验 |
 | Web/PWA | Wasm AudioWorklet, offline shell | supported-browser automation passed; Safari pending / 已支持浏览器自动化通过，Safari 待验 |
-| Android | Oboe/AAudio foreground service | dual-ABI builds plus Android 15 audio-focus/lifecycle simulation passed; device pending / 双 ABI 及 Android 15 音频焦点与生命周期仿真通过，真机待验 |
+| Android | Oboe/AAudio foreground service | dual-ABI builds plus Android 15 headless AAudio, all 30 native key mappings, audio-focus, and lifecycle gates passed; device pending / 双 ABI 及 Android 15 无头 AAudio、全部 30 个原生键、音频焦点与生命周期门禁通过，真机待验 |
 | iOS | AudioUnit, AVAudioSession, offline WKWebView | production background policy and hardware-key ownership simulations pass; fail-closed Simulator UI/bridge gate checked in; Apple run/device pending / 生产后台策略及硬件键所有权仿真通过，已纳入失败关闭的模拟器 UI/桥接门禁，Apple 运行与真机待验 |
 | HarmonyOS | OHAudio, AVSession, continuous task | exact production policy and native bridge/host simulations plus OpenHarmony API 12 compatibility HAPs passed; formal DevEco/device pending / 精确生产策略与原生桥、OHAudio 宿主仿真及 OpenHarmony API 12 兼容 HAP 通过，正式 DevEco 与真机待验 |
 | ESP32 | I2S, GPIO/BLE/Classic HID, A2DP Source | image/map and real firmware QEMU smoke passed; board HIL pending / 固件、map 与真实固件 QEMU 冒烟通过，开发板 HIL 待验 |
