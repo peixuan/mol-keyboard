@@ -236,6 +236,21 @@
       }
     },
     {
+      "name": "ci-macos-desktop",
+      "inherits": "ci-macos",
+      "displayName": "macOS Desktop GUI Acceptance",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "MOL_BUILD_DESKTOP_GUI": "ON",
+        "MOL_BUILD_NATIVE_DEBUG_GUI": "ON",
+        "MOL_BUILD_TESTS": "ON",
+        "MOL_VALIDATE_MOBILE_SOURCES": "OFF",
+        "MOL_PACKAGE_WEB_ASSETS": "ON",
+        "MOL_ENABLE_ASSERTIONS": "OFF",
+        "MOL_ENABLE_LTO": "ON"
+      }
+    },
+    {
       "name": "wasm-base",
       "hidden": true,
       "inherits": "base",
@@ -343,6 +358,7 @@
     { "name": "endurance", "configurePreset": "endurance" },
     { "name": "package-release", "configurePreset": "package-release" },
     { "name": "ci-macos", "configurePreset": "ci-macos" },
+    { "name": "ci-macos-desktop", "configurePreset": "ci-macos-desktop" },
     { "name": "wasm-debug", "configurePreset": "wasm-debug" },
     { "name": "wasm-release", "configurePreset": "wasm-release" },
     { "name": "android-arm64", "configurePreset": "android-arm64" },
@@ -365,6 +381,7 @@
     { "name": "coverage-clang", "configurePreset": "coverage-clang", "output": { "outputOnFailure": true } },
     { "name": "tsan-clang", "configurePreset": "tsan-clang", "output": { "outputOnFailure": true }, "environment": { "TSAN_OPTIONS": "halt_on_error=1" } },
     { "name": "ci-macos", "configurePreset": "ci-macos", "output": { "outputOnFailure": true } },
+    { "name": "ci-macos-desktop", "configurePreset": "ci-macos-desktop", "output": { "outputOnFailure": true } },
     { "name": "wasm-debug", "configurePreset": "wasm-debug", "output": { "outputOnFailure": true } },
     { "name": "wasm-release", "configurePreset": "wasm-release", "output": { "outputOnFailure": true } }
   ],
