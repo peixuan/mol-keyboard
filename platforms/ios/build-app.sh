@@ -59,12 +59,21 @@ fi
   cmake --build --preset "$preset"
 )
 
-app_path="$(find "$repository_root/build/$preset" -type d -name MoLKeyboard.app -print -quit)"
-test -n "$app_path"
-test -x "$app_path/MoLKeyboard"
-test -f "$app_path/Assets.car"
-test -f "$app_path/PrivacyInfo.xcprivacy"
-test -f "$app_path/web/index.html"
+app_path="$repository_root/build/$preset/platforms/ios/Release-$sdk/MoLKeyboard.app"
+if [[ ! -d "$app_path" ]]; then
+  echo "The expected $variant application bundle is missing: $app_path" >&2
+  exit 1
+fi
+if [[ ! -x "$app_path/MoLKeyboard" ]]; then
+  echo "The $variant application executable is missing or not executable." >&2
+  exit 1
+fi
+for relative_path in Assets.car PrivacyInfo.xcprivacy web/index.html; do
+  if [[ ! -f "$app_path/$relative_path" ]]; then
+    echo "The $variant application is missing $relative_path." >&2
+    exit 1
+  fi
+done
 plutil -lint "$app_path/Info.plist" "$app_path/PrivacyInfo.xcprivacy"
 
 if [[ "$variant" == "Device" && -n "${MOL_APPLE_SIGNING_IDENTITY:-}" ]]; then

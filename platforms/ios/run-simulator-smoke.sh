@@ -16,8 +16,8 @@ if [[ "${MOL_SKIP_IOS_BUILD:-0}" != "1" ]]; then
   "$script_dir/build-app.sh" Simulator
 fi
 
-app_path="$(find "$repository_root/build/ios-simulator" -type d -name MoLKeyboard.app -print -quit)"
-if [[ -z "$app_path" || ! -x "$app_path/MoLKeyboard" ]]; then
+app_path="$repository_root/build/ios-simulator/platforms/ios/Release-iphonesimulator/MoLKeyboard.app"
+if [[ ! -x "$app_path/MoLKeyboard" ]]; then
   echo "A built iOS Simulator application is required." >&2
   exit 1
 fi
