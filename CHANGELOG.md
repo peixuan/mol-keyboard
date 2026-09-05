@@ -50,6 +50,9 @@ All notable changes to this project will be documented in this file.
 - Added a cross-platform wxWidgets desktop shell that embeds the production Web
   instrument through the operating system WebView, plus an optional fully native
   wxWidgets debugger for exercising the independent headless service over IPC.
+- Added a dedicated fail-closed macOS desktop CI lane that builds the optimized
+  Web/Wasm payload, exercises WKWebView and the native debugger, and audits the
+  extracted application bundle plus the complete headless service lifecycle.
 
 ### Fixed
 

@@ -14,9 +14,11 @@ The Windows installer/uninstaller and an actual WScript shortcut pass an
 isolated Startup-directory product lifecycle; this does not alter the real user
 Startup folder or substitute for a sign-out/sign-in launch observation.
 Native macOS GUI/service compilation and physical Bluetooth audio/keyboard
-verification remain unavailable here. The macOS wxWidgets/WKWebView build gate
-and application-bundle resource layout are checked in, but no Apple result is
-inferred from the Windows or Linux runs.
+verification remain unavailable here. The dedicated macOS lane now builds the
+locked Web/Wasm payload, both wxWidgets applications, real WKWebView and native
+debugger acceptance, and an extracted GUI/headless package audit. Its portable
+wiring audit passes on Windows and Linux, but the Apple job itself has not run;
+no Apple result is inferred from those non-Apple runs.
 
 The exact macOS IOHID adapter and CoreAudio-selected desktop runtime compile and
 execute against controlled API models under MSVC and Linux Clang. These tests

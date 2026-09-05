@@ -1,7 +1,7 @@
 # M5 Desktop Application and Headless Evidence
 
-Refreshed on 2026-09-05 through code candidate `cc33552`. The wxWidgets
-GUI-enabled suites pass 97/97 on Windows MSVC and 99/99 on Linux GCC with Node
+Refreshed on 2026-09-05 through code candidate `ed1839f`. The wxWidgets
+GUI-enabled suites pass 98/98 on Windows MSVC and 100/100 on Linux GCC with Node
 22.22.1; extracted Release+LTO packages launch the production GUI and complete
 the independent no-UI service lifecycle. A separate fresh Windows tree disables
 both GUI options and the Web server, compiles 172 targets without wxWidgets, and
@@ -77,6 +77,12 @@ two capability-specific skips and zero npm vulnerabilities.
   sink, drives the exact built CLI through status, capability, preset, tempo,
   note, recording, playback, self-test, doctor, benchmark, all-notes-off, and
   shutdown paths, and requires launchd exit code zero plus socket cleanup.
+- A dedicated macOS desktop lane first builds the locked optimized Web/Wasm
+  payload, then builds both wxWidgets applications, exercises the real WKWebView
+  capability and native-debugger IPC acceptance modes, and audits the extracted
+  `.app` bundle plus complete null-audio daemon/CLI lifecycle. A portable CMake
+  audit fails if any part of that chain is removed. The wiring audit passes on
+  Windows and Linux; the Apple lane itself is not claimed as executed.
 - Linux CI runs that same production acceptance script unchanged against a
   controlled `launchctl`, `plutil`, and Darwin-host model. The model starts the
   real Linux daemon and CLI as a supervised process group, enforces the shipped
@@ -87,8 +93,9 @@ two capability-specific skips and zero npm vulnerabilities.
 
 | Configuration | Result | Relevant evidence |
 |---|---:|---|
-| Windows MSVC Debug with both GUIs | 97/97 | Real WebView2 production bundle and SharedArrayBuffer capability acceptance; native debugger-to-daemon IPC; full core, tool, package-consumer, service, and platform-simulation regression |
-| Linux x86_64 GCC with both GUIs (WSL/Xvfb) | 99/99 | Real GTK/WebKitGTK production bundle and MessagePort fallback acceptance under a simulated display; native debugger-to-daemon IPC; systemd and controlled launchd service lifecycles |
+| Windows MSVC Debug with both GUIs | 98/98 | Real WebView2 production bundle and SharedArrayBuffer capability acceptance; native debugger-to-daemon IPC; full core, tool, package-consumer, service, platform-simulation, and macOS desktop CI wiring regression |
+| Linux x86_64 GCC with both GUIs (WSL/Xvfb) | 100/100 | Real GTK/WebKitGTK production bundle and MessagePort fallback acceptance under a simulated display; native debugger-to-daemon IPC; systemd and controlled launchd service lifecycles; macOS desktop CI wiring audit |
+| macOS 15 desktop CI | configured; execution pending | Reproducible Release+LTO preset requires optimized Web/Wasm assets, both GUI acceptance modes, exactly one TGZ, extracted `.app` resources, system WebView capability, and the complete no-UI daemon/CLI lifecycle |
 | Windows MSVC Debug without GUI/Web server | 93/93 | Fresh 172-target build with `MOL_BUILD_DESKTOP_GUI=OFF`, `MOL_BUILD_NATIVE_DEBUG_GUI=OFF`, and `MOL_BUILD_WEB_SERVER=OFF`; daemon process, CLI, installed consumers, service, core, tools, and platform simulations pass |
 | Windows MSVC Debug | 78/78 | local IPC recovery, all 41 RPC methods, runtime callback, independent daemon process, CLI, recording/playback, rendering, macOS interface simulations |
 | Windows MSVC LTO Release | 93/93 | current optimized suite, WinMM enumeration and MIDI stream tests, fail-closed Web acceptance audit, real temporary Startup-shortcut product lifecycle, portable service-asset audits, and mobile policy/native-boundary simulations |

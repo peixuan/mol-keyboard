@@ -42,6 +42,27 @@ capabilities, runs self-test, sends note-on/note-off, silences the engine, and
 requests a clean service shutdown. Linux runs both windows inside Xvfb when no
 display is present.
 
+The dedicated Apple runner uses the reproducible `ci-macos-desktop` preset after
+building the locked production Web/Wasm payload. It must pass both GUI
+acceptance modes and then create and audit a TGZ containing the `.app` bundle:
+
+```bash
+source "$EMSDK/emsdk_env.sh"
+cmake --preset ci-macos-desktop
+cmake --build --preset ci-macos-desktop --parallel 3
+ctest --preset ci-macos-desktop \
+  -R 'mol_(desktop_(web_server|app_support|webview)|native_debug)'
+cpack --config build/ci-macos-desktop/CPackConfig.cmake -B build/packages-macos
+python3 tools/package_audit.py --archive <macos-tgz> \
+  --report-dir build/package-macos-audit --expected-version 0.1.0
+```
+
+The package audit starts the extracted WKWebView application against the
+installed production payload and then runs the extracted daemon and CLI through
+their complete null-audio lifecycle. A checked-in portable audit rejects any CI
+edit that drops these Apple-only gates. The job still has to execute on a real
+macOS runner before it counts as Apple build or runtime evidence.
+
 ## Run
 
 Start the production instrument directly:

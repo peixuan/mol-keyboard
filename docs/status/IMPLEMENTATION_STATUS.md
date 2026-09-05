@@ -9,8 +9,8 @@ on macOS. Real Windows and Linux system-WebView acceptance verifies
 AudioContext, AudioWorklet, cross-origin isolation, IndexedDB, and the supported
 SharedArrayBuffer or MessagePort transport without exposing a native script
 bridge. An additional fully native wxWidgets debugger drives the independent
-daemon over bounded local IPC. The GUI-enabled suites pass 97/97 on Windows and
-99/99 on Linux; the daemon and CLI remain independently buildable and usable
+daemon over bounded local IPC. The GUI-enabled suites pass 98/98 on Windows and
+100/100 on Linux; the daemon and CLI remain independently buildable and usable
 with both GUI options disabled. A fresh Windows build with both GUI options and
 the local Web server disabled compiles 172 targets and passes 93/93 tests,
 including the independent daemon process lifecycle.
@@ -26,10 +26,14 @@ replace an Apple SDK or macOS runtime result. The Apple-only CTest bootstraps
 the shipped LaunchAgent and exercises the real daemon/CLI lifecycle with null
 audio. Linux now executes that exact runner unchanged against a controlled
 launchd process model and the real product binaries, while the portable audit
-keeps both paths fail-closed. Native Apple execution remains pending. With those
-locally reachable desktop/service gates exhausted, both real ESP-IDF firmware
-images now also execute through their production storage, input/control, shared-core, and
-FreeRTOS audio paths in Espressif QEMU. Other locally actionable M10 release
+keeps both paths fail-closed. Native Apple execution remains pending. A
+dedicated macOS desktop job now builds the production
+Web/Wasm payload and both GUI applications, exercises WKWebView and native IPC,
+and audits the extracted GUI plus no-UI service lifecycle. Its portable wiring
+audit passes on Windows and Linux; the Apple job itself remains unexecuted.
+With those locally reachable desktop/service gates exhausted, both real ESP-IDF
+firmware images now also execute through their production storage,
+input/control, shared-core, and FreeRTOS audio paths in Espressif QEMU. Other locally actionable M10 release
 gates are complete. Native and Wasm
 regression, Release+LTO Tiny/Standard/Full profiles, static/shared ABI
 verification, coverage, static analysis, ASan/UBSan with all twelve fuzzers,
@@ -62,10 +66,15 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`cc33552` (`build(desktop): gate portable GUI packages`) is the latest locally
-validated code candidate. It follows the wxWidgets dependency audit, portable
-loopback server, native system-WebView shell, fully native service debugger, and
-fail-closed GUI acceptance commits. A real Windows WebView2 window reports the
+`ed1839f` (`ci(desktop): gate macOS GUI package`) is the latest locally
+validated code candidate. It adds a reproducible Release+LTO Apple desktop
+preset and a fail-closed CI path covering the optimized Web/Wasm build, both
+GUI acceptance modes, exact package selection, `.app` resources, and extracted
+headless lifecycle. A portable audit enforces that wiring. The full GUI-enabled
+regressions pass 98/98 on Windows and 100/100 on Linux. It follows the
+wxWidgets dependency audit, portable loopback server, native system-WebView
+shell, fully native service debugger, and fail-closed GUI acceptance commits.
+A real Windows WebView2 window reports the
 SharedArrayBuffer fast path; Linux WebKitGTK under Xvfb reports the supported
 MessagePort fallback. Both GUI-enabled native suites pass in full. Fresh
 Release+LTO packages were safely extracted and launched: the 2,940,518-byte
@@ -471,10 +480,10 @@ python tools/package_audit.py `
   --report-dir build/package-audit --expected-version 0.1.0
 ```
 
-The GUI-enabled Windows MSVC suite passes 97/97. The real system WebView2
+The GUI-enabled Windows MSVC suite passes 98/98. The real system WebView2
 reports `PASS-SharedArrayBuffer`; the native debugger connects to the real
 daemon and completes state/capability/self-test/note/shutdown RPC. Linux GCC
-passes 99/99 with both GUI tests under Xvfb; WebKitGTK reports
+passes 100/100 with both GUI tests under Xvfb; WebKitGTK reports
 `PASS-MessagePort`. Package audit launches the extracted production GUI before
 running the complete extracted headless runtime lifecycle.
 
@@ -816,7 +825,7 @@ tests.
 The HarmonyOS application descriptors, project audit, executable production
 policy/bridge/host simulations, and native source-check boundary pass locally.
 The previously verified headless Windows MSVC and Linux GCC Release suites pass
-95/95; the current GUI-enabled Debug suites pass 97/97 on Windows and 99/99 on
+95/95; the current GUI-enabled Debug suites pass 98/98 on Windows and 100/100 on
 Linux. Emscripten passes 42/42, and Linux AArch64 QEMU passes 71/71.
 The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
 5.8.9 build and audit
@@ -833,11 +842,12 @@ lane. Detailed evidence and pending formal/device acceptance are in
 
 ## Next highest-priority task
 
-Run `cmake --preset ci-macos`, its build, and all CTest cases on a real macOS
-host first; then exercise the production Web UI against that daemon and current
-Safari, including CoreAudio, IOHID permission, launchd, route loss, and clean
-shutdown. After the desktop gate, run native Windows/Linux ARM64 execution,
-official iOS and Harmony builds, physical Android/iOS/Harmony lifecycle and
+Run the checked-in `native` and `macos-desktop` jobs on a real macOS 15 host
+first. The latter uses `cmake --preset ci-macos-desktop`, real WKWebView and
+native-debugger acceptance, and the extracted GUI/headless package audit. Then
+exercise current Safari plus CoreAudio, IOHID permission, launchd, route loss,
+and clean shutdown. After the desktop gate, run native Windows/Linux ARM64
+execution, official iOS and Harmony builds, physical Android/iOS/Harmony lifecycle and
 route checks, ESP32/ESP32-S3 30-minute HIL with I2S/A2DP/USB/GPIO evidence, and
 instrumented P50/P95/maximum latency on every required route. Keep `v1.0.0`
 blocked until all results pass and the exact final candidate is reviewed.
