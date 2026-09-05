@@ -12,8 +12,8 @@ bridge. An additional fully native wxWidgets debugger drives the independent
 daemon over bounded local IPC. The portable release preset now includes both
 GUI applications, and package audit must launch the native debugger against an
 independent packaged daemon before it runs the separate no-UI daemon/CLI
-lifecycle. The latest GUI-enabled suite passes 101/101 on Windows and
-100/100 on Linux; the daemon and CLI remain independently buildable and usable
+lifecycle. The latest GUI-enabled suites pass 101/101 on Windows and
+103/103 on Linux; the daemon and CLI remain independently buildable and usable
 with both GUI options disabled. A fresh Windows build with both GUI options and
 the local Web server disabled compiles 172 targets and passes 93/93 tests,
 including the independent daemon process lifecycle.
@@ -90,6 +90,17 @@ size gate passes at 293,548 bytes for a stripped MSVC Release core, 644,608
 bytes for daemon plus CLI, 23,044 bytes for gzip-compressed Wasm, and 158,288
 bytes for deployable Web resources.
 
+The same clean clone compiled all 543 Linux Release+LTO package actions and
+passed 103/103 GUI-enabled tests under Xvfb, including the real systemd user
+service and controlled launchd lifecycle. Its 7,742,374-byte, 152-file TGZ has
+SHA-256 `6f013ea0107363200aaf33a4fe1f17d7460639fc5f990002e7b33454c8af22df`.
+Package audit schema 4 records WebKitGTK `PASS-MessagePort`, native-debugger RPC
+against an independent packaged daemon, and the separate headless lifecycle at
+48 kHz stereo with 4,096 finite frames, a 326-byte recording, native MIDI, and
+exit code zero. The Linux size gate passes at 513,436 bytes for the stripped
+Release+LTO core, 976,136 bytes for daemon plus CLI, 23,018 bytes for
+gzip-compressed Wasm, and 158,288 bytes for deployable Web resources.
+
 The inherited exact Android implementation candidate `0dbce9e` also passed
 clean dual-ABI Android Debug, instrumentation, unsigned Release, and lint
 builds. Its API 35 headless-emulator gate reported AAudio API
@@ -106,14 +117,8 @@ regressing. Package audit requires and launches the extracted system-WebView
 instrument and native service debugger on Windows, Linux, and macOS layouts.
 The debugger must control and shut down an independent packaged null-audio
 daemon over local IPC; audit then starts a fresh daemon for the complete no-UI
-CLI lifecycle. The latest clean Windows evidence is recorded above. The
-preceding exact desktop-package candidate `6897843` was also rebuilt on Linux:
-a fresh Linux build compiled 543 actions
-and produced a 7,732,484-byte, 152-file TGZ with SHA-256
-`10521374f9ebc222d507eb99138191190b371d879bc7138f849d6b9050b6f0ae`.
-Its WebKitGTK instrument reports `PASS-MessagePort`, and the same native-debug
-and no-UI lifecycle gates pass under Xvfb. Package audit schema 4 records all
-three independent runtime paths. The preceding `3e63c2e` candidate adds the
+CLI lifecycle. The latest clean Windows and Linux evidence is recorded above.
+The preceding `3e63c2e` candidate adds the
 macOS Release+LTO desktop CI and retains the full GUI-enabled regressions:
 98/98 on its Windows predecessor and 100/100 on Linux. The
 preceding `23ff832` candidate includes a bounded streaming MIDI 1.0 decoder,
@@ -526,7 +531,7 @@ runner and project audits.
 The real system WebView2
 reports `PASS-SharedArrayBuffer`; the native debugger connects to the real
 daemon and completes state/capability/self-test/note/shutdown RPC. Linux GCC
-passes 100/100 with both GUI tests under Xvfb; WebKitGTK reports
+passes 103/103 with both GUI tests under Xvfb; WebKitGTK reports
 `PASS-MessagePort`. Package audit launches the extracted production GUI and
 native service debugger before running the independent extracted headless
 runtime lifecycle.
@@ -767,7 +772,10 @@ stripped MSVC Release core, 644,608 bytes for daemon plus CLI, 23,044 bytes for
 gzip-compressed Wasm, and 158,288 bytes for deployable Web resources. The core
 was built without MSVC LTCG for this measurement because LLVM strip cannot
 rewrite MSVC `/GL` archive members; the packaged Release+LTO core is 536,464
-bytes before stripping. Dependency locks, notices,
+bytes before stripping. The exact-source Linux gate passes at 513,436 bytes for
+the stripped Release+LTO core, 976,136 bytes for daemon plus CLI, 23,018 bytes
+for gzip-compressed Wasm, and 158,288 bytes for deployable Web resources.
+Dependency locks, notices,
 licenses, npm audit, and SPDX SBOM validation passed. Current exact-candidate
 CPack package audits found 153 files on Windows and 152 on Linux, including the
 native wxWidgets production executable, optional native debugger, WebView2
@@ -778,9 +786,9 @@ and shuts down its own packaged daemon before a separate daemon and CLI complete
 the no-UI null-audio lifecycle with native MIDI capability. The current Windows
 AMD64 ZIP is 4,465,446 bytes with SHA-256
 `9ef71076c1a39512b8ab3c50b3088cdefcacc615986fd983b584e1896572b3b0`;
-its WebView2 reports SharedArrayBuffer and its recording is 327 bytes. The Linux
-x86_64 TGZ is 7,732,484 bytes with SHA-256
-`10521374f9ebc222d507eb99138191190b371d879bc7138f849d6b9050b6f0ae`;
+its WebView2 reports SharedArrayBuffer and its recording is 327 bytes. The
+current Linux x86_64 TGZ is 7,742,374 bytes with SHA-256
+`6f013ea0107363200aaf33a4fe1f17d7460639fc5f990002e7b33454c8af22df`;
 its WebKitGTK reports MessagePort and its recording is 326 bytes. Both report
 schema 4, 48 kHz stereo, 4,096 finite benchmark frames, no non-finite samples,
 exit code zero, and successful IPC cleanup. They are unsigned 0.1.0 candidate
@@ -802,11 +810,10 @@ A clean local clone of exact candidate
 `19735a9bc736686ee5406f12c933688f57f7641c`, created without hardlinks or copied
 build output, rebuilt the production Web/Wasm assets, passed 46/46 Emscripten
 MinSizeRel tests and 12/12 Web tests with zero npm vulnerabilities, compiled all
-575 Windows package actions, passed 101/101 GUI-enabled Release tests, and
-passed all three extracted runtime paths with the Windows hash recorded above.
-The clean clone remained clean after verification. The preceding Linux package
-evidence remains an exact `6897843` clean build: it compiled 543 actions and
-passed the same three-path package audit with the Linux hash recorded above.
+575 Windows and 543 Linux package actions, passed 101/101 Windows and 103/103
+Linux GUI-enabled Release tests, and passed all three extracted runtime paths
+with both hashes recorded above. The clean clone remained clean after
+verification.
 
 The preceding clean clone of
 `3e63c2e7f3a6436baf49be5c123765ee85a9b404`, created without hardlinks or copied
@@ -890,8 +897,8 @@ tests.
 The HarmonyOS application descriptors, project audit, executable production
 policy/bridge/host simulations, and native source-check boundary pass locally.
 The previously verified headless Windows MSVC and Linux GCC Release suites pass
-95/95; the latest GUI-enabled Release suite passes 101/101 on Windows, while
-the preceding Linux GUI-enabled Release+LTO suite passes 100/100. The latest
+95/95; the latest GUI-enabled Release suites pass 101/101 on Windows and 103/103
+on Linux. The latest
 exact-candidate Emscripten suite passes 46/46, and Linux
 AArch64 QEMU passes 71/71.
 The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
