@@ -222,10 +222,10 @@ project wiring is audited on every portable test configuration. The preceding
 production state machine for user-start gating, foreground/background
 transitions, playback and metronome continuation, idle stop, route recovery,
 and media-services reset. That same C source passes under MSVC, Linux GCC, and
-Emscripten. The preceding `dbc4374` candidate's ESP32 and
+Emscripten. The exact-source `19735a9` candidate's ESP32 and
 ESP32-S3 images boot under Espressif QEMU, mount/format transactional storage,
 pass the shared sequence and C4 checks, drain 12 production input commands, and
-render more than 100,000 frames with non-silent finite output and zero project
+render at least 96,000 frames with non-silent finite output and zero project
 failure counters. All four physical-board configurations still compile with
 the emulator option disabled. Windows MSVC Release passes 91/91 tests, Linux
 x86_64 GCC passes 92/92, and Emscripten MinSizeRel passes 42/42. System Chrome
@@ -444,8 +444,8 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
   peers; physical configuration, clear-pairing, and factory-reset gestures; an
   isolated bounded control task; and an optional physically authorized WPA2
   SoftAP Web configuration service with strict Origin/token/form validation.
-- ESP-IDF 6.1 built the default ESP32/ESP32-S3 images at 1,018,256 and 796,832
-  bytes and the 4 MiB Web variants at 1,551,168 and 1,302,192 bytes. The core
+- ESP-IDF 6.1 built the default ESP32/ESP32-S3 images at 1,018,320 and 796,896
+  bytes and the 4 MiB Web variants at 1,551,232 and 1,302,256 bytes. The core
   archive remains below 28 KiB and the queried eight-voice engine uses 37,664
   bytes of its 37,888-byte arena. A host-tested HIL verifier now fails on reset,
   underrun, watchdog, queue, persistence, capability, input, or real I2S-capture
@@ -675,26 +675,28 @@ With the pinned ESP-IDF environment active, from `platforms/esp32`:
 ./build-target.ps1 -Target esp32s3 -WebUi
 ```
 
-All four ESP-IDF 6.1/GNU 15.2.0 variants rebuilt successfully. Default/Web
-image sizes are 1,018,256/1,551,168 bytes for ESP32 and
-796,832/1,302,192 bytes for ESP32-S3. Default ESP32 reports 101,892 of 124,580
+All four ESP-IDF 6.1/GNU 15.2.0 variants rebuilt successfully from the clean
+exact-source candidate `19735a9`. Default/Web image sizes are
+1,018,320/1,551,232 bytes for ESP32 and 796,896/1,302,256 bytes for ESP32-S3.
+Default ESP32 reports 101,892 of 124,580
 bytes DRAM; its Web variant reports 118,000 bytes. Default ESP32-S3 reports
 148,923 of 341,760 bytes DIRAM; its Web variant reports 187,975 bytes. These
 are build/map results, not physical playback results.
 
-The optional Espressif QEMU 9.2.2 gate executed the clean `dbc4374` images:
+The optional Espressif QEMU 9.2.2 gate executed the same clean images:
 
 ```powershell
 platforms/esp32/run-qemu.ps1 -Target esp32
 platforms/esp32/run-qemu.ps1 -Target esp32s3
 ```
 
-ESP32 passed after 105,728 frames, 12 drained commands, and 211,256 nonzero
-samples; ESP32-S3 passed after 101,888 frames, 12 commands, and 203,852 nonzero
+ESP32 passed after 96,000 frames, 12 drained commands, and 191,853 nonzero
+samples; ESP32-S3 passed after 98,176 frames, 12 commands, and 196,195 nonzero
 samples. Both had three snapshots, 262.5 Hz C4, zero non-finite samples, and
-zero project failure counters. Each emulator run counted two deadline misses;
-the 22,459/26,857 microsecond maximum render times are reported but excluded from
-real-time acceptance. Full hashes and physical exclusions are in
+zero project failure counters. The emulator runs counted 156/139 deadline
+misses and 27,121/27,306 microsecond maximum render times; those virtual-host
+timings are reported but excluded from real-time acceptance. Full hashes and
+physical exclusions are in
 `docs/hardware/M9_ESP32_EVIDENCE.md`.
 
 Additional locally actionable M10 gates passed with these reproducible command

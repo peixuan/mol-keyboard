@@ -162,15 +162,16 @@ cd platforms/esp32
 ```
 
 Target configuration is stored in each build directory, so both target builds
-coexist without sharing an `sdkconfig`. On 2026-09-03, ESP-IDF 6.1 and GNU
-15.2.0 produced these map-backed results:
+coexist without sharing an `sdkconfig`. On 2026-09-05, clean exact-source
+candidate `19735a9` under ESP-IDF 6.1 and GNU 15.2.0 produced these map-backed
+results:
 
 | Target | Application image | `libmol_core.a` | Data-memory map |
 |---|---:|---:|---:|
-| ESP32 | 1,018,256 bytes | 26,790 bytes | DRAM 101,892 / 124,580 bytes |
-| ESP32-S3 | 796,832 bytes | 26,519 bytes | DIRAM 148,923 / 341,760 bytes |
-| ESP32 + Web | 1,551,168 bytes | 27,015 bytes | DRAM 118,000 / 124,580 bytes |
-| ESP32-S3 + Web | 1,302,192 bytes | 27,087 bytes | DIRAM 187,975 / 341,760 bytes |
+| ESP32 | 1,018,320 bytes | 26,790 bytes | DRAM 101,892 / 124,580 bytes |
+| ESP32-S3 | 796,896 bytes | 26,519 bytes | DIRAM 148,923 / 341,760 bytes |
+| ESP32 + Web | 1,551,232 bytes | 27,015 bytes | DRAM 118,000 / 124,580 bytes |
+| ESP32-S3 + Web | 1,302,256 bytes | 27,087 bytes | DIRAM 187,975 / 341,760 bytes |
 
 The component builds the complete M3 Tiny graph and stores all 18 fixed
 120-byte compiled Patches in flash. Its complete code and read-only archive is
