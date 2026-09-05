@@ -18,6 +18,7 @@ option(MOL_VALIDATE_MOBILE_SOURCES "Compile portable portions of mobile hosts" O
 option(MOL_BUILD_DAEMON "Build the headless daemon" ON)
 option(MOL_BUILD_WEB_SERVER "Build the local Web control server" ON)
 option(MOL_BUILD_DESKTOP_GUI "Build the wxWidgets WebView desktop application" OFF)
+option(MOL_BUILD_NATIVE_DEBUG_GUI "Build the wxWidgets native service debugger" OFF)
 option(MOL_PACKAGE_WEB_ASSETS "Install the prebuilt Web/PWA distribution" OFF)
 option(MOL_ENABLE_MIDI "Enable MIDI adapters" ON)
 option(MOL_ENABLE_SAMPLER "Enable the optional sampler" OFF)
@@ -59,7 +60,7 @@ endif()
 if(MOL_BUILD_DESKTOP_GUI AND NOT MOL_BUILD_WEB_SERVER)
   message(FATAL_ERROR "MOL_BUILD_DESKTOP_GUI requires MOL_BUILD_WEB_SERVER")
 endif()
-if(MOL_BUILD_DESKTOP_GUI AND NOT
+if((MOL_BUILD_DESKTOP_GUI OR MOL_BUILD_NATIVE_DEBUG_GUI) AND NOT
    (WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux" OR
     (APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")))
   message(FATAL_ERROR "wxWidgets desktop GUIs require Windows, Linux, or macOS")

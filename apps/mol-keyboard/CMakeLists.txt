@@ -56,6 +56,31 @@ if(MOL_BUILD_DESKTOP_GUI)
   endif()
 endif()
 
+if(MOL_BUILD_NATIVE_DEBUG_GUI)
+  add_library(mol_desktop_rpc_client STATIC desktop_rpc_client.cpp)
+  target_include_directories(mol_desktop_rpc_client PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+  target_link_libraries(mol_desktop_rpc_client PUBLIC mol::local_ipc mol::json)
+  target_compile_features(mol_desktop_rpc_client PUBLIC cxx_std_17)
+  set_target_properties(mol_desktop_rpc_client PROPERTIES CXX_EXTENSIONS OFF
+                                                          CXX_STANDARD_REQUIRED ON)
+  mol_enable_warnings(mol_desktop_rpc_client)
+  mol_enable_optional_instrumentation(mol_desktop_rpc_client)
+
+  add_executable(mol-keyboard-debug WIN32 MACOSX_BUNDLE main_native_debug.cpp)
+  target_link_libraries(mol-keyboard-debug PRIVATE mol_desktop_rpc_client wx::core)
+  set_target_properties(
+    mol-keyboard-debug
+    PROPERTIES CXX_EXTENSIONS OFF
+               CXX_STANDARD_REQUIRED ON
+               MACOSX_BUNDLE_BUNDLE_NAME "MoL Keyboard Debugger"
+               MACOSX_BUNDLE_GUI_IDENTIFIER "${MOL_APPLE_BUNDLE_IDENTIFIER}.debugger"
+               MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}")
+  mol_enable_warnings(mol-keyboard-debug)
+  mol_enable_optional_instrumentation(mol-keyboard-debug)
+  install(TARGETS mol-keyboard-debug RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+                                     BUNDLE DESTINATION .)
+endif()
+
 if(MOL_BUILD_TESTS)
   add_executable(mol_desktop_web_server_tests test_desktop_web_server.cpp)
   target_link_libraries(mol_desktop_web_server_tests PRIVATE mol_desktop_web_server)
@@ -101,5 +126,37 @@ if(MOL_BUILD_TESTS)
                 --acceptance-output ${_mol_webview_report})
     endif()
     set_tests_properties(mol_desktop_webview_acceptance PROPERTIES RUN_SERIAL TRUE TIMEOUT 30)
+  endif()
+
+  if(MOL_BUILD_NATIVE_DEBUG_GUI AND MOL_BUILD_DAEMON)
+    set(_mol_native_debug_state "${CMAKE_CURRENT_BINARY_DIR}/native-debug-state")
+    set(_mol_native_debug_report "${CMAKE_CURRENT_BINARY_DIR}/native-debug-acceptance.txt")
+    if(WIN32)
+      set(_mol_native_debug_endpoint "\\\\.\\pipe\\mol-keyboard-native-debug-ctest")
+    else()
+      string(SHA256 _mol_native_debug_hash "${CMAKE_CURRENT_BINARY_DIR}")
+      string(SUBSTRING "${_mol_native_debug_hash}" 0 12 _mol_native_debug_hash)
+      set(_mol_native_debug_endpoint "/tmp/mol-native-debug-${_mol_native_debug_hash}.sock")
+    endif()
+    set(_mol_native_debug_command
+        ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tests/integration/test_native_debug_gui.py
+        --daemon $<TARGET_FILE:mol-keyboardd> --gui $<TARGET_FILE:mol-keyboard-debug>
+        --state-dir ${_mol_native_debug_state} --endpoint ${_mol_native_debug_endpoint}
+        --report ${_mol_native_debug_report})
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+      find_program(MOL_XVFB_RUN xvfb-run)
+      if(MOL_XVFB_RUN)
+        add_test(NAME mol_native_debug_gui_acceptance
+                 COMMAND ${MOL_XVFB_RUN} -a ${_mol_native_debug_command})
+      elseif(DEFINED ENV{DISPLAY} AND NOT "$ENV{DISPLAY}" STREQUAL "")
+        add_test(NAME mol_native_debug_gui_acceptance COMMAND ${_mol_native_debug_command})
+      else()
+        message(FATAL_ERROR
+                "MOL_BUILD_NATIVE_DEBUG_GUI tests require DISPLAY or xvfb-run on Linux")
+      endif()
+    else()
+      add_test(NAME mol_native_debug_gui_acceptance COMMAND ${_mol_native_debug_command})
+    endif()
+    set_tests_properties(mol_native_debug_gui_acceptance PROPERTIES RUN_SERIAL TRUE TIMEOUT 25)
   endif()
 endif()

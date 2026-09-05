@@ -130,7 +130,7 @@ set_target_properties(
 mol_enable_warnings(mol_platform_audio_runtime)
 mol_enable_optional_instrumentation(mol_platform_audio_runtime)
 
-if(MOL_BUILD_TOOLS OR MOL_BUILD_DAEMON OR MOL_BUILD_FUZZERS)
+if(MOL_BUILD_TOOLS OR MOL_BUILD_DAEMON OR MOL_BUILD_FUZZERS OR MOL_BUILD_NATIVE_DEBUG_GUI)
   add_library(mol_json STATIC apps/mol-seq/json.cpp)
   add_library(mol::json ALIAS mol_json)
   target_include_directories(mol_json PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/apps/mol-seq)
@@ -292,12 +292,12 @@ if(MOL_BUILD_TOOLS)
   add_subdirectory(tools/latency-probe)
 endif()
 
-if(MOL_BUILD_DESKTOP_GUI)
+if(MOL_BUILD_DESKTOP_GUI OR MOL_BUILD_NATIVE_DEBUG_GUI)
   include(cmake/MolDependencies.cmake)
   mol_add_wxwidgets(${MOL_BUILD_DESKTOP_GUI})
 endif()
 
-if((MOL_BUILD_WEB_SERVER OR MOL_BUILD_DESKTOP_GUI) AND
+if((MOL_BUILD_WEB_SERVER OR MOL_BUILD_DESKTOP_GUI OR MOL_BUILD_NATIVE_DEBUG_GUI) AND
    (WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux" OR
     (APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")))
   add_subdirectory(apps/mol-keyboard)
