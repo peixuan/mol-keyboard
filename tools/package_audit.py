@@ -101,7 +101,16 @@ def required_paths(root: Path) -> list[str]:
         "share/mol-keyboard/service/uninstall-user-startup.ps1",
     ]
     if os.name == "nt":
-        fixed.append("bin/mol-keyboard.exe")
+        fixed.extend(["bin/mol-keyboard.exe", "bin/WebView2Loader.dll"])
+    elif sys.platform == "darwin":
+        fixed.extend(
+            [
+                "mol-keyboard.app/Contents/MacOS/mol-keyboard",
+                "mol-keyboard.app/Contents/Resources/web/index.html",
+            ]
+        )
+    else:
+        fixed.append("bin/mol-keyboard")
     library_candidates = [root / "lib" / "libmol_core.a", root / "lib" / "mol_core.lib"]
     if not any(path.is_file() for path in library_candidates):
         fixed.append("lib/{libmol_core.a|mol_core.lib}")
@@ -170,7 +179,7 @@ def run_headless_runtime_smoke(root: Path, runtime_root: Path) -> dict[str, obje
     )
     stdout_path = runtime_root / "daemon.stdout.log"
     stderr_path = runtime_root / "daemon.stderr.log"
-    runtime_root.mkdir(parents=True)
+    runtime_root.mkdir(parents=True, exist_ok=True)
 
     process: subprocess.Popen[bytes] | None = None
     try:
@@ -307,6 +316,43 @@ def run_headless_runtime_smoke(root: Path, runtime_root: Path) -> dict[str, obje
         ) from error
 
 
+def run_desktop_gui_smoke(root: Path, runtime_root: Path) -> dict[str, str]:
+    runtime_root.mkdir(parents=True, exist_ok=True)
+    if sys.platform == "darwin":
+        executable = root / "mol-keyboard.app" / "Contents" / "MacOS" / "mol-keyboard"
+    else:
+        suffix = ".exe" if os.name == "nt" else ""
+        executable = root / "bin" / f"mol-keyboard{suffix}"
+    report = runtime_root / "desktop-gui-acceptance.txt"
+    completed = subprocess.run(
+        [
+            str(executable),
+            "--web-root",
+            str(root / "share" / "mol-keyboard" / "web"),
+            "--acceptance-output",
+            str(report),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=20,
+    )
+    if completed.returncode != 0 or not report.is_file():
+        raise ValueError(
+            "packaged desktop GUI acceptance failed: "
+            f"exit={completed.returncode}, stdout={completed.stdout!r}, "
+            f"stderr={completed.stderr!r}"
+        )
+    fields = dict(
+        line.split("=", 1)
+        for line in report.read_text(encoding="utf-8").splitlines()
+        if "=" in line
+    )
+    if fields.get("passed") != "true":
+        raise ValueError(f"packaged desktop GUI reported failure: {fields}")
+    return {"mode": "native-webview", "detail": fields.get("detail", "")}
+
+
 def main() -> int:
     args = parse_args()
     archive = args.archive.resolve()
@@ -343,6 +389,7 @@ def main() -> int:
             cli_output = run_smoke_test(
                 root / "bin" / f"molctl{suffix}", ["--help"], "Commands:"
             )
+            desktop_gui = run_desktop_gui_smoke(root, extraction / "runtime")
             headless_runtime = run_headless_runtime_smoke(root, extraction / "runtime")
             entries = sorted(
                 path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_file()
@@ -352,13 +399,14 @@ def main() -> int:
         return 1
 
     report = {
-        "schema_version": 2,
+        "schema_version": 3,
         "archive": str(archive),
         "archive_bytes": archive.stat().st_size,
         "archive_sha256": archive_hash,
         "file_count": len(entries),
         "daemon_smoke_test": daemon_output,
         "cli_smoke_test": cli_output,
+        "desktop_gui_smoke": desktop_gui,
         "headless_runtime_smoke": headless_runtime,
         "result": "pass",
     }

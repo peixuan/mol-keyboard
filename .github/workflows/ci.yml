@@ -34,6 +34,14 @@ jobs:
         run: cmake --build --preset ${{ matrix.preset }}
       - name: Test
         run: ctest --preset ${{ matrix.preset }}
+      - name: Compile both macOS desktop GUI applications
+        if: runner.os == 'macOS'
+        run: |
+          cmake -S . -B build/ci-macos-gui -DCMAKE_BUILD_TYPE=Release \
+            -DMOL_BUILD_DESKTOP_GUI=ON -DMOL_BUILD_NATIVE_DEBUG_GUI=ON \
+            -DMOL_BUILD_TESTS=OFF
+          cmake --build build/ci-macos-gui --config Release \
+            --target mol-keyboard mol-keyboard-debug
 
   resource-profiles:
     strategy:
@@ -184,6 +192,11 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install Linux desktop GUI dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends \
+            libgtk-3-dev libwebkit2gtk-4.1-dev xvfb xauth
       - name: Install pinned Emscripten SDK
         shell: bash
         run: |
@@ -219,7 +232,7 @@ jobs:
         shell: bash
         run: |
           cpack --config build/package-release/CPackConfig.cmake -B build/packages
-          python3 tools/package_audit.py \
+          xvfb-run -a python3 tools/package_audit.py \
             --archive build/packages/mol-keyboard-*.tar.gz \
             --report-dir build/package-audit \
             --expected-version 0.1.0

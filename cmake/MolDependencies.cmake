@@ -43,7 +43,10 @@ function(mol_add_wxwidgets with_webview)
           wxUSE_HTML
           wxUSE_LIBJPEG
           wxUSE_LIBLZMA
+          wxUSE_LIBMSPACK
+          wxUSE_LIBNOTIFY
           wxUSE_LIBPNG
+          wxUSE_LIBSDL
           wxUSE_LIBTIFF
           wxUSE_MEDIACTRL
           wxUSE_MS_HTML_HELP
@@ -54,6 +57,8 @@ function(mol_add_wxwidgets with_webview)
           wxUSE_REGEX
           wxUSE_RIBBON
           wxUSE_RICHTEXT
+          wxUSE_SECRETSTORE
+          wxUSE_SPELLCHECK
           wxUSE_STC
           wxUSE_SVG
           wxUSE_TARSTREAM
