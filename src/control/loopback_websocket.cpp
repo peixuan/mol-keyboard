@@ -16,8 +16,12 @@
 #include <vector>
 
 #if defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #else
@@ -67,7 +71,9 @@ int wait_readable(Socket socket, int timeout_ms) {
   fd_set descriptors;
   FD_ZERO(&descriptors);
   FD_SET(socket, &descriptors);
-  timeval timeout{timeout_ms / 1000, (timeout_ms % 1000) * 1000};
+  timeval timeout{};
+  timeout.tv_sec = static_cast<decltype(timeout.tv_sec)>(timeout_ms / 1000);
+  timeout.tv_usec = static_cast<decltype(timeout.tv_usec)>(timeout_ms % 1000) * 1000;
 #if defined(_WIN32)
   return ::select(0, &descriptors, nullptr, nullptr, &timeout);
 #else
@@ -79,7 +85,7 @@ bool receive_exact(Socket socket, void* output, std::size_t size) {
   auto* bytes = static_cast<unsigned char*>(output);
   while (size != 0u) {
     const int chunk = static_cast<int>(std::min<std::size_t>(size, 16384u));
-    const int received = ::recv(socket, reinterpret_cast<char*>(bytes), chunk, 0);
+    const auto received = ::recv(socket, reinterpret_cast<char*>(bytes), chunk, 0);
     if (received <= 0) return false;
     bytes += static_cast<std::size_t>(received);
     size -= static_cast<std::size_t>(received);
@@ -92,9 +98,9 @@ bool send_exact(Socket socket, const void* input, std::size_t size) {
   while (size != 0u) {
     const int chunk = static_cast<int>(std::min<std::size_t>(size, 16384u));
 #if defined(MSG_NOSIGNAL)
-    const int sent = ::send(socket, reinterpret_cast<const char*>(bytes), chunk, MSG_NOSIGNAL);
+    const auto sent = ::send(socket, reinterpret_cast<const char*>(bytes), chunk, MSG_NOSIGNAL);
 #else
-    const int sent = ::send(socket, reinterpret_cast<const char*>(bytes), chunk, 0);
+    const auto sent = ::send(socket, reinterpret_cast<const char*>(bytes), chunk, 0);
 #endif
     if (sent <= 0) return false;
     bytes += static_cast<std::size_t>(sent);
@@ -362,7 +368,7 @@ bool receive_handshake(Socket socket, Handshake& handshake, std::string& failure
     if (ready < 0) return false;
     if (ready == 0) continue;
     std::array<char, 1024u> bytes{};
-    const int received = ::recv(socket, bytes.data(), static_cast<int>(bytes.size()), 0);
+    const auto received = ::recv(socket, bytes.data(), static_cast<int>(bytes.size()), 0);
     if (received <= 0) return false;
     source.append(bytes.data(), static_cast<std::size_t>(received));
   }

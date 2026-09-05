@@ -25,7 +25,7 @@ namespace moldesktop {
 namespace {
 
 constexpr std::size_t kMaximumRequestBytes = 8192U;
-constexpr std::size_t kMaximumAssetBytes = 16U * 1024U * 1024U;
+constexpr std::size_t kMaximumAssetBytes = std::size_t{16U} * 1024U * 1024U;
 
 #if defined(_WIN32)
 using Socket = SOCKET;
@@ -143,7 +143,7 @@ void HandleClient(Socket client, const std::filesystem::path& root) {
   std::string request;
   std::array<char, 2048> buffer{};
   while (request.find("\r\n\r\n") == request.npos && request.size() < kMaximumRequestBytes) {
-    const int received = recv(client, buffer.data(), static_cast<int>(buffer.size()), 0);
+    const auto received = recv(client, buffer.data(), static_cast<int>(buffer.size()), 0);
     if (received <= 0) return;
     request.append(buffer.data(), static_cast<std::size_t>(received));
   }
@@ -292,9 +292,9 @@ void WebServer::Stop() {
   if (impl_->listener != kInvalidSocket) {
     shutdown(impl_->listener, kShutdownBoth);
     CloseSocket(impl_->listener);
-    impl_->listener = kInvalidSocket;
   }
   if (impl_->worker.joinable()) impl_->worker.join();
+  impl_->listener = kInvalidSocket;
   impl_.reset();
   StopSocketRuntime();
 }
