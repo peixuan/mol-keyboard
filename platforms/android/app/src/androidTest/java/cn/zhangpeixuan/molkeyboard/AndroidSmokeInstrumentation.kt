@@ -137,6 +137,8 @@ class AndroidSmokeInstrumentation : Instrumentation() {
         val deviceId = 73
         try {
             onActivityThread(activity) { webView.pauseTimers() }
+            // Let a poll already dispatched by the WebView finish before the test drains the queue.
+            SystemClock.sleep(WEB_POLL_QUIESCE_MS)
             service.pollEvents()
             HARDWARE_KEY_CODES.forEachIndexed { index, keyCode ->
                 val downTime = SystemClock.uptimeMillis()
@@ -504,6 +506,7 @@ class AndroidSmokeInstrumentation : Instrumentation() {
         const val BACKGROUND_SETTLE_MS = 1_000L
         const val EVALUATION_TIMEOUT_MS = 5_000L
         const val WEB_TIMEOUT_MS = 15_000L
+        const val WEB_POLL_QUIESCE_MS = 1_000L
         const val POLL_INTERVAL_MS = 100L
         const val MAXIMUM_FAILURE_CHARS = 16_384
         const val NOTIFICATION_ID = 0x4D4F4C
