@@ -220,6 +220,40 @@
       "licenseDeclared": "Apache-2.0",
       "copyrightText": "NOASSERTION",
       "primaryPackagePurpose": "LIBRARY"
+    },
+    {
+      "name": "wxWidgets",
+      "SPDXID": "SPDXRef-Package-wxWidgets",
+      "versionInfo": "3.2.11",
+      "downloadLocation": "https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.11/wxWidgets-3.2.11.zip",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "02c4fdc8ec104a10efd809238f800b632c4d5cc6a2d54582bff775240007f01a"
+        }
+      ],
+      "licenseConcluded": "wxWindows",
+      "licenseDeclared": "wxWindows",
+      "copyrightText": "Copyright (c) 1998-2026 wxWidgets contributors",
+      "primaryPackagePurpose": "LIBRARY"
+    },
+    {
+      "name": "Microsoft Edge WebView2 SDK",
+      "SPDXID": "SPDXRef-Package-WebView2",
+      "versionInfo": "1.0.3485.44",
+      "downloadLocation": "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/1.0.3485.44",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "bc09150b179246ac90189649b13be8e6b11b3ac200e817e18df106e1f3cf489e"
+        }
+      ],
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "copyrightText": "Copyright (c) Microsoft Corporation",
+      "primaryPackagePurpose": "LIBRARY"
     }
   ],
   "relationships": [
@@ -297,6 +331,16 @@
       "spdxElementId": "SPDXRef-Package-MoL-Keyboard",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Package-Espressif-USB-Host-HID"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-MoL-Keyboard",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-wxWidgets"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-wxWidgets",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-WebView2"
     }
   ]
 }

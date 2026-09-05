@@ -221,6 +221,44 @@
         "Boot-protocol keyboard input only",
         "ESP-IDF Component Manager download with component hash verification"
       ]
+    },
+    {
+      "name": "wxWidgets",
+      "version": "3.2.11",
+      "source": "https://github.com/wxWidgets/wxWidgets",
+      "archive": "https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.11/wxWidgets-3.2.11.zip",
+      "archive_sha256": "02c4fdc8ec104a10efd809238f800b632c4d5cc6a2d54582bff775240007f01a",
+      "license_expression": "wxWindows",
+      "selected_license": "wxWindows",
+      "license_file": "third_party/licenses/wxwidgets-LICENCE.txt",
+      "license_file_sha256": "e5d3c8b47741899d287776457011b4e2ba164de4977cfc67b40167c6aeaf6335",
+      "local_modifications": [],
+      "build_options": [
+        "optional desktop GUI targets only",
+        "static multilib build",
+        "wxMSW, wxGTK3, or wxOSX native toolkit",
+        "wxWebView enabled for the production shell",
+        "samples, demos, tests, benchmarks, media, rich text, XRC, OpenGL, and bundled image libraries disabled"
+      ]
+    },
+    {
+      "name": "Microsoft Edge WebView2 SDK",
+      "version": "1.0.3485.44",
+      "source": "https://www.nuget.org/packages/Microsoft.Web.WebView2/1.0.3485.44",
+      "archive": "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/1.0.3485.44",
+      "archive_sha256": "bc09150b179246ac90189649b13be8e6b11b3ac200e817e18df106e1f3cf489e",
+      "license_expression": "BSD-3-Clause",
+      "selected_license": "BSD-3-Clause",
+      "license_file": "third_party/licenses/webview2-LICENSE.txt",
+      "license_file_sha256": "9995174528dba139ca753d02d8667dbec49f65ab17e65c643a914f2b58cfb4a2",
+      "notice_file": "third_party/licenses/webview2-NOTICE.txt",
+      "notice_file_sha256": "106423785c5b7eba0a8e61d1837f2132e9c828e20ad530f565d981c1df60dd90",
+      "local_modifications": [],
+      "build_options": [
+        "Windows wxWebView Edge backend only",
+        "dynamic WebView2Loader.dll",
+        "Evergreen WebView2 Runtime supplied by the operating system"
+      ]
     }
   ]
 }

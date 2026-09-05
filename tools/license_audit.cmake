@@ -20,6 +20,12 @@ set(_typescript_notice
 set(_vite_license "${MOL_SOURCE_DIR}/third_party/licenses/vite-LICENSE.md")
 set(_playwright_license
     "${MOL_SOURCE_DIR}/third_party/licenses/playwright-LICENSE.txt")
+set(_wxwidgets_license
+    "${MOL_SOURCE_DIR}/third_party/licenses/wxwidgets-LICENCE.txt")
+set(_webview2_license
+    "${MOL_SOURCE_DIR}/third_party/licenses/webview2-LICENSE.txt")
+set(_webview2_notice
+    "${MOL_SOURCE_DIR}/third_party/licenses/webview2-NOTICE.txt")
 set(_web_lock "${MOL_SOURCE_DIR}/apps/web/package-lock.json")
 set(_apache_license "${MOL_SOURCE_DIR}/LICENSE")
 set(_android_build "${MOL_SOURCE_DIR}/platforms/android/build.gradle.kts")
@@ -34,7 +40,8 @@ foreach(_required_file "${_manifest}" "${_miniaudio_license}"
                        "${_oboe_license}" "${_espressif_usb_license}"
                        "${_espressif_hid_license}" "${_typescript_license}"
                        "${_typescript_notice}" "${_vite_license}"
-                       "${_playwright_license}"
+                       "${_playwright_license}" "${_wxwidgets_license}"
+                       "${_webview2_license}" "${_webview2_notice}"
                        "${_web_lock}" "${_apache_license}"
                        "${_android_build}" "${_android_wrapper}"
                        "${_android_wrapper_properties}"
@@ -122,9 +129,27 @@ string(JSON _hid_license_hash GET "${_manifest_json}" dependencies 3
        license_file_sha256)
 string(JSON _hid_patch_count LENGTH "${_manifest_json}" dependencies 3
        local_modifications)
+string(JSON _wxwidgets_name GET "${_manifest_json}" dependencies 4 name)
+string(JSON _wxwidgets_version GET "${_manifest_json}" dependencies 4 version)
+string(JSON _wxwidgets_archive_hash GET "${_manifest_json}" dependencies 4
+       archive_sha256)
+string(JSON _wxwidgets_license_hash GET "${_manifest_json}" dependencies 4
+       license_file_sha256)
+string(JSON _wxwidgets_patch_count LENGTH "${_manifest_json}" dependencies 4
+       local_modifications)
+string(JSON _webview2_name GET "${_manifest_json}" dependencies 5 name)
+string(JSON _webview2_version GET "${_manifest_json}" dependencies 5 version)
+string(JSON _webview2_archive_hash GET "${_manifest_json}" dependencies 5
+       archive_sha256)
+string(JSON _webview2_license_hash GET "${_manifest_json}" dependencies 5
+       license_file_sha256)
+string(JSON _webview2_notice_hash GET "${_manifest_json}" dependencies 5
+       notice_file_sha256)
+string(JSON _webview2_patch_count LENGTH "${_manifest_json}" dependencies 5
+       local_modifications)
 
 if(NOT _schema EQUAL 1 OR NOT _component_count EQUAL 10 OR
-   NOT _dependency_count EQUAL 4 OR NOT _ci_name STREQUAL "actions/checkout" OR
+   NOT _dependency_count EQUAL 6 OR NOT _ci_name STREQUAL "actions/checkout" OR
    NOT _ci_revision STREQUAL "de0fac2e4500dabe0009e67214ff5f5447ce83dd" OR
    NOT _emsdk_name STREQUAL "Emscripten SDK" OR
    NOT _emsdk_revision STREQUAL
@@ -177,7 +202,17 @@ if(NOT _schema EQUAL 1 OR NOT _component_count EQUAL 10 OR
    NOT _hid_commit STREQUAL "0deb8045caf6eadd18089bbcb9ae1aaa505f449e" OR
    NOT _hid_component_hash STREQUAL
        "a6c5366f9b6d80b0d5f56d085d62941464512e0968b96c5877e76a80fcc23f13" OR
-   NOT _hid_patch_count EQUAL 0)
+   NOT _hid_patch_count EQUAL 0 OR
+   NOT _wxwidgets_name STREQUAL "wxWidgets" OR
+   NOT _wxwidgets_version STREQUAL "3.2.11" OR
+   NOT _wxwidgets_archive_hash STREQUAL
+       "02c4fdc8ec104a10efd809238f800b632c4d5cc6a2d54582bff775240007f01a" OR
+   NOT _wxwidgets_patch_count EQUAL 0 OR
+   NOT _webview2_name STREQUAL "Microsoft Edge WebView2 SDK" OR
+   NOT _webview2_version STREQUAL "1.0.3485.44" OR
+   NOT _webview2_archive_hash STREQUAL
+       "bc09150b179246ac90189649b13be8e6b11b3ac200e817e18df106e1f3cf489e" OR
+   NOT _webview2_patch_count EQUAL 0)
   message(FATAL_ERROR "The runtime dependency lock records are incomplete or unexpected")
 endif()
 
@@ -215,6 +250,16 @@ file(SHA256 "${_playwright_license}" _actual_playwright_license_hash)
 if(NOT _actual_playwright_license_hash STREQUAL _playwright_license_hash)
   message(FATAL_ERROR
           "The Playwright license snapshot hash does not match the lock")
+endif()
+file(SHA256 "${_wxwidgets_license}" _actual_wxwidgets_license_hash)
+if(NOT _actual_wxwidgets_license_hash STREQUAL _wxwidgets_license_hash)
+  message(FATAL_ERROR "The wxWidgets license snapshot hash does not match the lock")
+endif()
+file(SHA256 "${_webview2_license}" _actual_webview2_license_hash)
+file(SHA256 "${_webview2_notice}" _actual_webview2_notice_hash)
+if(NOT _actual_webview2_license_hash STREQUAL _webview2_license_hash OR
+   NOT _actual_webview2_notice_hash STREQUAL _webview2_notice_hash)
+  message(FATAL_ERROR "The WebView2 legal snapshots do not match the lock")
 endif()
 file(SHA256 "${_apache_license}" _actual_apache_license_hash)
 foreach(_android_component_index RANGE 6 9)
@@ -316,7 +361,9 @@ string(JSON _kotlin_package_name GET "${_sbom_json}" packages 11 name)
 string(JSON _annotations_package_name GET "${_sbom_json}" packages 12 name)
 string(JSON _usb_package_name GET "${_sbom_json}" packages 13 name)
 string(JSON _hid_package_name GET "${_sbom_json}" packages 14 name)
-if(NOT _spdx_version STREQUAL "SPDX-2.3" OR NOT _package_count EQUAL 15 OR
+string(JSON _wxwidgets_package_name GET "${_sbom_json}" packages 15 name)
+string(JSON _webview2_package_name GET "${_sbom_json}" packages 16 name)
+if(NOT _spdx_version STREQUAL "SPDX-2.3" OR NOT _package_count EQUAL 17 OR
    NOT _dependency_name STREQUAL "miniaudio" OR
    NOT _oboe_package_name STREQUAL "Oboe" OR
    NOT _typescript_package_name STREQUAL "TypeScript" OR
@@ -327,7 +374,9 @@ if(NOT _spdx_version STREQUAL "SPDX-2.3" OR NOT _package_count EQUAL 15 OR
    NOT _kotlin_package_name STREQUAL "Kotlin Standard Library" OR
    NOT _annotations_package_name STREQUAL "JetBrains Java Annotations" OR
    NOT _usb_package_name STREQUAL "Espressif USB Host Library" OR
-   NOT _hid_package_name STREQUAL "Espressif USB Host HID Driver")
+   NOT _hid_package_name STREQUAL "Espressif USB Host HID Driver" OR
+   NOT _wxwidgets_package_name STREQUAL "wxWidgets" OR
+   NOT _webview2_package_name STREQUAL "Microsoft Edge WebView2 SDK")
   message(FATAL_ERROR "The SPDX SBOM is incomplete")
 endif()
 

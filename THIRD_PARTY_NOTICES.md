@@ -37,3 +37,23 @@ components are licensed under Apache License 2.0; the complete license text is
 the repository's `LICENSE`. Artifact checksums and source locations are
 recorded in `third_party/manifest.lock.json` and the SPDX SBOM. No local
 patches are applied.
+
+## wxWidgets 3.2.11
+
+The optional Windows, Linux, and macOS desktop GUI targets use wxWidgets from
+the official 3.2.11 source archive. It is statically linked as separate base,
+core, and WebView libraries and is never linked into `mol_core`,
+`mol-keyboardd`, or `molctl`. Bundled image, media, rich-text, XRC, OpenGL,
+sample, demo, benchmark, and test components are disabled. No local patches are
+applied. wxWidgets is licensed under the wxWindows Library Licence 3.1, including
+its binary distribution exception; the complete upstream text is preserved at
+`third_party/licenses/wxwidgets-LICENCE.txt`.
+
+## Microsoft Edge WebView2 SDK 1.0.3485.44
+
+The Windows wxWebView backend uses the checksum-locked Microsoft Edge WebView2
+SDK selected by wxWidgets 3.2.11. The package supplies WebView2 headers and the
+dynamically loaded `WebView2Loader.dll`; the Evergreen browser runtime is a
+system prerequisite and is not bundled. The SDK license and third-party notice
+are preserved at `third_party/licenses/webview2-LICENSE.txt` and
+`third_party/licenses/webview2-NOTICE.txt`. No local patches are applied.
