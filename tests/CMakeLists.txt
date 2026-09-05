@@ -103,6 +103,9 @@ add_test(NAME mol_esp32_hil_parser_tests
          COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/hardware/esp32_hil.py --self-test)
 add_test(NAME mol_esp32_qemu_parser_tests
          COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/hardware/esp32_qemu.py --self-test)
+add_test(NAME mol_android_emulator_gate_tests
+         COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/android_emulator_gate.py
+                 --self-test)
 
 add_executable(
   mol_esp32_sequence_store_tests unit/test_esp32_sequence_store.c
@@ -136,6 +139,12 @@ add_test(
   COMMAND
     ${CMAKE_COMMAND} -DMOL_SOURCE_DIR=${PROJECT_SOURCE_DIR} -P
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_web_project.cmake)
+
+add_test(
+  NAME mol_android_project_audit
+  COMMAND
+    ${CMAKE_COMMAND} -DMOL_SOURCE_DIR=${PROJECT_SOURCE_DIR} -P
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_android_project.cmake)
 
 add_test(
   NAME mol_harmony_project_audit

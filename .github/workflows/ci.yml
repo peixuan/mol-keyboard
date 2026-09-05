@@ -379,10 +379,13 @@ jobs:
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager \
+            "platform-tools" \
+            "emulator" \
             "platforms;android-36" \
             "build-tools;36.0.0" \
             "ndk;28.2.13676358" \
-            "cmake;3.31.6"
+            "cmake;3.31.6" \
+            "system-images;android-35;google_apis;x86_64"
       - name: Install pinned Emscripten SDK
         shell: bash
         run: |
@@ -404,6 +407,60 @@ jobs:
             cd platforms/android
             ./gradlew :app:lintDebug --no-daemon --no-configuration-cache
           )
+      - name: Run packaged application in the Android emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -e /dev/kvm
+          sudo chown "$USER" /dev/kvm
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/android-avd"
+          adb_path="$ANDROID_HOME/platform-tools/adb"
+          avdmanager_path="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
+          emulator_path="$ANDROID_HOME/emulator/emulator"
+          mkdir -p "$ANDROID_AVD_HOME" build
+          echo no | "$avdmanager_path" create avd \
+            --force \
+            --name mol_android_ci \
+            --package "system-images;android-35;google_apis;x86_64" \
+            --device pixel_6
+          "$emulator_path" -avd mol_android_ci \
+            -no-window \
+            -no-boot-anim \
+            -no-snapshot \
+            -gpu swiftshader_indirect \
+            -no-metrics >build/android-emulator.log 2>&1 &
+          emulator_pid=$!
+          cleanup() {
+            "$adb_path" emu kill >/dev/null 2>&1 || true
+            for attempt in $(seq 1 20); do
+              if ! kill -0 "$emulator_pid" 2>/dev/null; then
+                break
+              fi
+              sleep 1
+            done
+            kill "$emulator_pid" 2>/dev/null || true
+            wait "$emulator_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          timeout 120 "$adb_path" wait-for-device
+          for attempt in $(seq 1 60); do
+            if [ "$("$adb_path" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then
+              break
+            fi
+            if [ "$attempt" = "60" ]; then
+              tail -n 200 build/android-emulator.log
+              exit 1
+            fi
+            sleep 2
+          done
+          python3 tools/android_emulator_gate.py \
+            --adb "$adb_path" \
+            --debug-apk platforms/android/app/build/outputs/apk/debug/app-debug.apk \
+            --test-apk platforms/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk \
+            --report build/android-emulator-gate.json || {
+              tail -n 200 build/android-emulator.log
+              exit 1
+            }
 
   ios:
     runs-on: macos-15

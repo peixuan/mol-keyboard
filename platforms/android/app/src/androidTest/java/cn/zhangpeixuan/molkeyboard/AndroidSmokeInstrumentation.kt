@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebView
@@ -84,6 +85,7 @@ class AndroidSmokeInstrumentation : Instrumentation() {
             check(rendered.getInt("renderFailures") == 0)
             check(rendered.getInt("nonFiniteSamples") == 0)
 
+            val hardwareKeyCount = verifyHardwareKeyboard(activity, webView)
             val focusEvidence = verifyAudioFocusInterruption(webView)
             val backgroundEvidence =
                 verifyBackgroundLifecycle(activity, webView, focusEvidence.resumedCallbacks)
@@ -92,6 +94,8 @@ class AndroidSmokeInstrumentation : Instrumentation() {
             results.putString("callbacks", rendered.getLong("callbackCount").toString())
             results.putString("frames", rendered.getLong("renderedFrames").toString())
             results.putString("sampleRate", rendered.getInt("sampleRate").toString())
+            results.putString("hardwareKeys", hardwareKeyCount.toString())
+            results.putString("hardwareRepeatSuppressed", "true")
             results.putString("focusInterrupted", focusEvidence.interrupted.toString())
             results.putString("focusResumedCallbacks", focusEvidence.resumedCallbacks.toString())
             results.putString("backgroundCallbacks", backgroundEvidence.backgroundCallbacks.toString())
@@ -105,6 +109,172 @@ class AndroidSmokeInstrumentation : Instrumentation() {
             activity?.runOnUiThread { activity.finish() }
         }
     }
+
+    private fun verifyHardwareKeyboard(activity: MainActivity, webView: WebView): Int {
+        val connected = CountDownLatch(1)
+        val serviceReference = AtomicReference<AudioForegroundService>()
+        val connection = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+                serviceReference.set((binder as? AudioForegroundService.LocalBinder)?.service)
+                connected.countDown()
+            }
+
+            override fun onServiceDisconnected(name: ComponentName?) {
+                serviceReference.set(null)
+            }
+        }
+        check(
+            targetContext.bindService(
+                Intent(targetContext, AudioForegroundService::class.java),
+                connection,
+                Context.BIND_AUTO_CREATE,
+            ),
+        ) { "Could not bind the audio service for hardware keyboard validation" }
+        check(connected.await(EVALUATION_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+            "Audio service binding timed out during hardware keyboard validation"
+        }
+        val service = requireNotNull(serviceReference.get())
+        val deviceId = 73
+        try {
+            onActivityThread(activity) { webView.pauseTimers() }
+            service.pollEvents()
+            HARDWARE_KEY_CODES.forEachIndexed { index, keyCode ->
+                val downTime = SystemClock.uptimeMillis()
+                onActivityThread(activity) {
+                    check(
+                        activity.dispatchKeyEvent(
+                            KeyEvent(
+                                downTime,
+                                downTime,
+                                KeyEvent.ACTION_DOWN,
+                                keyCode,
+                                0,
+                                0,
+                                deviceId,
+                                0,
+                            ),
+                        ),
+                    ) { "Hardware key down was rejected for keyCode=$keyCode" }
+                    check(
+                        activity.dispatchKeyEvent(
+                            KeyEvent(
+                                downTime,
+                                downTime + 1,
+                                KeyEvent.ACTION_DOWN,
+                                keyCode,
+                                1,
+                                0,
+                                deviceId,
+                                0,
+                            ),
+                        ),
+                    ) { "Hardware key repeat was rejected for keyCode=$keyCode" }
+                }
+                val gesture = keyboardGesture(deviceId, keyCode)
+                val note = FIRST_HARDWARE_NOTE + index
+                val started = waitForKeyboardEvent(
+                    service,
+                    EVENT_NOTE_STARTED,
+                    gesture,
+                    note,
+                )
+                check(
+                    started.count {
+                        it.type == EVENT_NOTE_STARTED && it.gesture == gesture && it.note == note
+                    } == 1,
+                ) { "Hardware key did not produce exactly one Note On for note=$note" }
+                check(started.none { it.type == EVENT_COMMAND_DROPPED }) {
+                    "Hardware key Note On delivery overflowed the command queue"
+                }
+
+                val upTime = SystemClock.uptimeMillis()
+                onActivityThread(activity) {
+                    check(
+                        activity.dispatchKeyEvent(
+                            KeyEvent(
+                                downTime,
+                                upTime + index,
+                                KeyEvent.ACTION_UP,
+                                keyCode,
+                                0,
+                                0,
+                                deviceId,
+                                0,
+                            ),
+                        ),
+                    ) { "Hardware key up was rejected for keyCode=$keyCode" }
+                }
+                val released = waitForKeyboardEvent(
+                    service,
+                    EVENT_NOTE_RELEASED,
+                    gesture,
+                    note,
+                )
+                check(
+                    released.any {
+                        it.type == EVENT_NOTE_RELEASED && it.gesture == gesture && it.note == note
+                    },
+                ) { "Hardware key did not produce Note Off for note=$note" }
+                check(released.none { it.type == EVENT_COMMAND_DROPPED }) {
+                    "Hardware key Note Off delivery overflowed the command queue"
+                }
+            }
+        } finally {
+            onActivityThread(activity) { webView.resumeTimers() }
+            targetContext.unbindService(connection)
+        }
+        return HARDWARE_KEY_CODES.size
+    }
+
+    private fun waitForKeyboardEvent(
+        service: AudioForegroundService,
+        expectedType: Int,
+        expectedGesture: Long,
+        expectedNote: Int,
+    ): List<AndroidEventRecord> {
+        val records = mutableListOf<AndroidEventRecord>()
+        val deadline = SystemClock.uptimeMillis() + AUDIO_TIMEOUT_MS
+        while (SystemClock.uptimeMillis() < deadline) {
+            records += pollEvents(service)
+            if (records.any {
+                    it.type == expectedType && it.gesture == expectedGesture &&
+                        it.note == expectedNote
+                }
+            ) {
+                SystemClock.sleep(POLL_INTERVAL_MS)
+                records += pollEvents(service)
+                return records
+            }
+            SystemClock.sleep(POLL_INTERVAL_MS)
+        }
+        error(
+            "Timed out waiting for hardware keyboard event: " +
+                "type=$expectedType gesture=$expectedGesture note=$expectedNote records=$records",
+        )
+    }
+
+    private fun pollEvents(service: AudioForegroundService): List<AndroidEventRecord> {
+        val values = service.pollEvents()
+        check(values.size % EVENT_FIELD_COUNT == 0)
+        return buildList {
+            var offset = 0
+            while (offset < values.size) {
+                add(
+                    AndroidEventRecord(
+                        type = values[offset].toInt(),
+                        gesture = values[offset + 1],
+                        note = values[offset + 3].toInt(),
+                    ),
+                )
+                offset += EVENT_FIELD_COUNT
+            }
+        }
+    }
+
+    private fun keyboardGesture(deviceId: Int, keyCode: Int): Long =
+        HARDWARE_GESTURE_PREFIX or
+            ((deviceId.toLong() and 0xFFFFL) shl 16) or
+            (keyCode.toLong() and 0xFFFFL)
 
     private fun verifyBackgroundLifecycle(
         activity: MainActivity,
@@ -337,6 +507,44 @@ class AndroidSmokeInstrumentation : Instrumentation() {
         const val POLL_INTERVAL_MS = 100L
         const val MAXIMUM_FAILURE_CHARS = 16_384
         const val NOTIFICATION_ID = 0x4D4F4C
+        const val EVENT_FIELD_COUNT = 5
+        const val EVENT_NOTE_STARTED = 1
+        const val EVENT_NOTE_RELEASED = 2
+        const val EVENT_COMMAND_DROPPED = 10
+        const val FIRST_HARDWARE_NOTE = 60
+        const val HARDWARE_GESTURE_PREFIX = 1L shl 52
+        val HARDWARE_KEY_CODES = intArrayOf(
+            KeyEvent.KEYCODE_Z,
+            KeyEvent.KEYCODE_S,
+            KeyEvent.KEYCODE_X,
+            KeyEvent.KEYCODE_D,
+            KeyEvent.KEYCODE_C,
+            KeyEvent.KEYCODE_V,
+            KeyEvent.KEYCODE_G,
+            KeyEvent.KEYCODE_B,
+            KeyEvent.KEYCODE_H,
+            KeyEvent.KEYCODE_N,
+            KeyEvent.KEYCODE_J,
+            KeyEvent.KEYCODE_M,
+            KeyEvent.KEYCODE_Q,
+            KeyEvent.KEYCODE_2,
+            KeyEvent.KEYCODE_W,
+            KeyEvent.KEYCODE_3,
+            KeyEvent.KEYCODE_E,
+            KeyEvent.KEYCODE_R,
+            KeyEvent.KEYCODE_5,
+            KeyEvent.KEYCODE_T,
+            KeyEvent.KEYCODE_6,
+            KeyEvent.KEYCODE_Y,
+            KeyEvent.KEYCODE_7,
+            KeyEvent.KEYCODE_U,
+            KeyEvent.KEYCODE_I,
+            KeyEvent.KEYCODE_9,
+            KeyEvent.KEYCODE_O,
+            KeyEvent.KEYCODE_0,
+            KeyEvent.KEYCODE_P,
+            KeyEvent.KEYCODE_LEFT_BRACKET,
+        )
     }
 }
 
@@ -348,4 +556,10 @@ private data class BackgroundEvidence(
 private data class FocusEvidence(
     val interrupted: Boolean,
     val resumedCallbacks: Long,
+)
+
+private data class AndroidEventRecord(
+    val type: Int,
+    val gesture: Long,
+    val note: Int,
 )

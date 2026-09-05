@@ -117,24 +117,41 @@ class MainActivity : Activity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (super.dispatchKeyEvent(event)) return true
-        val note = NOTE_BY_KEY_CODE[event.keyCode] ?: return false
+        val note = NOTE_BY_KEY_CODE[event.keyCode] ?: return super.dispatchKeyEvent(event)
         val gesture = HARDWARE_GESTURE_PREFIX or
             ((event.deviceId.toLong() and 0xFFFFL) shl 16) or
             (event.keyCode.toLong() and 0xFFFFL)
-        val service = audioService ?: return false
+        val service = audioService ?: return super.dispatchKeyEvent(event)
         return when (event.action) {
             KeyEvent.ACTION_DOWN -> {
                 if (event.repeatCount == 0) {
-                    service.submitControl(NativeCommands.NOTE_ON, gesture, note, 0, 0, 0, 0.82f, 0f)
+                    service.submitControl(
+                        NativeCommands.NOTE_ON,
+                        gesture,
+                        note,
+                        0,
+                        0,
+                        0,
+                        0.82f,
+                        0f,
+                    ) == 0
+                } else {
+                    true
                 }
-                true
             }
             KeyEvent.ACTION_UP -> {
-                service.submitControl(NativeCommands.NOTE_OFF, gesture, note, 0, 0, 0, 0f, 0f)
-                true
+                service.submitControl(
+                    NativeCommands.NOTE_OFF,
+                    gesture,
+                    note,
+                    0,
+                    0,
+                    0,
+                    0f,
+                    0f,
+                ) == 0
             }
-            else -> false
+            else -> super.dispatchKeyEvent(event)
         }
     }
 
