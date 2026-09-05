@@ -34,6 +34,7 @@ add_executable(
 target_compile_features(mol_ios_app PRIVATE cxx_std_17)
 target_compile_options(mol_ios_app PRIVATE $<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>)
 target_link_libraries(mol_ios_app PRIVATE mol_apple_audio mol::core
+                                          "-framework CoreGraphics"
                                           "-framework UIKit" "-framework WebKit")
 set_target_properties(
   mol_ios_app
