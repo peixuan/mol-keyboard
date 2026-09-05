@@ -223,6 +223,7 @@
         "MOL_ENABLE_ASSERTIONS": "OFF",
         "MOL_ENABLE_LTO": "ON",
         "MOL_BUILD_DESKTOP_GUI": "ON",
+        "MOL_BUILD_NATIVE_DEBUG_GUI": "ON",
         "MOL_PACKAGE_WEB_ASSETS": "ON"
       }
     },

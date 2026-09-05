@@ -71,6 +71,8 @@ foreach(_token
         "sys.platform == \"darwin\""
         "mol-keyboard.app/Contents/MacOS/mol-keyboard"
         "mol-keyboard.app/Contents/Resources/web/index.html"
+        "mol-keyboard-debug.app/Contents/MacOS/mol-keyboard-debug"
+        "run_native_debug_gui_smoke"
         "run_headless_runtime_smoke")
   string(FIND "${_audit_text}" "${_token}" _token_offset)
   if(_token_offset EQUAL -1)

@@ -179,6 +179,12 @@ add_test(
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_macos_desktop_project.cmake)
 
 add_test(
+  NAME mol_desktop_package_project_audit
+  COMMAND
+    ${CMAKE_COMMAND} -DMOL_SOURCE_DIR=${PROJECT_SOURCE_DIR} -P
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_desktop_package_project.cmake)
+
+add_test(
   NAME mol_linux_service_project_audit
   COMMAND
     ${CMAKE_COMMAND} -DMOL_SOURCE_DIR=${PROJECT_SOURCE_DIR} -P

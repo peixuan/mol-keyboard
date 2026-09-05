@@ -101,16 +101,23 @@ def required_paths(root: Path) -> list[str]:
         "share/mol-keyboard/service/uninstall-user-startup.ps1",
     ]
     if os.name == "nt":
-        fixed.extend(["bin/mol-keyboard.exe", "bin/WebView2Loader.dll"])
+        fixed.extend(
+            [
+                "bin/mol-keyboard.exe",
+                "bin/mol-keyboard-debug.exe",
+                "bin/WebView2Loader.dll",
+            ]
+        )
     elif sys.platform == "darwin":
         fixed.extend(
             [
                 "mol-keyboard.app/Contents/MacOS/mol-keyboard",
                 "mol-keyboard.app/Contents/Resources/web/index.html",
+                "mol-keyboard-debug.app/Contents/MacOS/mol-keyboard-debug",
             ]
         )
     else:
-        fixed.append("bin/mol-keyboard")
+        fixed.extend(["bin/mol-keyboard", "bin/mol-keyboard-debug"])
     library_candidates = [root / "lib" / "libmol_core.a", root / "lib" / "mol_core.lib"]
     if not any(path.is_file() for path in library_candidates):
         fixed.append("lib/{libmol_core.a|mol_core.lib}")
@@ -353,6 +360,105 @@ def run_desktop_gui_smoke(root: Path, runtime_root: Path) -> dict[str, str]:
     return {"mode": "native-webview", "detail": fields.get("detail", "")}
 
 
+def run_native_debug_gui_smoke(root: Path, runtime_root: Path) -> dict[str, str]:
+    runtime_root.mkdir(parents=True, exist_ok=True)
+    suffix = ".exe" if os.name == "nt" else ""
+    daemon = root / "bin" / f"mol-keyboardd{suffix}"
+    if sys.platform == "darwin":
+        debugger = (
+            root
+            / "mol-keyboard-debug.app"
+            / "Contents"
+            / "MacOS"
+            / "mol-keyboard-debug"
+        )
+    else:
+        debugger = root / "bin" / f"mol-keyboard-debug{suffix}"
+    state_dir = runtime_root / "native-debug-state"
+    report = runtime_root / "native-debug-acceptance.txt"
+    endpoint = (
+        rf"\\.\pipe\mol-keyboard-package-debug-{os.getpid()}-{uuid.uuid4().hex}"
+        if os.name == "nt"
+        else str(runtime_root / "native-debug.sock")
+    )
+    stdout_path = runtime_root / "native-debug-daemon.stdout.log"
+    stderr_path = runtime_root / "native-debug-daemon.stderr.log"
+    daemon_flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+    process: subprocess.Popen[bytes] | None = None
+    try:
+        with stdout_path.open("wb") as stdout, stderr_path.open("wb") as stderr:
+            process = subprocess.Popen(
+                [
+                    str(daemon),
+                    "--null-backend",
+                    "--state-dir",
+                    str(state_dir),
+                    "--endpoint",
+                    endpoint,
+                ],
+                stdin=subprocess.DEVNULL,
+                stdout=stdout,
+                stderr=stderr,
+                creationflags=daemon_flags,
+            )
+            completed = subprocess.run(
+                [
+                    str(debugger),
+                    "--endpoint",
+                    endpoint,
+                    "--acceptance-output",
+                    str(report),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=20,
+            )
+            if completed.returncode != 0 or not report.is_file():
+                raise ValueError(
+                    "packaged native debugger acceptance failed: "
+                    f"exit={completed.returncode}, stdout={completed.stdout!r}, "
+                    f"stderr={completed.stderr!r}"
+                )
+            try:
+                exit_code = process.wait(timeout=5)
+            except subprocess.TimeoutExpired as error:
+                raise ValueError(
+                    "packaged daemon did not exit after native debugger acceptance"
+                ) from error
+            fields = dict(
+                line.split("=", 1)
+                for line in report.read_text(encoding="utf-8").splitlines()
+                if "=" in line
+            )
+            if fields.get("passed") != "true" or exit_code != 0:
+                raise ValueError(
+                    f"packaged native debugger reported failure: {fields}, "
+                    f"daemon exit={exit_code}"
+                )
+            if os.name != "nt" and Path(endpoint).exists():
+                raise ValueError("native debugger left its IPC endpoint behind")
+        return {"mode": "native-wxwidgets", "detail": fields.get("detail", "")}
+    except Exception as error:
+        if process is not None and process.poll() is None:
+            process.kill()
+            process.wait(timeout=5)
+        daemon_stdout = (
+            stdout_path.read_text(encoding="utf-8", errors="replace")
+            if stdout_path.is_file()
+            else ""
+        )
+        daemon_stderr = (
+            stderr_path.read_text(encoding="utf-8", errors="replace")
+            if stderr_path.is_file()
+            else ""
+        )
+        raise ValueError(
+            f"packaged native debugger smoke failed: {error}; "
+            f"daemon stdout={daemon_stdout!r}; daemon stderr={daemon_stderr!r}"
+        ) from error
+
+
 def main() -> int:
     args = parse_args()
     archive = args.archive.resolve()
@@ -390,6 +496,7 @@ def main() -> int:
                 root / "bin" / f"molctl{suffix}", ["--help"], "Commands:"
             )
             desktop_gui = run_desktop_gui_smoke(root, extraction / "runtime")
+            native_debug_gui = run_native_debug_gui_smoke(root, extraction / "runtime")
             headless_runtime = run_headless_runtime_smoke(root, extraction / "runtime")
             entries = sorted(
                 path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_file()
@@ -399,7 +506,7 @@ def main() -> int:
         return 1
 
     report = {
-        "schema_version": 3,
+        "schema_version": 4,
         "archive": str(archive),
         "archive_bytes": archive.stat().st_size,
         "archive_sha256": archive_hash,
@@ -407,6 +514,7 @@ def main() -> int:
         "daemon_smoke_test": daemon_output,
         "cli_smoke_test": cli_output,
         "desktop_gui_smoke": desktop_gui,
+        "native_debug_gui_smoke": native_debug_gui,
         "headless_runtime_smoke": headless_runtime,
         "result": "pass",
     }
