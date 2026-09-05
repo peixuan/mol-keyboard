@@ -292,7 +292,9 @@ if(MOL_BUILD_TOOLS)
   add_subdirectory(tools/latency-probe)
 endif()
 
-if(WIN32 AND MOL_BUILD_WEB_SERVER)
+if(MOL_BUILD_WEB_SERVER AND
+   (WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux" OR
+    (APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")))
   add_subdirectory(apps/mol-keyboard)
 endif()
 

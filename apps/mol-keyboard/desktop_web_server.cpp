@@ -1,9 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "desktop_web_server.hpp"
 
+#if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#else
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#endif
 
 #include <array>
 #include <atomic>
@@ -20,9 +27,48 @@ namespace {
 constexpr std::size_t kMaximumRequestBytes = 8192U;
 constexpr std::size_t kMaximumAssetBytes = 16U * 1024U * 1024U;
 
-bool SendAll(SOCKET client, std::string_view bytes) {
+#if defined(_WIN32)
+using Socket = SOCKET;
+constexpr Socket kInvalidSocket = INVALID_SOCKET;
+constexpr int kShutdownBoth = SD_BOTH;
+#else
+using Socket = int;
+constexpr Socket kInvalidSocket = -1;
+constexpr int kShutdownBoth = SHUT_RDWR;
+#endif
+
+void CloseSocket(Socket socket_handle) {
+#if defined(_WIN32)
+  closesocket(socket_handle);
+#else
+  close(socket_handle);
+#endif
+}
+
+bool StartSocketRuntime() {
+#if defined(_WIN32)
+  WSADATA data{};
+  return WSAStartup(MAKEWORD(2, 2), &data) == 0;
+#else
+  return true;
+#endif
+}
+
+void StopSocketRuntime() {
+#if defined(_WIN32)
+  WSACleanup();
+#endif
+}
+
+bool SendAll(Socket client, std::string_view bytes) {
   while (!bytes.empty()) {
-    const int chunk = send(client, bytes.data(), static_cast<int>(bytes.size()), 0);
+    const int flags =
+#if defined(MSG_NOSIGNAL)
+        MSG_NOSIGNAL;
+#else
+        0;
+#endif
+    const auto chunk = send(client, bytes.data(), static_cast<int>(bytes.size()), flags);
     if (chunk <= 0) return false;
     bytes.remove_prefix(static_cast<std::size_t>(chunk));
   }
@@ -41,7 +87,7 @@ std::string_view MimeType(const std::filesystem::path& path) {
   return "application/octet-stream";
 }
 
-void SendResponse(SOCKET client, int status, std::string_view reason, std::string_view content_type,
+void SendResponse(Socket client, int status, std::string_view reason, std::string_view content_type,
                   std::string_view body, bool head_only) {
   std::ostringstream headers;
   headers << "HTTP/1.1 " << status << ' ' << reason << "\r\n"
@@ -85,10 +131,15 @@ bool IsInsideRoot(const std::filesystem::path& root, const std::filesystem::path
   return true;
 }
 
-void HandleClient(SOCKET client, const std::filesystem::path& root) {
+void HandleClient(Socket client, const std::filesystem::path& root) {
+#if defined(_WIN32)
   DWORD timeout_ms = 2000U;
   (void)setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout_ms),
                    sizeof(timeout_ms));
+#else
+  timeval timeout{2, 0};
+  (void)setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+#endif
   std::string request;
   std::array<char, 2048> buffer{};
   while (request.find("\r\n\r\n") == request.npos && request.size() < kMaximumRequestBytes) {
@@ -144,7 +195,7 @@ void HandleClient(SOCKET client, const std::filesystem::path& root) {
 }  // namespace
 
 struct WebServer::Impl {
-  SOCKET listener = INVALID_SOCKET;
+  Socket listener = kInvalidSocket;
   std::filesystem::path root;
   std::atomic<bool> running{false};
   std::thread worker;
@@ -175,22 +226,23 @@ bool WebServer::Start(const std::filesystem::path& web_root, std::uint16_t reque
       return false;
     }
   }
-  WSADATA data{};
-  if (WSAStartup(MAKEWORD(2, 2), &data) != 0) {
-    error = "Winsock initialization failed";
+  if (!StartSocketRuntime()) {
+    error = "the socket runtime could not be initialized";
     return false;
   }
   auto implementation = std::make_unique<Impl>();
   implementation->root = root;
   implementation->listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (implementation->listener == INVALID_SOCKET) {
-    WSACleanup();
+  if (implementation->listener == kInvalidSocket) {
+    StopSocketRuntime();
     error = "the loopback Web server socket could not be created";
     return false;
   }
+#if defined(_WIN32)
   const BOOL exclusive = TRUE;
   (void)setsockopt(implementation->listener, SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
                    reinterpret_cast<const char*>(&exclusive), sizeof(exclusive));
+#endif
   sockaddr_in address{};
   address.sin_family = AF_INET;
   address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
@@ -198,16 +250,24 @@ bool WebServer::Start(const std::filesystem::path& web_root, std::uint16_t reque
   if (bind(implementation->listener, reinterpret_cast<const sockaddr*>(&address),
            sizeof(address)) != 0 ||
       listen(implementation->listener, SOMAXCONN) != 0) {
-    closesocket(implementation->listener);
-    WSACleanup();
+    CloseSocket(implementation->listener);
+    StopSocketRuntime();
     error = "the loopback Web server could not bind or listen";
     return false;
   }
-  int address_size = sizeof(address);
-  if (getsockname(implementation->listener, reinterpret_cast<sockaddr*>(&address), &address_size) !=
-      0) {
-    closesocket(implementation->listener);
-    WSACleanup();
+#if defined(_WIN32)
+  int address_size = static_cast<int>(sizeof(address));
+  const int name_result = getsockname(implementation->listener,
+                                      reinterpret_cast<sockaddr*>(&address),
+                                      &address_size);
+#else
+  socklen_t address_size = sizeof(address);
+  const int name_result = getsockname(implementation->listener,
+                                      reinterpret_cast<sockaddr*>(&address), &address_size);
+#endif
+  if (name_result != 0) {
+    CloseSocket(implementation->listener);
+    StopSocketRuntime();
     error = "the loopback Web server port could not be determined";
     return false;
   }
@@ -216,10 +276,10 @@ bool WebServer::Start(const std::filesystem::path& web_root, std::uint16_t reque
   Impl* const state = implementation.get();
   implementation->worker = std::thread([state]() {
     while (state->running.load()) {
-      const SOCKET client = accept(state->listener, nullptr, nullptr);
-      if (client == INVALID_SOCKET) break;
+      const Socket client = accept(state->listener, nullptr, nullptr);
+      if (client == kInvalidSocket) break;
       HandleClient(client, state->root);
-      closesocket(client);
+      CloseSocket(client);
     }
   });
   impl_ = std::move(implementation);
@@ -229,14 +289,14 @@ bool WebServer::Start(const std::filesystem::path& web_root, std::uint16_t reque
 void WebServer::Stop() {
   if (!impl_) return;
   impl_->running.store(false);
-  if (impl_->listener != INVALID_SOCKET) {
-    shutdown(impl_->listener, SD_BOTH);
-    closesocket(impl_->listener);
-    impl_->listener = INVALID_SOCKET;
+  if (impl_->listener != kInvalidSocket) {
+    shutdown(impl_->listener, kShutdownBoth);
+    CloseSocket(impl_->listener);
+    impl_->listener = kInvalidSocket;
   }
   if (impl_->worker.joinable()) impl_->worker.join();
   impl_.reset();
-  WSACleanup();
+  StopSocketRuntime();
 }
 
 std::uint16_t WebServer::port() const { return impl_ ? impl_->port : 0U; }
