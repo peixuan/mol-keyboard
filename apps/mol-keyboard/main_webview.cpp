@@ -65,7 +65,8 @@ class WebFrame final : public wxFrame {
   WebFrame(std::uint16_t port, std::filesystem::path acceptance_output)
       : wxFrame(nullptr, wxID_ANY, "MoL Keyboard", wxDefaultPosition, wxSize(1180, 760)),
         port_(port),
-        acceptance_output_(std::move(acceptance_output)) {}
+        acceptance_output_(std::move(acceptance_output)),
+        acceptance_timer_(this) {}
 
   bool Initialize(const wxString& url, const wxString& backend) {
     // wxWidgets 3.2's Edge backend stores its profile below the application-specific
@@ -84,6 +85,7 @@ class WebFrame final : public wxFrame {
     browser_->Bind(wxEVT_WEBVIEW_NEWWINDOW, &WebFrame::OnNewWindow, this);
     browser_->Bind(wxEVT_WEBVIEW_LOADED, &WebFrame::OnLoaded, this);
     browser_->Bind(wxEVT_WEBVIEW_ERROR, &WebFrame::OnError, this);
+    Bind(wxEVT_TIMER, &WebFrame::OnAcceptanceTimeout, this, acceptance_timer_.GetId());
     auto* layout = new wxBoxSizer(wxVERTICAL);
     layout->Add(browser_, 1, wxEXPAND);
     SetSizer(layout);
@@ -96,17 +98,29 @@ class WebFrame final : public wxFrame {
   void FinishAcceptance(bool passed, const wxString& detail) {
     if (acceptance_finished_) return;
     acceptance_finished_ = true;
+    acceptance_timer_.Stop();
     std::ofstream output(acceptance_output_, std::ios::binary);
     output << "passed=" << (passed ? "true" : "false") << '\n'
            << "detail=" << detail.ToStdString() << '\n'
            << "url=" << browser_->GetCurrentURL().ToStdString() << '\n';
     if (!output.good()) passed = false;
     g_exit_code = passed ? 0 : 1;
-    CallAfter([this]() { Close(true); });
+    CallAfter([this]() {
+      Destroy();
+      if (wxTheApp != nullptr) wxTheApp->ExitMainLoop();
+    });
   }
 
   void OnNavigating(wxWebViewEvent& event) {
-    if (!moldesktop::IsTrustedNavigation(event.GetURL().ToStdString(), port_)) {
+    const std::string url = event.GetURL().ToStdString();
+    const std::string acceptance_prefix = "http://127.0.0.1:" + std::to_string(port_) +
+                                          "/__mol_desktop_acceptance__/";
+    if (!acceptance_output_.empty() && url.rfind(acceptance_prefix, 0u) == 0u) {
+      event.Veto();
+      const std::string result = url.substr(acceptance_prefix.size());
+      FinishAcceptance(result.rfind("PASS-", 0u) == 0u,
+                       wxString::FromUTF8("web capabilities=" + result));
+    } else if (!moldesktop::IsTrustedNavigation(url, port_)) {
       event.Veto();
       if (!acceptance_output_.empty()) FinishAcceptance(false, "blocked navigation");
     }
@@ -117,19 +131,18 @@ class WebFrame final : public wxFrame {
     if (!acceptance_output_.empty()) FinishAcceptance(false, "blocked new window");
   }
 
-  void OnLoaded(wxWebViewEvent&) {
+  void OnLoaded(wxWebViewEvent& event) {
     if (acceptance_output_.empty()) return;
-    wxString result;
-    const bool executed = browser_->RunScript(
-        "document.title.startsWith('MoL Keyboard') && "
-        "typeof AudioContext !== 'undefined' && "
-        "typeof AudioWorkletNode !== 'undefined' && "
-        "self.crossOriginIsolated === true && "
-        "typeof SharedArrayBuffer !== 'undefined' && ('indexedDB' in self)",
-        &result);
-    const wxString detail = executed ? wxString("web capabilities=") + result
-                                     : wxString("script execution failed");
-    FinishAcceptance(executed && result == "true", detail);
+    const std::string loaded_url = event.GetURL().ToStdString();
+    const std::string expected_origin =
+        "http://127.0.0.1:" + std::to_string(port_) + "/";
+    if (loaded_url.rfind(expected_origin, 0u) != 0u || acceptance_started_) return;
+    acceptance_started_ = true;
+    acceptance_timer_.StartOnce(10000);
+  }
+
+  void OnAcceptanceTimeout(wxTimerEvent&) {
+    FinishAcceptance(false, "capability report timed out");
   }
 
   void OnError(wxWebViewEvent& event) {
@@ -144,8 +157,12 @@ class WebFrame final : public wxFrame {
   wxWebView* browser_ = nullptr;
   std::uint16_t port_ = 0;
   std::filesystem::path acceptance_output_;
+  wxTimer acceptance_timer_;
+  bool acceptance_started_ = false;
   bool acceptance_finished_ = false;
 };
+
+}  // namespace
 
 class DesktopApp final : public wxApp {
  public:
@@ -183,7 +200,8 @@ class DesktopApp final : public wxApp {
     if (!wxWebView::IsBackendAvailable(backend))
       return Fail("The required system WebView runtime is unavailable.", options);
 
-    const wxString url = wxString::Format("http://127.0.0.1:%u/", server_.port());
+    wxString url = wxString::Format("http://127.0.0.1:%u/", server_.port());
+    if (!options.acceptance_output.empty()) url += "?mol-desktop-acceptance";
     auto* frame = new WebFrame(server_.port(), options.acceptance_output);
     if (!frame->Initialize(url, backend)) {
       frame->Destroy();
@@ -197,6 +215,11 @@ class DesktopApp final : public wxApp {
   int OnExit() override {
     server_.Stop();
     instance_.reset();
+    return g_exit_code;
+  }
+
+  int OnRun() override {
+    (void)wxApp::OnRun();
     return g_exit_code;
   }
 
@@ -215,7 +238,5 @@ class DesktopApp final : public wxApp {
   moldesktop::WebServer server_;
   std::unique_ptr<wxSingleInstanceChecker> instance_;
 };
-
-}  // namespace
 
 wxIMPLEMENT_APP(DesktopApp);

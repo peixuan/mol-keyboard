@@ -318,6 +318,8 @@ class DebugFrame final : public wxFrame {
   bool acceptance_finished_ = false;
 };
 
+}  // namespace
+
 class DebugApp final : public wxApp {
  public:
   bool OnInit() override {
@@ -337,8 +339,11 @@ class DebugApp final : public wxApp {
   }
 
   int OnExit() override { return g_exit_code; }
-};
 
-}  // namespace
+  int OnRun() override {
+    (void)wxApp::OnRun();
+    return g_exit_code;
+  }
+};
 
 wxIMPLEMENT_APP(DebugApp);

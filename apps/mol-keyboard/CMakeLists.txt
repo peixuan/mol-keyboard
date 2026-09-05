@@ -37,6 +37,11 @@ if(MOL_BUILD_DESKTOP_GUI)
   install(TARGETS mol-keyboard RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
                                BUNDLE DESTINATION .)
 
+  if(APPLE)
+    install(DIRECTORY ${PROJECT_SOURCE_DIR}/apps/web/dist/
+            DESTINATION mol-keyboard.app/Contents/Resources/web)
+  endif()
+
   if(WIN32)
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(ARM64|aarch64)$")
       set(_mol_webview2_arch arm64)
@@ -102,28 +107,23 @@ if(MOL_BUILD_TESTS)
 
   if(MOL_BUILD_DESKTOP_GUI)
     set(_mol_webview_report "${CMAKE_CURRENT_BINARY_DIR}/webview-acceptance.txt")
+    set(_mol_webview_command
+        ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tests/integration/test_gui_acceptance.py
+        --executable $<TARGET_FILE:mol-keyboard> --report ${_mol_webview_report} -- --web-root
+        ${PROJECT_SOURCE_DIR}/apps/web/dist --acceptance-output ${_mol_webview_report})
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
       find_program(MOL_XVFB_RUN xvfb-run)
       if(MOL_XVFB_RUN)
-        add_test(
-          NAME mol_desktop_webview_acceptance
-          COMMAND ${MOL_XVFB_RUN} -a $<TARGET_FILE:mol-keyboard> --web-root
-                  ${PROJECT_SOURCE_DIR}/apps/web/dist --acceptance-output
-                  ${_mol_webview_report})
+        add_test(NAME mol_desktop_webview_acceptance
+                 COMMAND ${MOL_XVFB_RUN} -a ${_mol_webview_command})
       elseif(DEFINED ENV{DISPLAY} AND NOT "$ENV{DISPLAY}" STREQUAL "")
-        add_test(
-          NAME mol_desktop_webview_acceptance
-          COMMAND mol-keyboard --web-root ${PROJECT_SOURCE_DIR}/apps/web/dist
-                  --acceptance-output ${_mol_webview_report})
+        add_test(NAME mol_desktop_webview_acceptance COMMAND ${_mol_webview_command})
       else()
         message(FATAL_ERROR
                 "MOL_BUILD_DESKTOP_GUI tests require DISPLAY or xvfb-run on Linux")
       endif()
     else()
-      add_test(
-        NAME mol_desktop_webview_acceptance
-        COMMAND mol-keyboard --web-root ${PROJECT_SOURCE_DIR}/apps/web/dist
-                --acceptance-output ${_mol_webview_report})
+      add_test(NAME mol_desktop_webview_acceptance COMMAND ${_mol_webview_command})
     endif()
     set_tests_properties(mol_desktop_webview_acceptance PROPERTIES RUN_SERIAL TRUE TIMEOUT 30)
   endif()

@@ -24,6 +24,23 @@ import {
 } from "./keyboard";
 import { hasNativeBridge, NativeAudioEngine } from "./native-engine";
 
+const desktopAcceptance = new URLSearchParams(window.location.search).has(
+  "mol-desktop-acceptance",
+);
+if (desktopAcceptance) {
+  const checks: ReadonlyArray<readonly [string, boolean]> = [
+    ["AudioContext", typeof AudioContext !== "undefined"],
+    ["AudioWorkletNode", typeof AudioWorkletNode !== "undefined"],
+    ["crossOriginIsolated", window.crossOriginIsolated === true],
+    ["IndexedDB", "indexedDB" in window],
+  ];
+  const missing = checks.filter(([, available]) => !available).map(([name]) => name);
+  const transport = typeof SharedArrayBuffer === "undefined" ? "MessagePort" : "SharedArrayBuffer";
+  const result = missing.length === 0 ? `PASS-${transport}` : `FAIL:${missing.join(",")}`;
+  document.title = `MoL Keyboard Desktop Acceptance ${result}`;
+  window.location.replace(`/__mol_desktop_acceptance__/${result}`);
+}
+
 interface ActiveGesture {
   readonly id: number;
   readonly note: number;
