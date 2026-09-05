@@ -225,7 +225,7 @@ NSString* mime_type(NSString* path) {
   NSError* error = nil;
   NSData* data = [NSData dataWithContentsOfURL:file options:NSDataReadingMappedIfSafe error:&error];
   if (data == nil) {
-    [urlSchemeTask didFailWithError:error ?: [self notFoundError]];
+    [urlSchemeTask didFailWithError:error != nil ? error : [self notFoundError]];
     return;
   }
   NSURLResponse* response = [[NSURLResponse alloc] initWithURL:url
@@ -443,10 +443,10 @@ NSString* mime_type(NSString* path) {
        "status: JSON.parse(statusText), rejected: JSON.parse(rejectedText)};";
   __weak MOLViewController* weakSelf = self;
   [webView callAsyncJavaScript:script
-                     arguments:@{}
-                       inFrame:nil
-                  contentWorld:WKContentWorld.pageWorld
-             completionHandler:^(id result, NSError* error) {
+                      arguments:@{}
+                        inFrame:nil
+              inContentWorld:WKContentWorld.pageWorld
+              completionHandler:^(id result, NSError* error) {
                [weakSelf completeSimulatorSmokeWithResult:result error:error];
              }];
 }
