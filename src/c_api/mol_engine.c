@@ -138,7 +138,6 @@ struct mol_engine {
   float sustain;
   float pitch_bend;
   float pitch_bend_ratio;
-  float modulation;
   int32_t octave_shift;
   int32_t transpose;
   mol_scale_type_t scale_type;
@@ -179,6 +178,7 @@ struct mol_engine {
   uint8_t recording_available;
   mol_patch_t current_patch;
   mol_preset_id_t current_preset;
+  float modulation;
 };
 
 static int mol_engine_config_is_valid(const mol_engine_config_t* config) {
