@@ -1,12 +1,13 @@
 # M5 Desktop Application and Headless Evidence
 
-Refreshed on 2026-09-05 through exact candidate `6897843`. The portable release
+Refreshed on 2026-09-05 through exact candidate `19735a9`. The portable release
 preset now includes both wxWidgets applications, and extracted-package audit
 launches the native debugger against its own packaged daemon before exercising
-an independent no-UI daemon/CLI lifecycle. The wxWidgets
-GUI-enabled suites pass 98/98 on Windows MSVC with Emscripten Node 22.16.0 and
-100/100 on Linux GCC with native Node 22.22.1; extracted Release+LTO packages
-launch the production GUI and complete the independent no-UI service lifecycle.
+an independent no-UI daemon/CLI lifecycle. The latest wxWidgets GUI-enabled
+suite passes 101/101 on Windows MSVC with Emscripten Node 22.16.0; the preceding
+Linux GCC suite passes 100/100 with native Node 22.22.1. Extracted Release+LTO
+packages launch the production GUI and complete the independent no-UI service
+lifecycle.
 A separate fresh Windows tree disables
 both GUI options and the Web server, compiles 172 targets without wxWidgets, and
 passes 93/93 including the real daemon process lifecycle. Earlier headless evidence was verified
@@ -97,7 +98,7 @@ two capability-specific skips and zero npm vulnerabilities.
 
 | Configuration | Result | Relevant evidence |
 |---|---:|---|
-| Windows MSVC Release+LTO with both GUIs (clean clone) | 98/98 | Real WebView2 production bundle and SharedArrayBuffer capability acceptance; native debugger-to-daemon IPC; full core, tool, package-consumer, service, platform-simulation, and macOS desktop CI wiring regression |
+| Windows MSVC Release+LTO with both GUIs (clean `19735a9` clone) | 101/101 | Real WebView2 production bundle and SharedArrayBuffer capability acceptance; native debugger-to-daemon IPC; full core, tool, package-consumer, service, platform-simulation, Android-emulator wiring, and macOS desktop CI wiring regression |
 | Linux x86_64 GCC Release+LTO with both GUIs (clean clone, WSL/Xvfb) | 100/100 | Real GTK/WebKitGTK production bundle and MessagePort fallback acceptance under a simulated display; native debugger-to-daemon IPC; systemd and controlled launchd service lifecycles; macOS desktop CI wiring audit |
 | macOS 15 desktop CI | configured; execution pending | Reproducible Release+LTO preset requires optimized Web/Wasm assets, both GUI acceptance modes, exactly one TGZ, extracted `.app` resources, system WebView capability, and the complete no-UI daemon/CLI lifecycle |
 | Windows MSVC Debug without GUI/Web server | 93/93 | Fresh 172-target build with `MOL_BUILD_DESKTOP_GUI=OFF`, `MOL_BUILD_NATIVE_DEBUG_GUI=OFF`, and `MOL_BUILD_WEB_SERVER=OFF`; daemon process, CLI, installed consumers, service, core, tools, and platform simulations pass |
@@ -107,10 +108,10 @@ two capability-specific skips and zero npm vulnerabilities.
 | Linux x86_64 Clang (WSL) | 78/78 | Unix socket mode/cleanup, null-audio service process, CLI lifecycle, Linux adapter compilation, macOS interface simulations |
 | Linux AArch64 QEMU 10.2.1 | 71/71 | target core/DSP/music tests, 18-preset metrics, mobile policy/native-boundary simulations, null playback, nested daemon process, CLI/render lifecycle |
 | Windows Clang ASan/UBSan | 57/57 | all sanitizer-enabled portable/control tests and twelve 20-second parser fuzz sessions, including MIDI-file import and realtime MIDI-stream decoding; current Harmony policy audit/source cases pass targeted validation |
-| Emscripten MinSizeRel (clean `6897843` clone) | 44/44 | current core/worklet regression plus fail-closed Web/platform and desktop-package acceptance-project audits and mobile policy/native-boundary simulations |
+| Emscripten MinSizeRel (clean `19735a9` clone) | 46/46 | current core/worklet regression plus fail-closed Web/platform, Android-emulator, and desktop-package acceptance-project audits and mobile policy/native-boundary simulations |
 | ESP32 / ESP32-S3 | build passed | firmware regression; application binaries remain 153,440 and 179,328 bytes |
 
-The exact-candidate extracted-package audit reports schema 4. The 4,463,145-byte
+The exact-candidate extracted-package audit reports schema 4. The 4,465,446-byte
 Windows ZIP contains 153 files and its WebView2 shell reports
 `PASS-SharedArrayBuffer`; the 7,732,484-byte Linux TGZ contains 152 files and
 its WebKitGTK shell reports `PASS-MessagePort` under Xvfb. Each package's native
@@ -119,7 +120,7 @@ state/capability/self-test/note/release/shutdown RPC. A fresh packaged daemon an
 CLI then run with no UI through 48 kHz stereo null audio, recording, playback,
 diagnostics, a 4,096-frame finite benchmark, clean shutdown, and IPC cleanup.
 Their SHA-256 digests are
-`5c4cfff1a1272f42828d7b911f72f54d1dee009c3da78589145800e4558efd34`
+`9ef71076c1a39512b8ab3c50b3088cdefcacc615986fd983b584e1896572b3b0`
 and `10521374f9ebc222d507eb99138191190b371d879bc7138f849d6b9050b6f0ae`
 respectively.
 

@@ -12,7 +12,7 @@ bridge. An additional fully native wxWidgets debugger drives the independent
 daemon over bounded local IPC. The portable release preset now includes both
 GUI applications, and package audit must launch the native debugger against an
 independent packaged daemon before it runs the separate no-UI daemon/CLI
-lifecycle. The GUI-enabled suites pass 98/98 on Windows and
+lifecycle. The latest GUI-enabled suite passes 101/101 on Windows and
 100/100 on Linux; the daemon and CLI remain independently buildable and usable
 with both GUI options disabled. A fresh Windows build with both GUI options and
 the local Web server disabled compiles 172 targets and passes 93/93 tests,
@@ -74,12 +74,25 @@ latency remain external acceptance gates. No `v1.0.0` tag exists.
 
 ## Last verified commit
 
-`0dbce9e` (`test(android): gate native keyboard in emulator`) is the latest
+`19735a9` (`docs(android): record native keyboard gate`) is the latest unified
 exact candidate reproduced from a clean local clone. It compiled all 108
 Emscripten actions, passed 46/46 MinSizeRel tests, rebuilt and tested the
 production Web bundle from 20 locked packages with zero vulnerabilities and
-12/12 tests, and passed clean dual-ABI Android Debug, instrumentation, unsigned
-Release, and lint builds. Its API 35 headless-emulator gate reported AAudio API
+12/12 tests, compiled all 575 Windows Release+LTO package actions with both
+wxWidgets applications, and passed 101/101 GUI-enabled tests. Its
+4,465,446-byte, 153-file Windows ZIP has SHA-256
+`9ef71076c1a39512b8ab3c50b3088cdefcacc615986fd983b584e1896572b3b0`.
+Package audit schema 4 records WebView2 `PASS-SharedArrayBuffer`, native-debugger
+RPC against an independent packaged daemon, and a separate 48 kHz stereo
+headless daemon/CLI lifecycle with 4,096 finite benchmark frames, a 327-byte
+recording, native MIDI support, and exit code zero. The exact-source Windows
+size gate passes at 293,548 bytes for a stripped MSVC Release core, 644,608
+bytes for daemon plus CLI, 23,044 bytes for gzip-compressed Wasm, and 158,288
+bytes for deployable Web resources.
+
+The inherited exact Android implementation candidate `0dbce9e` also passed
+clean dual-ABI Android Debug, instrumentation, unsigned Release, and lint
+builds. Its API 35 headless-emulator gate reported AAudio API
 2 at 48 kHz, 30/30 production hardware-key mappings, repeat suppression,
 focus-loss/reopen recovery, 101 background callbacks, 224 screen-off callbacks,
 idle shutdown, no residual foreground service, and instrumentation code `-1`.
@@ -88,28 +101,21 @@ The exact Debug APK is 3,644,823 bytes with SHA-256
 the 2,590,764-byte unsigned Release APK has SHA-256
 `6010ee48225b3b050b307b3b5ab4dac07ab5e681dabf91d6632a4bba05a2e96e`.
 
-The preceding exact desktop-package candidate `6897843` enables both wxWidgets
-applications, and a portable CMake audit prevents that contract from silently
+The portable CMake audit prevents the two-GUI package contract from silently
 regressing. Package audit requires and launches the extracted system-WebView
 instrument and native service debugger on Windows, Linux, and macOS layouts.
 The debugger must control and shut down an independent packaged null-audio
 daemon over local IPC; audit then starts a fresh daemon for the complete no-UI
-CLI lifecycle. Its exact clean Windows clone compiled 108 Emscripten targets,
-passed 44/44 MinSizeRel tests, rebuilt the production Web bundle from 20 locked
-packages with zero vulnerabilities, compiled 575 native Release+LTO actions,
-and produced a 4,463,145-byte, 153-file ZIP with SHA-256
-`5c4cfff1a1272f42828d7b911f72f54d1dee009c3da78589145800e4558efd34`.
-Its WebView2 instrument reports `PASS-SharedArrayBuffer`, its packaged native
-debugger passes state/capability/self-test/note/release/shutdown RPC, and the
-subsequent headless lifecycle reports 48 kHz stereo, native MIDI, 4,096 finite
-benchmark frames, and exit code zero. A fresh Linux build compiled 543 actions
+CLI lifecycle. The latest clean Windows evidence is recorded above. The
+preceding exact desktop-package candidate `6897843` was also rebuilt on Linux:
+a fresh Linux build compiled 543 actions
 and produced a 7,732,484-byte, 152-file TGZ with SHA-256
 `10521374f9ebc222d507eb99138191190b371d879bc7138f849d6b9050b6f0ae`.
 Its WebKitGTK instrument reports `PASS-MessagePort`, and the same native-debug
 and no-UI lifecycle gates pass under Xvfb. Package audit schema 4 records all
 three independent runtime paths. The preceding `3e63c2e` candidate adds the
 macOS Release+LTO desktop CI and retains the full GUI-enabled regressions:
-98/98 on Windows and 100/100 on Linux. The
+98/98 on its Windows predecessor and 100/100 on Linux. The
 preceding `23ff832` candidate includes a bounded streaming MIDI 1.0 decoder,
 public CC1 modulation, native WinMM/Linux raw-MIDI/CoreMIDI adapters, explicit
 Omni or Channel 1--16 filtering, truthful service capability/device reporting,
@@ -464,9 +470,12 @@ to be native ARM64 or physical-device evidence. Validation ran on 2026-09-03.
 
 ## Blocked platform checks
 
-- Apple SDKs and DevEco/HarmonyOS SDKs are not available on this Windows host.
-  The public OpenHarmony SDK compatibility build and macOS simulations do not
-  change those formal platform constraints or runtime status.
+- Apple SDKs are not available on this Windows host. Huawei's current Windows
+  Command Line Tools include the HarmonyOS SDK, Hvigor, and emulator, but the
+  official download redirects this host to Huawei Account authentication and no
+  authenticated SDK/license session is available. The public OpenHarmony SDK
+  compatibility build and macOS simulations do not change those formal platform
+  constraints or runtime status.
 - Playwright's Windows WebKit port does not expose AudioWorklet and is not actual
   Safari. Current-stable Safari remains unverified until run on an Apple host.
 - No Bluetooth output was exposed for the Windows run. WSL exposes neither a
@@ -511,8 +520,9 @@ python tools/package_audit.py `
   --report-dir build/package-audit --expected-version 0.1.0
 ```
 
-The GUI-enabled Windows MSVC suite passes 98/98. The current ordinary Debug
-suite passes 99/99 after adding the Android emulator runner and project audits.
+The exact-candidate GUI-enabled Windows MSVC Release suite passes 101/101. The
+current ordinary Debug suite passes 99/99 after adding the Android emulator
+runner and project audits.
 The real system WebView2
 reports `PASS-SharedArrayBuffer`; the native debugger connects to the real
 daemon and completes state/capability/self-test/note/shutdown RPC. Linux GCC
@@ -752,9 +762,12 @@ optimized endurance suite passed 2/2 in 270.38 seconds: the engine simulated
 core), emitted 230,136 events, and produced no non-finite samples. Runtime
 recovery completed 30 rebuild cycles in 1.42 seconds.
 
-The refreshed release size gate passed at 505,956 bytes for the stripped core,
-976,136 bytes for daemon plus CLI, 23,018 bytes for gzip-compressed Wasm, and
-157,610 bytes for deployable Web resources. Dependency locks, notices,
+The latest exact-source Windows release size gate passed at 293,548 bytes for a
+stripped MSVC Release core, 644,608 bytes for daemon plus CLI, 23,044 bytes for
+gzip-compressed Wasm, and 158,288 bytes for deployable Web resources. The core
+was built without MSVC LTCG for this measurement because LLVM strip cannot
+rewrite MSVC `/GL` archive members; the packaged Release+LTO core is 536,464
+bytes before stripping. Dependency locks, notices,
 licenses, npm audit, and SPDX SBOM validation passed. Current exact-candidate
 CPack package audits found 153 files on Windows and 152 on Linux, including the
 native wxWidgets production executable, optional native debugger, WebView2
@@ -762,9 +775,9 @@ loader where required, `mol-latency-probe`, and every desktop service
 definition. Each extracted production GUI loads the packaged Web bundle and
 passes real system-WebView capability checks. Each native debugger then drives
 and shuts down its own packaged daemon before a separate daemon and CLI complete
-the no-UI null-audio lifecycle with native MIDI capability. The Windows AMD64
-ZIP is 4,463,145 bytes with SHA-256
-`5c4cfff1a1272f42828d7b911f72f54d1dee009c3da78589145800e4558efd34`;
+the no-UI null-audio lifecycle with native MIDI capability. The current Windows
+AMD64 ZIP is 4,465,446 bytes with SHA-256
+`9ef71076c1a39512b8ab3c50b3088cdefcacc615986fd983b584e1896572b3b0`;
 its WebView2 reports SharedArrayBuffer and its recording is 327 bytes. The Linux
 x86_64 TGZ is 7,732,484 bytes with SHA-256
 `10521374f9ebc222d507eb99138191190b371d879bc7138f849d6b9050b6f0ae`;
@@ -786,13 +799,14 @@ python3 tools/package_audit.py --archive <archive> \
 ```
 
 A clean local clone of exact candidate
-`68978434f077cc9170e29f17fe5829ab7d11da97`, created without hardlinks or copied
-build output, rebuilt the production Web/Wasm assets, passed 44/44 Emscripten
-MinSizeRel tests, compiled all 575 Windows package actions, and passed all three
-extracted runtime paths with the Windows hash recorded above. A fresh Linux
-Release+LTO build of the identical committed source compiled 543 actions and
+`19735a9bc736686ee5406f12c933688f57f7641c`, created without hardlinks or copied
+build output, rebuilt the production Web/Wasm assets, passed 46/46 Emscripten
+MinSizeRel tests and 12/12 Web tests with zero npm vulnerabilities, compiled all
+575 Windows package actions, passed 101/101 GUI-enabled Release tests, and
+passed all three extracted runtime paths with the Windows hash recorded above.
+The clean clone remained clean after verification. The preceding Linux package
+evidence remains an exact `6897843` clean build: it compiled 543 actions and
 passed the same three-path package audit with the Linux hash recorded above.
-The clean clone remained clean after verification.
 
 The preceding clean clone of
 `3e63c2e7f3a6436baf49be5c123765ee85a9b404`, created without hardlinks or copied
@@ -876,8 +890,9 @@ tests.
 The HarmonyOS application descriptors, project audit, executable production
 policy/bridge/host simulations, and native source-check boundary pass locally.
 The previously verified headless Windows MSVC and Linux GCC Release suites pass
-95/95; the GUI-enabled Release+LTO suites pass 98/98 on Windows and 100/100 on
-Linux. The latest exact-candidate Emscripten suite passes 46/46, and Linux
+95/95; the latest GUI-enabled Release suite passes 101/101 on Windows, while
+the preceding Linux GUI-enabled Release+LTO suite passes 100/100. The latest
+exact-candidate Emscripten suite passes 46/46, and Linux
 AArch64 QEMU passes 71/71.
 The official OpenHarmony 5.0.0.71/API 12 public SDK and Hvigor
 5.8.9 build and audit

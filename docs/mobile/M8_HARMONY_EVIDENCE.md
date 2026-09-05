@@ -11,8 +11,12 @@ the strict ArkTS toolchain. A separate OpenHarmony API 12 compatibility product
 is `build-verified` with the official public OpenHarmony SDK, but this does not
 qualify the formal HarmonyOS/DevEco product.
 Neither product is `runtime-verified` or `device-verified`: this Windows host
-has no DevEco Studio, HarmonyOS SDK, signing identity, emulator, or physical
-HarmonyOS/OpenHarmony device.
+has no installed DevEco Studio/current HarmonyOS SDK, signing identity,
+configured emulator, or physical HarmonyOS/OpenHarmony device. Huawei's current
+[Command Line Tools](https://developer.huawei.com/consumer/cn/doc/doccenter-deveco-studio/ide-commandline-get)
+are Windows-compatible and bundle the SDK, Hvigor, and emulator, but their
+official download redirected this host to Huawei Account authentication; no
+authenticated SDK/license session was available for installation.
 
 ## Implemented product path
 
