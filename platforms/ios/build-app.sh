@@ -74,7 +74,12 @@ for relative_path in Assets.car PrivacyInfo.xcprivacy web/index.html; do
     exit 1
   fi
 done
-plutil -lint "$app_path/Info.plist" "$app_path/PrivacyInfo.xcprivacy"
+for plist_path in "$app_path/Info.plist" "$app_path/PrivacyInfo.xcprivacy"; do
+  if ! plutil -lint "$plist_path"; then
+    echo "The $variant application contains an invalid property list: $plist_path" >&2
+    exit 1
+  fi
+done
 
 if [[ "$variant" == "Device" && -n "${MOL_APPLE_SIGNING_IDENTITY:-}" ]]; then
   codesign --force --sign "$MOL_APPLE_SIGNING_IDENTITY" --timestamp=none "$app_path"
