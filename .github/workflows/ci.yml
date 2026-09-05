@@ -24,6 +24,8 @@ jobs:
             preset: ci-windows-msvc
           - runner: macos-15
             preset: ci-macos
+          - runner: macos-15-intel
+            preset: ci-macos
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Check out source
@@ -40,7 +42,11 @@ jobs:
         run: ctest --preset ${{ matrix.preset }}
 
   macos-desktop:
-    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Check out source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

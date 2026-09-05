@@ -23,7 +23,8 @@ endif()
 math(EXPR _job_length "${_job_end} - ${_job_start}")
 string(SUBSTRING "${_workflow_text}" ${_job_start} ${_job_length} _job_text)
 foreach(_token
-        "runs-on: macos-15"
+        "runner: [macos-15, macos-15-intel]"
+        [[runs-on: ${{ matrix.runner }}]]
         "cmake --preset wasm-release"
         "npm --prefix apps/web run build"
         "cmake --preset ci-macos-desktop"
