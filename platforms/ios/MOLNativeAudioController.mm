@@ -148,6 +148,18 @@ BOOL has_lifecycle_action(std::uint32_t actions, mol_ios_audio_action_t action) 
   return (actions & static_cast<std::uint32_t>(action)) != 0U;
 }
 
+std::int32_t error_status(NSError* error) {
+  if (error == nil) return -1;
+  const NSInteger code = error.code;
+  if (code < static_cast<NSInteger>(std::numeric_limits<std::int32_t>::min())) {
+    return std::numeric_limits<std::int32_t>::min();
+  }
+  if (code > static_cast<NSInteger>(std::numeric_limits<std::int32_t>::max())) {
+    return std::numeric_limits<std::int32_t>::max();
+  }
+  return static_cast<std::int32_t>(code);
+}
+
 NSString* serialize_response(NSDictionary<NSString*, id>* response) {
   NSError* error = nil;
   NSData* data = [NSJSONSerialization dataWithJSONObject:response options:0 error:&error];
@@ -155,7 +167,7 @@ NSString* serialize_response(NSDictionary<NSString*, id>* response) {
     return @"{\"ok\":false,\"error\":\"Native response serialization failed\"}";
   }
   NSString* text = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-  return text ?: @"{\"ok\":false,\"error\":\"Native response encoding failed\"}";
+  return text != nil ? text : @"{\"ok\":false,\"error\":\"Native response encoding failed\"}";
 }
 
 NSString* success_response(NSDictionary<NSString*, id>* fields) {
@@ -252,7 +264,8 @@ NSString* failure_response(NSString* message) {
   NSError* parseError = nil;
   id parsed = [NSJSONSerialization JSONObjectWithData:requestData options:0 error:&parseError];
   if (![parsed isKindOfClass:NSDictionary.class]) {
-    return failure_response(parseError.localizedDescription ?: @"Request JSON is invalid");
+    NSString* message = parseError.localizedDescription;
+    return failure_response(message != nil ? message : @"Request JSON is invalid");
   }
   NSDictionary<NSString*, id>* request = parsed;
   if (!has_exact_keys(request, @[ @"version", @"method", @"params" ])) {
@@ -275,7 +288,8 @@ NSString* failure_response(NSString* message) {
     if (!has_exact_keys(params, @[])) return failure_response(@"Unexpected parameters");
     NSError* error = nil;
     if (![self startUserAudio:&error]) {
-      return failure_response(error.localizedDescription ?: @"Native audio could not start");
+      NSString* message = error.localizedDescription;
+      return failure_response(message != nil ? message : @"Native audio could not start");
     }
     return success_response(@{});
   }
@@ -319,7 +333,8 @@ NSString* failure_response(NSString* message) {
   }
   if ([method isEqualToString:@"recording.export"]) {
     if (!has_exact_keys(params, @[])) return failure_response(@"Unexpected parameters");
-    NSData* sequence = [_host exportRecording] ?: _loadedSequence;
+    NSData* sequence = [_host exportRecording];
+    if (sequence == nil) sequence = _loadedSequence;
     if (sequence.length == 0U || sequence.length > kMaximumRecordingBytes) {
       return failure_response(@"No complete recording is available");
     }
@@ -455,7 +470,7 @@ NSString* failure_response(NSString* message) {
 - (BOOL)startUserAudio:(NSError**)error {
   if (_lifecycle.user_started && _host.status.active) return YES;
   if (![_host startWithError:error]) {
-    _lastStartStatus = error != nullptr && *error != nil ? (*error).code : -1;
+    _lastStartStatus = error_status(error != nullptr ? *error : nil);
     mol_ios_audio_lifecycle_start_failed(&_lifecycle);
     return NO;
   }
@@ -598,7 +613,7 @@ NSString* failure_response(NSString* message) {
       [self applyLifecycleActions:mol_ios_audio_lifecycle_restart_completed(&_lifecycle, true)];
       return;
     }
-    _lastStartStatus = error != nil ? error.code : -1;
+    _lastStartStatus = error_status(error);
     [self applyLifecycleActions:mol_ios_audio_lifecycle_restart_completed(&_lifecycle, false)];
     return;
   }
