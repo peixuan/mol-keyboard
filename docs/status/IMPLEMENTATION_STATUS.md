@@ -941,6 +941,47 @@ ArkTS bytecode and both required native ABIs.
 lane. Detailed evidence and pending formal/device acceptance are in
 `docs/mobile/M8_HARMONY_EVIDENCE.md`.
 
+## Session handoff (2026-09-07)
+
+This session is preserved on branch `codex/mol-keyboard-v1`. The executable
+source candidate is `95c6cee9fd5d0bab1389cef75d851bd606f96ab9`; the subsequent
+documentation checkpoint is `3123852ee5880396931f015c9fc546cfdfc396bb`.
+[GitHub Actions run 15](https://github.com/peixuan/mol-keyboard/actions/runs/33985159864)
+validated the executable candidate with 25/25 successful jobs, and
+[GitHub Actions run 16](https://github.com/peixuan/mol-keyboard/actions/runs/33986315411)
+validated the documentation checkpoint with the same 25/25 successful job
+matrix. The branch was clean and synchronized with `origin/mol-keyboard-v1`
+before this handoff update. No `v1.0.0` tag was created.
+
+The session completed these English atomic commits, in order:
+
+1. `666728e` — `test(web): exercise the production app in Safari`
+2. `f8081ca` — `fix(web): allow Safari first-launch startup`
+3. `3efd667` — `fix(packaging): tolerate slow desktop GUI startup`
+4. `1acc574` — `fix(android): quiesce WebView event polling in smoke test`
+5. `95c6cee` — `fix(desktop): allow slow packaged debugger startup`
+6. `3123852` — `docs(status): record hosted platform acceptance`
+
+Local acceptance also passed the six project audits, the 12/12 Web unit suite,
+strict TypeScript and Safari JavaScript checks, the native-debugger build and
+tests, and three consecutive extracted Windows package audits. Hosted evidence
+now covers real Windows and Linux desktop GUIs, native and WebView debugger
+paths, independent headless services, macOS arm64/x86_64 builds and packaged
+GUI launch audits, Safari, Android emulator, iPhone Simulator, ESP-IDF QEMU,
+and the remaining build, sanitizer, analysis, coverage, packaging, and
+cross-architecture matrix described above.
+
+To resume in a new session, first read `CODEX_GOAL.md` and this file completely,
+then confirm the checked-out branch tip is synchronized with
+`origin/mol-keyboard-v1` and that the worktree is clean. Do not repeat the
+completed desktop, service, simulator, or hosted matrix unless a relevant source
+change invalidates it. Begin with the formal HarmonyOS build in an authenticated
+current DevEco/Harmony SDK environment. If that environment is still
+unavailable, the only remaining acceptance work requires physical devices,
+audio/input routes or peripherals, or instrumented latency/endurance equipment,
+as enumerated below. Keep the release tag blocked until every Definition of Done
+gate has real passing evidence.
+
 ## Next highest-priority task
 
 Run the formal HarmonyOS build in an authenticated current DevEco/Harmony SDK
